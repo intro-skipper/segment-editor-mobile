@@ -1,4 +1,4 @@
-package live.ditto.reactinmobile
+package org.introskipper.segmenteditor
 
 import org.junit.Test
 

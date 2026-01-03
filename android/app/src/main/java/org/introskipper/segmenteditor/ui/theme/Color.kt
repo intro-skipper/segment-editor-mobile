@@ -1,4 +1,4 @@
-package live.ditto.reactinmobile.ui.theme
+package org.introskipper.segmenteditor.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

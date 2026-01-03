@@ -1,4 +1,4 @@
-package live.ditto.reactinmobile
+package org.introskipper.segmenteditor
 
 // The built in Android WebView
 import android.webkit.WebResourceRequest
@@ -18,7 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
-import live.ditto.reactinmobile.ui.theme.ReactInMobileTheme
+import org.introskipper.segmenteditor.ui.theme.ReactInMobileTheme
 
 @Composable
 fun ComposeWrappedWebView() {

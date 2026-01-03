@@ -1,4 +1,4 @@
-package live.ditto.reactinmobile
+package org.introskipper.segmenteditor
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import live.ditto.reactinmobile.ui.theme.ReactInMobileTheme
+import org.introskipper.segmenteditor.ui.theme.ReactInMobileTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
