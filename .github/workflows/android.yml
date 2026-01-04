@@ -47,6 +47,7 @@ jobs:
       name: Build Release Gradle
       with:
         job-id: SegmentEditor
+        build-root-directory: android
         # Specifies arguments for Gradle execution
         arguments: |
           --configure-on-demand
