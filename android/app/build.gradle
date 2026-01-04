@@ -1,3 +1,5 @@
+import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
+
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
@@ -78,6 +80,8 @@ node {
     // The Node.js project directory location
     // This is where the package.json file and node_modules directory are located
     // By default it is at the root of the current project
+    npmCommand = DefaultNativePlatform.currentOperatingSystem.isMacOsX()
+            ? '/usr/local/bin/npm' : npmCommand
     nodeProjectDir.set(file("../../web"))
 }
 
