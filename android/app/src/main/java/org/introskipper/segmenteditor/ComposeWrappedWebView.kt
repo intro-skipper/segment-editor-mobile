@@ -3,6 +3,7 @@ package org.introskipper.segmenteditor
 // The built in Android WebView
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 
@@ -48,7 +49,12 @@ fun ComposeWrappedWebView() {
                      * See https://developer.android.com/reference/android/webkit/WebSettings#setJavaScriptEnabled(boolean)
                      */
                     @Suppress("SetJavaScriptEnabled")
-                    settings.javaScriptEnabled = false
+                    settings.javaScriptEnabled = true
+                    settings.cacheMode = WebSettings.LOAD_DEFAULT
+                    settings.domStorageEnabled = true
+                    settings.loadsImagesAutomatically = true
+                    settings.mediaPlaybackRequiresUserGesture = false
+                    settings.allowFileAccess = true
                 }
 
                 webViewClient =  object : WebViewClient() {
