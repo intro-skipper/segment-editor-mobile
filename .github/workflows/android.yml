@@ -80,7 +80,7 @@ jobs:
 
     - uses: actions/upload-artifact@v4
       with:
-        name: Jellyfin Segment Editor ${{ env.GIT_HASH }}
+        name: Segment Editor ${{ env.GIT_HASH }}
         retention-days: 1
         path: ${{steps.sign_main.outputs.signedReleaseFile}}
 
@@ -90,6 +90,6 @@ jobs:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         automatic_release_tag: ${{ env.GIT_BRANCH }}
         prerelease: ${{ env.GIT_BRANCH != 'main' }}
-        title: Jellyfin Segment Editor ${{ env.GIT_HASH }}
+        title: Segment Editor ${{ env.GIT_HASH }}
         files: |
           ${{steps.sign_main.outputs.signedReleaseFile}}
