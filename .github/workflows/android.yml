@@ -83,3 +83,13 @@ jobs:
         name: Jellyfin Segment Editor ${{ env.GIT_HASH }}
         retention-days: 1
         path: ${{steps.sign_main.outputs.signedReleaseFile}}
+
+    - uses: 8bitDream/action-github-releases@v1.0.0
+      if: github.event_name != 'pull_request'
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: ${{ env.GIT_BRANCH }}
+        prerelease: ${{ env.GIT_BRANCH != 'main' }}
+        title: Jellyfin Segment Editor ${{ env.GIT_HASH }}
+        files: |
+          ${{steps.sign_main.outputs.signedReleaseFile}}
