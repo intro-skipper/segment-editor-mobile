@@ -51,7 +51,7 @@ jobs:
         # Specifies arguments for Gradle execution
         arguments: |
           --configure-on-demand
-          assembleDebug
+          assembleRelease
         # Gradle version to use for execution:
         #   wrapper (default), current, rc, nightly, release-nightly, or
         #   versions like 6.6 (see https://services.gradle.org/versions/all)
@@ -61,15 +61,22 @@ jobs:
           org.gradle.unsafe.configuration-cache=true
           org.gradle.configuration-cache=true
 
-    - name: List directory contents
-      run: ls -R android/app/build/outputs/apk/debug
-
-    - name: Rename APK file
-      run: |
-        mv android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/Jellyfin.Segment.Editor-${{ env.GIT_HASH }}.apk
+    - uses: r0adkll/sign-android-release@v1
+      name: Sign Release APK
+      # ID used to access action output
+      id: sign_main
+      with:
+        releaseDirectory: ndroid/app/build/outputs/apk/release
+        signingKeyBase64: ${{ secrets.KEYSTORE_FILE }}
+        alias: "tagmo"
+        keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+        keyPassword: ${{ secrets.KEYSTORE_PASSWORD }}
+      env:
+        # override default build-tools version (29.0.3) -- optional
+        BUILD_TOOLS_VERSION: "34.0.0"
 
     - uses: actions/upload-artifact@v4
       with:
         name: Jellyfin Segment Editor ${{ env.GIT_HASH }}
         retention-days: 1
-        path: android/app/build/outputs/apk/debug/Jellyfin.Segment.Editor-${{ env.GIT_HASH }}.apk
+        path: ${{steps.sign_main.outputs.signedReleaseFile}}
