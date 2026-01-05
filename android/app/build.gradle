@@ -22,6 +22,11 @@ android {
         vectorDrawables {
             useSupportLibrary true
         }
+
+        def commit = providers.exec {
+            commandLine("git", "rev-parse", "--short", "HEAD")
+        }.standardOutput.asText.get().trim()
+        project.archivesBaseName = "${rootProject.name}-${commit}"
     }
 
     buildTypes {
@@ -47,6 +52,12 @@ android {
     packagingOptions {
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
+        }
+    }
+
+    applicationVariants.configureEach { variant ->
+        variant.outputs.each { output ->
+            output.outputFileName = project.archivesBaseName + "-${output.baseName}.apk"
         }
     }
 }
