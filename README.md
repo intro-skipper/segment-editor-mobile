@@ -1,22 +1,29 @@
-# React in Web App
+# Jellyfin Segment Editor
 
-Ever wanted to build a React app, bundle it and run it locally on a mobile device? This is a project for you! Often at [Ditto](https://www.ditto.live), we have customers who simply can't port a ton of code to SwiftUI, Jetpack Compose or have the know-how to wrangle React Native. Sometimes, a good old single-page web app will do the job. But what if you don't have any internet? This project will show you how you can build the web app, bundle it with some nice build scripts, and run it _locally_ in your iOS or Android app
+Manage Jellyfin Media Segment positions the simple way. This tool is in early stages of development.
 
-![Final image of a React Web app Running within an iOS and Android app](./final-image.jpg)
+- Create/Edit/Delete all kind of Segments (Intro, Outro, ...)
+- Player to copy timestamps while you watch
+
+## Requirements
+
+- Jellyfin 10.10
+- Jellyfin Plugin [MediaSegments API](https://github.com/intro-skipper/jellyfin-plugin-ms-api)
+- Jellyfin Server API Key (created by you)
+
+## Installation
+
+- Download for your platform from [Releases](https://github.com/intro-skipper/segment-editor/releases/latest)
+
+## Related projects
+
+- Jellyfin Plugin: [.EDL Creator](https://github.com/intro-skipper/jellyfin-plugin-edl)
+- Jellyfin Plugin: [Chapter Creator](https://github.com/intro-skipper/jellyfin-plugin-ms-chapter)
+- Jellyfin Plugin: [MediaSegments API](https://github.com/intro-skipper/jellyfin-plugin-ms-api)
 
 ## Prerequisites
 
 - Xcode 14.3 or higher for iOS
-- [NVM](https://github.com/nvm-sh/nvm) installed on your machine and set to use Node.js 20
-
-### Setting NVM to Node 20
-
-If you've already installed [nvm](https://github.com/nvm-sh/nvm), then you can run:
-
-```sh
-nvm install 20
-nvm alias default 20
-```
 
 ## Running it on iOS
 
@@ -29,3 +36,5 @@ nvm alias default 20
 1. Run `cd web` and run `npm install` to install the dependencies
 2. Open the `android` directory in Android Studio
 3. Build and run the app in an emulator or on a physical device
+
+*Template provided by https://github.com/getditto/react-in-mobile*
