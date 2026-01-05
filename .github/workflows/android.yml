@@ -62,14 +62,14 @@ jobs:
           org.gradle.configuration-cache=true
 
     - name: List directory contents
-      run: ls -R android/app/build/outputs
+      run: ls -R android/app/build/outputs/apk/release
 
     - uses: r0adkll/sign-android-release@v1
       name: Sign Release APK
       # ID used to access action output
       id: sign_main
       with:
-        releaseDirectory: ndroid/app/build/outputs/apk/release
+        releaseDirectory: android/app/build/outputs/apk/release
         signingKeyBase64: ${{ secrets.KEYSTORE_FILE }}
         alias: "tagmo"
         keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
