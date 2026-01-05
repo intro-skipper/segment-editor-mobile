@@ -88,7 +88,7 @@ jobs:
       if: github.event_name != 'pull_request'
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        automatic_release_tag: ${{ env.GIT_BRANCH }}
+        automatic_release_tag: ${{ env.GIT_HASH }}
         prerelease: ${{ env.GIT_BRANCH != 'main' }}
         title: Segment Editor ${{ env.GIT_HASH }}
         files: |
