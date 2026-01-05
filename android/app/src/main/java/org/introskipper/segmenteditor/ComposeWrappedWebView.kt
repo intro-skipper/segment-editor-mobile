@@ -55,6 +55,8 @@ fun ComposeWrappedWebView() {
                     settings.domStorageEnabled = true
                     settings.loadsImagesAutomatically = true
                     settings.mediaPlaybackRequiresUserGesture = false
+                    settings.allowFileAccess = false
+                    settings.allowContentAccess = false
                 }
 
                 webViewClient =  object : WebViewClient() {
