@@ -80,8 +80,9 @@ node {
     // The Node.js project directory location
     // This is where the package.json file and node_modules directory are located
     // By default it is at the root of the current project
-    npmCommand = DefaultNativePlatform.currentOperatingSystem.isMacOsX()
-            ? '/usr/local/bin/npm' : npmCommand
+    if (DefaultNativePlatform.currentOperatingSystem.isMacOsX()) {
+        npmCommand =  '/usr/local/bin/npm'
+    }
     nodeProjectDir.set(file("../../web"))
 }
 
