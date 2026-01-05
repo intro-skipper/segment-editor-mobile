@@ -50,11 +50,11 @@ fun ComposeWrappedWebView() {
                      */
                     @Suppress("SetJavaScriptEnabled")
                     settings.javaScriptEnabled = true
+                    settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                     settings.cacheMode = WebSettings.LOAD_DEFAULT
                     settings.domStorageEnabled = true
                     settings.loadsImagesAutomatically = true
                     settings.mediaPlaybackRequiresUserGesture = false
-                    settings.allowFileAccess = true
                 }
 
                 webViewClient =  object : WebViewClient() {
