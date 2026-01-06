@@ -58,7 +58,6 @@ jobs:
         gradle-version: wrapper
         # Properties are passed as -Pname=value
         properties: |
-          org.gradle.unsafe.configuration-cache=true
           org.gradle.configuration-cache=true
 
     - name: List directory contents
