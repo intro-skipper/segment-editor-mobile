@@ -15,7 +15,12 @@ import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewAssetLoader.AssetsPathHandler
 
 import android.view.ViewGroup
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
@@ -24,6 +29,8 @@ import org.introskipper.segmenteditor.ui.theme.ReactInMobileTheme
 @Composable
 fun ComposeWrappedWebView() {
     val inPreview = LocalInspectionMode.current
+    var backEnabled by remember { mutableStateOf(false) }
+    var webView: WebView? by remember { mutableStateOf(null) }
     AndroidView(
         factory = { context ->
 
@@ -66,6 +73,13 @@ fun ComposeWrappedWebView() {
                     ): WebResourceResponse? {
                         return assetLoader.shouldInterceptRequest(request.url)
                     }
+                    override fun doUpdateVisitedHistory(
+                        view: WebView?,
+                        url: String?,
+                        isReload: Boolean
+                    ) {
+                        backEnabled = view?.canGoBack() ?: false
+                    }
                 }
 
                 /**
@@ -75,10 +89,17 @@ fun ComposeWrappedWebView() {
                  * https://developer.android.com/reference/androidx/webkit/WebViewAssetLoader
                  */
                 loadUrl("https://appassets.androidplatform.net/assets/dist/index.html")
+                webView = this
             }
         },
-        update = {}
+        update = {
+            webView = it
+        }
     )
+
+    BackHandler(enabled = backEnabled) {
+        webView?.goBack()
+    }
 }
 
 @Preview(showBackground = true, apiLevel = 33)
