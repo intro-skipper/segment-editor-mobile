@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">Segment Editor</string>
+
+    <string name="install_storage">Insufficient storage!</string>
+    <string name="install_conflict">Package conflict!</string>
+    <string name="install_aborted">Install aborted!</string>
+    <string name="install_blocked">Install blocked!</string>
+    <string name="install_rejected">Install rejected!</string>
+    <string name="install_broken">Install corrupt!</string>
 </resources>
