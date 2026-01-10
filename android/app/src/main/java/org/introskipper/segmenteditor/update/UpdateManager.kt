@@ -48,7 +48,7 @@ class UpdateManager internal constructor(activity: MainActivity) {
     private fun configureGit() {
         CoroutineScope(Dispatchers.IO).launch(Dispatchers.IO) {
             JSONExecutor(
-                browserActivity,  "https://api.github.com/repos/intro-skipper/segment-editor-mobile/releases/"
+                browserActivity,  "https://api.github.com/repos/intro-skipper/segment-editor-mobile/releases"
             ).setResultListener(object : JSONExecutor.ResultListener {
                 override fun onResults(result: String?) {
                     result?.let { parseUpdateJSON(it) }
