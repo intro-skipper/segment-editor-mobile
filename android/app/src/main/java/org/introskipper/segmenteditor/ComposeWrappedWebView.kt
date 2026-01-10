@@ -1,21 +1,19 @@
 package org.introskipper.segmenteditor
 
 // The built in Android WebView
+import android.content.pm.ActivityInfo
+import android.view.View
+import android.view.ViewGroup
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-
-// Import the WebViewAssetLoader
-// This is part of the AndroidX Webkit library
-// The gradle dependency is `androidx.webkit:webkit:1.9.0`
-// See the gradle file for more details
-import androidx.webkit.WebViewAssetLoader
-import androidx.webkit.WebViewAssetLoader.AssetsPathHandler
-
-import android.view.ViewGroup
+import android.widget.FrameLayout
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,11 +22,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.webkit.WebViewAssetLoader
+import androidx.webkit.WebViewAssetLoader.AssetsPathHandler
 import org.introskipper.segmenteditor.ui.theme.ReactInMobileTheme
 
 @Composable
 fun ComposeWrappedWebView() {
     val inPreview = LocalInspectionMode.current
+    val activity = LocalActivity.current as ComponentActivity
     var backEnabled by remember { mutableStateOf(false) }
     var webView: WebView? by remember { mutableStateOf(null) }
     AndroidView(
@@ -64,6 +65,42 @@ fun ComposeWrappedWebView() {
                     settings.mediaPlaybackRequiresUserGesture = false
                     settings.allowFileAccess = false
                     settings.allowContentAccess = false
+                }
+
+                webChromeClient = object : WebChromeClient() {
+                    private var customView: View? = null
+                    private var customViewCallback: CustomViewCallback? = null
+
+                    override fun onShowCustomView(view: View, callback: CustomViewCallback) {
+                        if (customView != null) {
+                            callback.onCustomViewHidden()
+                            return
+                        }
+
+                        // Store the custom view and callback
+                        customView = view
+                        customViewCallback = callback
+
+                        // Add the custom view to the activity's root view
+                        val decorView = activity.window.decorView as FrameLayout
+                        decorView.addView(view, FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        ))
+
+                        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                    }
+
+                    override fun onHideCustomView() {
+                        val decorView = activity.window.decorView as FrameLayout
+                        customView?.let {
+                            decorView.removeView(it)
+                        }
+                        customView = null
+                        customViewCallback?.onCustomViewHidden()
+
+                        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER
+                    }
                 }
 
                 webViewClient =  object : WebViewClient() {
