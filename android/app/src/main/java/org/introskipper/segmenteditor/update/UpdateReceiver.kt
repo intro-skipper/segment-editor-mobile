@@ -49,14 +49,14 @@ class UpdateReceiver : BroadcastReceiver() {
                                 )
                             )
                         } catch (_: URISyntaxException) {
-                            toast(context, R.string.install_broken)
+                            context.toast(R.string.install_broken)
                         }
-                    } ?: toast(context, R.string.install_rejected)
+                    } ?: context.toast(R.string.install_rejected)
                 }
-                PackageInstaller.STATUS_FAILURE_BLOCKED -> { toast(context, R.string.install_blocked) }
-                PackageInstaller.STATUS_FAILURE_STORAGE -> { toast(context, R.string.install_storage) }
-                PackageInstaller.STATUS_FAILURE_CONFLICT -> { toast(context, R.string.install_conflict) }
-                PackageInstaller.STATUS_FAILURE_ABORTED -> { toast(context, R.string.install_aborted) }
+                PackageInstaller.STATUS_FAILURE_BLOCKED -> { context.toast(R.string.install_blocked) }
+                PackageInstaller.STATUS_FAILURE_STORAGE -> { context.toast(R.string.install_storage) }
+                PackageInstaller.STATUS_FAILURE_CONFLICT -> { context.toast(R.string.install_conflict) }
+                PackageInstaller.STATUS_FAILURE_ABORTED -> { context.toast(R.string.install_aborted) }
                 PackageInstaller.STATUS_SUCCESS -> { }
                 else -> {
                     val error = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
@@ -64,20 +64,6 @@ class UpdateReceiver : BroadcastReceiver() {
                         Toast.makeText(context, error, Toast.LENGTH_LONG).show()
                 }
             }
-        }
-    }
-
-    private fun toast(context: Context, res: Int) {
-        MainScope().launch {
-            Toast.makeText(
-                context, context.getString(res), Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
-
-    private val Context.isAppRunning: Boolean get() {
-        with (getSystemService(ACTIVITY_SERVICE) as ActivityManager) {
-            return runningAppProcesses.any { packageName.equals(it.processName) }
         }
     }
 
@@ -92,5 +78,19 @@ class UpdateReceiver : BroadcastReceiver() {
             allowAnyComponent()
             allowPackage { true }
         }.build().sanitizeByFiltering(intent).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+
+    private fun Context.toast( res: Int) {
+        MainScope().launch {
+            Toast.makeText(
+                this@toast, getString(res), Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    private val Context.isAppRunning: Boolean get() {
+        with (getSystemService(ACTIVITY_SERVICE) as ActivityManager) {
+            return runningAppProcesses.any { packageName.equals(it.processName) }
+        }
     }
 }

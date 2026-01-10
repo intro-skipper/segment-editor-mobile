@@ -1,5 +1,6 @@
 package org.introskipper.segmenteditor.update
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.PackageInstaller
@@ -48,7 +49,7 @@ class UpdateManager internal constructor(activity: MainActivity) {
     private fun configureGit() {
         CoroutineScope(Dispatchers.IO).launch(Dispatchers.IO) {
             JSONExecutor(
-                browserActivity,  "https://api.github.com/repos/intro-skipper/segment-editor-mobile/releases/latest"
+                "https://api.github.com/repos/intro-skipper/segment-editor-mobile/releases/latest"
             ).setResultListener(object : JSONExecutor.ResultListener {
                 override fun onResults(result: String?) {
                     result?.let { parseUpdateJSON(it) }
@@ -60,6 +61,7 @@ class UpdateManager internal constructor(activity: MainActivity) {
         }
     }
 
+    @SuppressLint("RequestInstallPackagesPolicy")
     fun installDownload(apkUrl: String?) {
         if (apkUrl.isNullOrEmpty()) return
         CoroutineScope(Dispatchers.IO).launch(Dispatchers.IO) {
