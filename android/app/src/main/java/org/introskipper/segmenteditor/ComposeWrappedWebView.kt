@@ -78,7 +78,7 @@ fun ComposeWrappedWebView() {
                         }
 
                         // Store the custom view and callback
-                        customView = view
+                        customView = view.apply { keepScreenOn = false }
                         customViewCallback = callback
 
                         // Add the custom view to the activity's root view
