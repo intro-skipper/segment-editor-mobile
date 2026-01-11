@@ -30,6 +30,21 @@ android {
         project.archivesBaseName = "${rootProject.name}-${commit}"
     }
 
+    try {
+        def keystoreProps = new Properties()
+        keystoreProps.load(new FileInputStream(rootProject.file("keystore.properties")))
+        signingConfigs {
+            document {
+                keyAlias keystoreProps['keyAlias']
+                keyPassword keystoreProps['keyPassword']
+                storeFile file(keystoreProps['storeFile'])
+                storePassword keystoreProps['storePassword']
+            }
+        }
+        buildTypes.release.signingConfig signingConfigs.document
+        buildTypes.debug.signingConfig signingConfigs.document
+    } catch (FileNotFoundException ignored) { }
+
     buildTypes {
         release {
             minifyEnabled false

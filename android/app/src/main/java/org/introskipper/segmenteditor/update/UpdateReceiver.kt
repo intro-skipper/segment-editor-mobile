@@ -8,7 +8,6 @@ import android.content.Intent
 import android.content.pm.PackageInstaller
 import android.widget.Toast
 import androidx.core.content.IntentCompat
-import androidx.core.content.IntentSanitizer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -42,7 +41,7 @@ class UpdateReceiver : BroadcastReceiver() {
                 PackageInstaller.STATUS_PENDING_USER_ACTION -> {
                     intent.getParcelableExtraCompat<Intent>(Intent.EXTRA_INTENT)?.let { intent ->
                         try {
-                            startLauncherActivity(
+                            startInstallActivity(
                                 context, Intent.parseUri(
                                     intent.toUri(0),
                                     Intent.URI_ALLOW_UNSAFE or Intent.URI_INTENT_SCHEME
@@ -67,17 +66,8 @@ class UpdateReceiver : BroadcastReceiver() {
         }
     }
 
-    private fun startLauncherActivity(context: Context, intent: Intent) {
+    private fun startInstallActivity(context: Context, intent: Intent) {
         context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    }
-
-    private fun startSanitized(context: Context, intent: Intent) {
-        context.startActivity(IntentSanitizer.Builder().apply {
-            intent.action?.let { allowAction(it) }
-            allowExtra(PackageInstaller.EXTRA_SESSION_ID) { true }
-            allowAnyComponent()
-            allowPackage { true }
-        }.build().sanitizeByFiltering(intent).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
     private fun Context.toast( res: Int) {
