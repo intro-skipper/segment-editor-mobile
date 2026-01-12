@@ -29,7 +29,16 @@ android {
         buildConfigField "String", "COMMIT", "\""+commit+"\""
         project.archivesBaseName = "${rootProject.name}-${commit}"
     }
+    androidResources {
+        generateLocaleConfig = true
+    }
 
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
     try {
         def keystoreProps = new Properties()
         keystoreProps.load(new FileInputStream(rootProject.file("keystore.properties")))
@@ -45,12 +54,6 @@ android {
         buildTypes.debug.signingConfig signingConfigs.document
     } catch (FileNotFoundException ignored) { }
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17

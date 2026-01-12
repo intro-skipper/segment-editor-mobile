@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Segment Editor</string>
+    <string name="install_storage">Nicht genügend Speicherplatz!</string>
+    <string name="install_conflict">Paketkonflikt!</string>
+    <string name="install_aborted">16 Die Installation wurde abgebrochen!</string>
+    <string name="install_blocked">16 Installation blockiert!</string>
+    <string name="install_rejected">Installation abgelehnt!</string>
+    <string name="install_broken">Installation fehlerhaft!</string>
+</resources>
