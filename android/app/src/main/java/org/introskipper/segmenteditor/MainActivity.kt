@@ -10,10 +10,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import org.introskipper.segmenteditor.ui.theme.ReactInMobileTheme
+import org.introskipper.segmenteditor.update.CustomDialog
 import org.introskipper.segmenteditor.update.UpdateManager
 
 class MainActivity : ComponentActivity() {
-    private var updateManager: UpdateManager? = null
+    var updateManager: UpdateManager? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -39,11 +40,6 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         updateManager = UpdateManager(this)
-        updateManager?.setUpdateListener(object : UpdateManager.UpdateListener {
-            override fun onUpdateFound() {
-                updateManager?.onUpdateRequested()
-            }
-        })
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

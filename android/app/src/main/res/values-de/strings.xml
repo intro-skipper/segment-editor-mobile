@@ -1,10 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Segment Editor</string>
+
     <string name="install_storage">Nicht genügend Speicherplatz!</string>
     <string name="install_conflict">Paketkonflikt!</string>
     <string name="install_aborted">16 Die Installation wurde abgebrochen!</string>
     <string name="install_blocked">16 Installation blockiert!</string>
     <string name="install_rejected">Installation abgelehnt!</string>
     <string name="install_broken">Installation fehlerhaft!</string>
+
+    <string name="update_heading">Update verfügbar!</string>
+    <string name="update_message">Eine neue Version des Segment Editor steht zur Installation bereit.</string>
+    <string name="button_install">Installieren</string>
+    <string name="button_dismiss">Zurückweisen</string>
 </resources>

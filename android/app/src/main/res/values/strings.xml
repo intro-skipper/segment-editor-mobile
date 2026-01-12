@@ -8,5 +8,10 @@
     <string name="install_rejected">Install rejected!</string>
     <string name="install_broken">Install corrupt!</string>
 
+    <string name="update_heading">Update available!</string>
+    <string name="update_message">A new version of Segment Editor is available to install.</string>
+    <string name="button_install">Install</string>
+    <string name="button_dismiss">Dismiss</string>
+
     <string name="mimetype_apk" translatable="false">application/vnd.android.package-archive</string>
 </resources>

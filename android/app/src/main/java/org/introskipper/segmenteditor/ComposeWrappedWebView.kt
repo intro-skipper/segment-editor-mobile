@@ -1,6 +1,7 @@
 package org.introskipper.segmenteditor
 
 // The built in Android WebView
+import android.annotation.SuppressLint
 import android.content.pm.ActivityInfo
 import android.view.View
 import android.view.ViewGroup
@@ -11,7 +12,6 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
@@ -25,13 +25,17 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewAssetLoader.AssetsPathHandler
 import org.introskipper.segmenteditor.ui.theme.ReactInMobileTheme
+import org.introskipper.segmenteditor.update.CustomDialog
+import org.introskipper.segmenteditor.update.UpdateManager
 
+@SuppressLint("UnrememberedMutableState")
 @Composable
 fun ComposeWrappedWebView() {
     val inPreview = LocalInspectionMode.current
-    val activity = LocalActivity.current as ComponentActivity
+    val activity = LocalActivity.current as MainActivity
     var backEnabled by remember { mutableStateOf(false) }
     var webView: WebView? by remember { mutableStateOf(null) }
+    val openDialogCustom = remember { mutableStateOf(false) }
     AndroidView(
         factory = { context ->
 
@@ -136,6 +140,16 @@ fun ComposeWrappedWebView() {
 
     BackHandler(enabled = backEnabled) {
         webView?.goBack()
+    }
+
+    activity.updateManager?.setUpdateListener(object : UpdateManager.UpdateListener {
+        override fun onUpdateFound() {
+            openDialogCustom.value = true
+        }
+    })
+
+    if (openDialogCustom.value) {
+        CustomDialog(openDialogCustom = openDialogCustom)
     }
 }
 
