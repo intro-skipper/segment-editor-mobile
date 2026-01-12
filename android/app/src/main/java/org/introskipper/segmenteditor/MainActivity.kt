@@ -27,13 +27,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-
-        updateManager = UpdateManager(this)
-        updateManager?.setUpdateListener(object : UpdateManager.UpdateListener {
-            override fun onUpdateFound() {
-                updateManager?.onUpdateRequested()
-            }
-        })
     }
 
     val onRequestInstall = registerForActivityResult(
@@ -41,6 +34,16 @@ class MainActivity : ComponentActivity() {
     ) {
         if (packageManager.canRequestPackageInstalls())
             updateManager?.onUpdateRequested()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        updateManager = UpdateManager(this)
+        updateManager?.setUpdateListener(object : UpdateManager.UpdateListener {
+            override fun onUpdateFound() {
+                updateManager?.onUpdateRequested()
+            }
+        })
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
