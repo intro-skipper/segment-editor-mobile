@@ -121,7 +121,6 @@ class UpdateManager internal constructor(activity: MainActivity) {
     }
 
     private fun requestDownload(apkUrl: String) {
-
         if (browserActivity.packageManager.canRequestPackageInstalls()) {
             installDownload(apkUrl)
         } else {

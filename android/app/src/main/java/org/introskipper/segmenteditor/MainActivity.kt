@@ -12,11 +12,13 @@ import androidx.compose.ui.Modifier
 import org.introskipper.segmenteditor.ui.theme.ReactInMobileTheme
 import org.introskipper.segmenteditor.update.CustomDialog
 import org.introskipper.segmenteditor.update.UpdateManager
+import java.io.File
 
 class MainActivity : ComponentActivity() {
     var updateManager: UpdateManager? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        updateManager = UpdateManager(this)
         setContent {
             ReactInMobileTheme {
                 // A surface container using the 'background' color from the theme
@@ -33,13 +35,7 @@ class MainActivity : ComponentActivity() {
     val onRequestInstall = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
-        if (packageManager.canRequestPackageInstalls())
-            updateManager?.onUpdateRequested()
-    }
-
-    override fun onStart() {
-        super.onStart()
-        updateManager = UpdateManager(this)
+        if (packageManager.canRequestPackageInstalls()) updateManager?.onUpdateRequested()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
