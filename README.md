@@ -8,7 +8,8 @@ Manage Jellyfin Media Segment positions the simple way. This tool is in early st
 ## Requirements
 
 - Jellyfin 10.10
-- Jellyfin Plugin [MediaSegments API](https://github.com/intro-skipper/jellyfin-plugin-ms-api)
+- [Intro Skipper](https://github.com/intro-skipper/intro-skipper) for Jellyfin 10.11+
+- [MediaSegments API](https://github.com/intro-skipper/jellyfin-plugin-ms-api) for Jellyfin 10.10
 - Jellyfin Server API Key (created by you)
 
 ## Installation
