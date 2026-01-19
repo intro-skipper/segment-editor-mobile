@@ -86,7 +86,7 @@ fun CustomDialogUI(modifier: Modifier = Modifier, openDialogCustom: MutableState
                 androidx.compose.material3.Text(
                     text = stringResource(R.string.update_heading),
                     textAlign = TextAlign.Center,
-                    color = colorResource( R.color.icon_orange),
+                    color = colorResource(R.color.icon_orange),
                     modifier = Modifier
                         .padding(top = 5.dp)
                         .fillMaxWidth(),
@@ -109,7 +109,7 @@ fun CustomDialogUI(modifier: Modifier = Modifier, openDialogCustom: MutableState
                 Modifier
                     .fillMaxWidth()
                     .padding(top = 10.dp)
-                    .background(MaterialTheme.colorScheme.tertiaryContainer),
+                    .background(colorResource(R.color.icon_orange)),
                 horizontalArrangement = Arrangement.SpaceAround) {
 
                 androidx.compose.material3.TextButton(onClick = {
