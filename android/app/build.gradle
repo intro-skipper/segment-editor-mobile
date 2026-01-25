@@ -120,25 +120,18 @@ node {
 
 tasks.register('runGitClean', Exec) {
     commandLine 'rm', '-r', 'web'
-    // Optional: configure the working directory
     workingDir file('../..')
-    // Optional: standard streams can be inherited for visible output
-    standardOutput = System.out
-    errorOutput = System.err
+    ignoreExitValue = true
 }
 tasks.register('runGitClone', Exec) {
     commandLine 'git', 'clone', 'https://github.com/intro-skipper/segment-editor', 'web'
-    // Optional: configure the working directory
     workingDir file('../..')
-    // Optional: standard streams can be inherited for visible output
     standardOutput = System.out
     errorOutput = System.err
 }
 tasks.register('runGitCloud', Exec) {
     commandLine 'git', 'cherry-pick', 'd6eabe39ae8ad587b2770c9c13e3fe164d044a3e'
-    // Optional: configure the working directory
     workingDir file('../../web')
-    // Optional: standard streams can be inherited for visible output
     standardOutput = System.out
     errorOutput = System.err
 }
