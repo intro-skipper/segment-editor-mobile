@@ -34,8 +34,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import org.introskipper.segmenteditor.MainActivity
 import org.introskipper.segmenteditor.R
-import org.introskipper.segmenteditor.ui.theme.Purple80
-import org.introskipper.segmenteditor.ui.theme.PurpleGrey40
 
 
 @Composable
@@ -119,7 +117,7 @@ fun CustomDialogUI(modifier: Modifier = Modifier, openDialogCustom: MutableState
                     androidx.compose.material3.Text(
                         stringResource(R.string.button_dismiss),
                         fontWeight = FontWeight.Bold,
-                        color = PurpleGrey40,
+                        color = Color(0xFFFFF0B4),
                         modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
                     )
                 }
@@ -130,7 +128,7 @@ fun CustomDialogUI(modifier: Modifier = Modifier, openDialogCustom: MutableState
                     androidx.compose.material3.Text(
                         stringResource(R.string.button_install),
                         fontWeight = FontWeight.ExtraBold,
-                        color = Color.Black,
+                        color = Color.White,
                         modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
                     )
                 }
