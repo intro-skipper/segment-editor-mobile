@@ -1,0 +1,21 @@
+From d6eabe39ae8ad587b2770c9c13e3fe164d044a3e Mon Sep 17 00:00:00 2001
+From: Abandoned Cart <twistedumbrella@gmail.com>
+Date: Mon, 5 Jan 2026 13:46:31 -0500
+Subject: [PATCH] Use android virtual asset path for base
+
+---
+ vite.config.ts | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/vite.config.ts b/vite.config.ts
+index acd9214..3776f94 100644
+--- a/vite.config.ts
++++ b/vite.config.ts
+@@ -7,6 +7,7 @@ import { defineConfig } from 'vite'
+ 
+ // https://vitejs.dev/config/
+ export default defineConfig({
++  base: 'https://appassets.androidplatform.net/assets/dist/',
+   plugins: [
+     devtools(),
+     tanstackRouter({

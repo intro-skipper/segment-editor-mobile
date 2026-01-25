@@ -130,7 +130,7 @@ tasks.register('runGitClone', Exec) {
     errorOutput = System.err
 }
 tasks.register('runGitCloud', Exec) {
-    commandLine 'git', 'cherry-pick', 'd6eabe39ae8ad587b2770c9c13e3fe164d044a3e'
+    commandLine 'git', 'apply', '../android.patch'
     workingDir file('../../web')
     standardOutput = System.out
     errorOutput = System.err
