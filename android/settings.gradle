@@ -10,7 +10,19 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven {
+            // React Native and JSC
+            url "$rootDir/../node_modules/react-native/android"
+        }
+        maven {
+            // Android JSC
+            url "$rootDir/../node_modules/jsc-android/dist"
+        }
     }
 }
 rootProject.name = "SegmentEditor"
 include ':app'
+
+// Include React Native modules
+apply from: file("../node_modules/@react-native/gradle-plugin/settings.gradle.kts")
+includeBuild('../node_modules/@react-native/gradle-plugin')

@@ -6,3 +6,9 @@ xcuserdata/
 keystore.properties
 
 web
+node_modules
+package-lock.json
+*.log
+.gradle
+*.iml
+local.properties
