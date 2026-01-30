@@ -14,3 +14,7 @@ dependencyResolutionManagement {
 }
 rootProject.name = "SegmentEditor"
 include ':app'
+
+// React Native integration
+apply from: file("../node_modules/@react-native/gradle-plugin/settings.gradle")
+includeBuild("../node_modules/@react-native/gradle-plugin")
