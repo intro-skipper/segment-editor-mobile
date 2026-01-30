@@ -4,8 +4,9 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'org.jetbrains.kotlin.plugin.compose'
-    id 'com.facebook.react'
 }
+
+apply from: "../../node_modules/react-native/react.gradle"
 
 android {
     namespace 'org.introskipper.segmenteditor'
