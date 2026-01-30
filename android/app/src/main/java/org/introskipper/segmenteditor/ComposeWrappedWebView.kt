@@ -24,6 +24,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewAssetLoader.AssetsPathHandler
+import org.introskipper.segmenteditor.bridge.JellyfinBridge
 import org.introskipper.segmenteditor.ui.theme.ReactInMobileTheme
 import org.introskipper.segmenteditor.update.CustomDialog
 import org.introskipper.segmenteditor.update.UpdateManager
@@ -69,6 +70,10 @@ fun ComposeWrappedWebView() {
                     settings.mediaPlaybackRequiresUserGesture = false
                     settings.allowFileAccess = false
                     settings.allowContentAccess = false
+                    
+                    // Add JavaScript bridge for Jellyfin API integration
+                    val bridge = JellyfinBridge(context, activity, this)
+                    addJavascriptInterface(bridge, "JellyfinBridge")
                 }
 
                 webChromeClient = object : WebChromeClient() {
