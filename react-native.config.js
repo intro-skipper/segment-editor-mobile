@@ -1,7 +1,10 @@
-react {
-    // Hermes configuration
-    hermesEnabled = true
-    
-    // New Architecture disabled by default
-    enableNewArchitecture = false
-}
+module.exports = {
+    project: {
+        android: {
+            sourceDir: './android',
+        },
+        ios: {
+            sourceDir: './ios',
+        },
+    },
+};
