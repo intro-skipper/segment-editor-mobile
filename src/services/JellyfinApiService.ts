@@ -5,6 +5,7 @@
 
 import axios, {AxiosInstance} from 'axios';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import {MediaItem} from '../types/media';
 
 export enum SegmentType {
   Intro = 'Intro',
@@ -233,6 +234,84 @@ class JellyfinApiService {
         error: error.message || 'Failed to delete segment',
       };
     }
+  }
+
+  /**
+   * Get media items from library
+   */
+  async getMediaItems(
+    parentId?: string,
+    includeItemTypes: string = 'Movie,Episode',
+    recursive: boolean = true,
+    limit: number = 100,
+  ): Promise<ApiResponse<MediaItem[]>> {
+    try {
+      if (!this.axiosInstance) {
+        return {
+          success: false,
+          error: 'API not initialized',
+        };
+      }
+
+      const params: any = {
+        IncludeItemTypes: includeItemTypes,
+        Recursive: recursive,
+        Limit: limit,
+        Fields: 'BasicSyncInfo',
+        SortBy: 'SortName',
+        SortOrder: 'Ascending',
+      };
+
+      if (parentId) {
+        params.ParentId = parentId;
+      }
+
+      const response = await this.axiosInstance.get('/Items', {params});
+      return {
+        success: true,
+        data: response.data.Items || [],
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch media items',
+      };
+    }
+  }
+
+  /**
+   * Get media item by ID
+   */
+  async getMediaItem(itemId: string): Promise<ApiResponse<MediaItem>> {
+    try {
+      if (!this.axiosInstance) {
+        return {
+          success: false,
+          error: 'API not initialized',
+        };
+      }
+
+      const response = await this.axiosInstance.get(`/Items/${itemId}`);
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch media item',
+      };
+    }
+  }
+
+  /**
+   * Get video stream URL for a media item
+   */
+  getVideoUrl(itemId: string): string {
+    if (!this.serverUrl || !this.apiKey) {
+      return '';
+    }
+    return `${this.serverUrl}/Videos/${itemId}/stream?api_key=${this.apiKey}&Static=true`;
   }
 
   /**
