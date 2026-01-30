@@ -44,6 +44,7 @@ function VideoPlayerScreen(): React.JSX.Element {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1.0);
+  const [videoError, setVideoError] = useState<string | null>(null);
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
@@ -52,10 +53,20 @@ function VideoPlayerScreen(): React.JSX.Element {
 
   const onLoad = (data: OnLoadData) => {
     setDuration(data.duration);
+    setVideoError(null);
   };
 
   const onProgress = (data: OnProgressData) => {
     setCurrentTime(data.currentTime);
+  };
+
+  const onError = (error: any) => {
+    console.error('Video player error:', error);
+    setVideoError('Failed to load video. Please check your connection and try again.');
+    Alert.alert(
+      'Video Error',
+      'Failed to load video. Please check your connection and try again.',
+    );
   };
 
   const handlePlayPause = () => {
@@ -116,17 +127,33 @@ function VideoPlayerScreen(): React.JSX.Element {
         </View>
 
         <View style={styles.videoContainer}>
-          <Video
-            ref={videoRef}
-            source={{uri: videoUrl}}
-            style={styles.video}
-            controls={false}
-            paused={paused}
-            onLoad={onLoad}
-            onProgress={onProgress}
-            rate={playbackRate}
-            resizeMode="contain"
-          />
+          {videoError ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>⚠️</Text>
+              <Text style={styles.errorMessage}>{videoError}</Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => {
+                  setVideoError(null);
+                  setPaused(false);
+                }}>
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <Video
+              ref={videoRef}
+              source={{uri: videoUrl}}
+              style={styles.video}
+              controls={false}
+              paused={paused}
+              onLoad={onLoad}
+              onProgress={onProgress}
+              onError={onError}
+              rate={playbackRate}
+              resizeMode="contain"
+            />
+          )}
         </View>
 
         <View
@@ -196,7 +223,7 @@ function VideoPlayerScreen(): React.JSX.Element {
             <View
               style={[
                 styles.progressFill,
-                {width: `${(currentTime / duration) * 100}%`},
+                {width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%'},
               ]}
             />
           </View>
@@ -331,6 +358,34 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     backgroundColor: Colors.primary,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  errorMessage: {
+    color: '#FFF',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 6,
+  },
+  retryButtonText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

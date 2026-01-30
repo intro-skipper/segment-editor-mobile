@@ -306,11 +306,15 @@ class JellyfinApiService {
 
   /**
    * Get video stream URL for a media item
+   * Note: Uses query parameter for API key for compatibility with react-native-video
+   * For enhanced security in production, consider proxy server with header-based auth
    */
   getVideoUrl(itemId: string): string {
     if (!this.serverUrl || !this.apiKey) {
       return '';
     }
+    // Using query parameter for compatibility with react-native-video which doesn't support custom headers
+    // In production, consider using a proxy server that adds the X-Emby-Token header
     return `${this.serverUrl}/Videos/${itemId}/stream?api_key=${this.apiKey}&Static=true`;
   }
 

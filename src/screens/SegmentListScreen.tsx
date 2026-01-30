@@ -45,7 +45,7 @@ function SegmentListScreen(): React.JSX.Element {
 
   useEffect(() => {
     loadSegments();
-  }, []);
+  }, [itemId]);
 
   const loadSegments = async () => {
     setLoading(true);
@@ -235,7 +235,7 @@ function SegmentListScreen(): React.JSX.Element {
           <FlatList
             data={segments}
             renderItem={renderSegment}
-            keyExtractor={(item, index) => `${item.Type}-${index}`}
+            keyExtractor={(item) => `${item.ItemId}-${item.Type}`}
             contentContainerStyle={styles.listContent}
           />
         )}

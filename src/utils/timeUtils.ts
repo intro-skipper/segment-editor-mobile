@@ -47,6 +47,11 @@ export function formatTicks(ticks: number): string {
 export function parseTimeToSeconds(timeStr: string): number {
   const parts = timeStr.split(':').map(p => parseInt(p, 10));
   
+  // Validate all parts are valid numbers
+  if (parts.some(n => isNaN(n) || n < 0)) {
+    return 0;
+  }
+  
   if (parts.length === 2) {
     // MM:SS
     return parts[0] * 60 + parts[1];

@@ -283,9 +283,18 @@ function SegmentEditorScreen(): React.JSX.Element {
                   },
                 ]}>
                 <Text style={styles.timelineText}>
-                  {formatTime(
-                    parseTimeToSeconds(endTime) - parseTimeToSeconds(startTime),
-                  )}
+                  {(() => {
+                    const startSeconds = parseTimeToSeconds(startTime);
+                    const endSeconds = parseTimeToSeconds(endTime);
+                    const duration = endSeconds - startSeconds;
+                    
+                    // Handle invalid durations
+                    if (isNaN(duration) || duration < 0) {
+                      return 'Invalid';
+                    }
+                    
+                    return formatTime(duration);
+                  })()}
                 </Text>
               </View>
             </View>

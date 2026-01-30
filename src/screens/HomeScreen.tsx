@@ -54,8 +54,21 @@ function HomeScreen(): React.JSX.Element {
   };
 
   const handleSaveCredentials = async () => {
+    // Validate server URL format
+    let url = serverUrl.trim();
+    
+    // Check if URL starts with http:// or https://
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      Alert.alert('Error', 'Server URL must start with http:// or https://');
+      return;
+    }
+    
+    // Remove trailing slashes
+    url = url.replace(/\/+$/, '');
+    
     try {
-      await JellyfinApiService.saveCredentials(serverUrl, apiKey);
+      await JellyfinApiService.saveCredentials(url, apiKey);
+      setServerUrl(url);
       Alert.alert('Success', 'Credentials saved successfully');
     } catch (error) {
       Alert.alert('Error', 'Failed to save credentials');
@@ -149,7 +162,10 @@ function HomeScreen(): React.JSX.Element {
 
           {connected && (
             <>
-              <View style={styles.connectedContainer}>
+              <View style={[
+                styles.connectedContainer,
+                {backgroundColor: isDarkMode ? '#1B5E20' : '#E8F5E9'}
+              ]}>
                 <Text style={[styles.connectedText, {color: isDarkMode ? Colors.white : Colors.black}]}>
                   Connected to Jellyfin server
                 </Text>
@@ -219,7 +235,6 @@ const styles = StyleSheet.create({
   connectedContainer: {
     marginTop: 24,
     padding: 16,
-    backgroundColor: '#E8F5E9',
     borderRadius: 8,
   },
   connectedText: {
