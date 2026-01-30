@@ -2,6 +2,7 @@ package org.introskipper.segmenteditor.storage
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
@@ -19,7 +20,13 @@ class SecurePreferences(context: Context) {
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
         )
     } catch (e: Exception) {
-        // Fallback to regular SharedPreferences if encryption fails
+        // Note: This fallback to unencrypted storage is a security trade-off
+        // On some devices, EncryptedSharedPreferences may fail due to:
+        // - KeyStore issues
+        // - Device security settings
+        // - Android version incompatibilities
+        // TODO: Consider notifying the user when encryption fails
+        Log.e("SecurePreferences", "Encryption failed, falling back to unencrypted storage", e)
         context.getSharedPreferences("jellyfin_prefs", Context.MODE_PRIVATE)
     }
     

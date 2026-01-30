@@ -2,6 +2,7 @@ package org.introskipper.segmenteditor.api
 
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import org.introskipper.segmenteditor.BuildConfig
 import org.introskipper.segmenteditor.model.Segment
 import org.introskipper.segmenteditor.model.SegmentCreateRequest
 import retrofit2.Response
@@ -17,7 +18,12 @@ class JellyfinApiService(
     
     init {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            // Only log body in debug builds for security
+            level = if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BODY
+            } else {
+                HttpLoggingInterceptor.Level.BASIC
+            }
         }
         
         val okHttpClient = OkHttpClient.Builder()

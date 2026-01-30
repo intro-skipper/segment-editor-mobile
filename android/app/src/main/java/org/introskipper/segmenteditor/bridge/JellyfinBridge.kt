@@ -1,6 +1,7 @@
 package org.introskipper.segmenteditor.bridge
 
 import android.content.Context
+import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.lifecycle.lifecycleScope
@@ -36,6 +37,8 @@ class JellyfinBridge(
         return preferences.getServerUrl() ?: ""
     }
     
+    // Note: Exposing API key to JavaScript is a security concern
+    // This should only be used with trusted web content
     @JavascriptInterface
     fun getApiKey(): String {
         return preferences.getApiKey() ?: ""
@@ -46,11 +49,16 @@ class JellyfinBridge(
         preferences.saveServerUrl(serverUrl)
         preferences.saveApiKey(apiKey)
         apiService = JellyfinApiService(serverUrl, apiKey)
-        notifyWebView("onCredentialsSaved", "{\"success\": true}")
+        notifyWebView("onCredentialsSaved", createSuccessResponse())
     }
     
     @JavascriptInterface
     fun testConnection(callbackId: String) {
+        if (!isValidCallbackId(callbackId)) {
+            Log.e("JellyfinBridge", "Invalid callback ID: $callbackId")
+            return
+        }
+        
         activity.lifecycleScope.launch {
             try {
                 val response = withContext(Dispatchers.IO) {
@@ -58,21 +66,25 @@ class JellyfinBridge(
                 }
                 
                 val result = if (response?.isSuccessful == true) {
-                    "{\"success\": true, \"data\": ${gson.toJson(response.body())}}"
+                    createSuccessResponse(response.body())
                 } else {
-                    "{\"success\": false, \"error\": \"Connection failed: ${response?.code()}\"}"
+                    createErrorResponse("Connection failed: ${response?.code()}")
                 }
                 
                 notifyWebView(callbackId, result)
             } catch (e: Exception) {
-                val error = "{\"success\": false, \"error\": \"${e.message}\"}"
-                notifyWebView(callbackId, error)
+                notifyWebView(callbackId, createErrorResponse(e.message ?: "Unknown error"))
             }
         }
     }
     
     @JavascriptInterface
     fun getSegments(itemId: String, callbackId: String) {
+        if (!isValidCallbackId(callbackId)) {
+            Log.e("JellyfinBridge", "Invalid callback ID: $callbackId")
+            return
+        }
+        
         activity.lifecycleScope.launch {
             try {
                 val response = withContext(Dispatchers.IO) {
@@ -80,21 +92,25 @@ class JellyfinBridge(
                 }
                 
                 val result = if (response?.isSuccessful == true) {
-                    "{\"success\": true, \"data\": ${gson.toJson(response.body())}}"
+                    createSuccessResponse(response.body())
                 } else {
-                    "{\"success\": false, \"error\": \"Failed to get segments: ${response?.code()}\"}"
+                    createErrorResponse("Failed to get segments: ${response?.code()}")
                 }
                 
                 notifyWebView(callbackId, result)
             } catch (e: Exception) {
-                val error = "{\"success\": false, \"error\": \"${e.message}\"}"
-                notifyWebView(callbackId, error)
+                notifyWebView(callbackId, createErrorResponse(e.message ?: "Unknown error"))
             }
         }
     }
     
     @JavascriptInterface
     fun createSegment(segmentJson: String, callbackId: String) {
+        if (!isValidCallbackId(callbackId)) {
+            Log.e("JellyfinBridge", "Invalid callback ID: $callbackId")
+            return
+        }
+        
         activity.lifecycleScope.launch {
             try {
                 val segment = gson.fromJson(segmentJson, SegmentCreateRequest::class.java)
@@ -103,21 +119,25 @@ class JellyfinBridge(
                 }
                 
                 val result = if (response?.isSuccessful == true) {
-                    "{\"success\": true, \"data\": ${gson.toJson(response.body())}}"
+                    createSuccessResponse(response.body())
                 } else {
-                    "{\"success\": false, \"error\": \"Failed to create segment: ${response?.code()}\"}"
+                    createErrorResponse("Failed to create segment: ${response?.code()}")
                 }
                 
                 notifyWebView(callbackId, result)
             } catch (e: Exception) {
-                val error = "{\"success\": false, \"error\": \"${e.message}\"}"
-                notifyWebView(callbackId, error)
+                notifyWebView(callbackId, createErrorResponse(e.message ?: "Unknown error"))
             }
         }
     }
     
     @JavascriptInterface
     fun updateSegment(itemId: String, segmentType: String, segmentJson: String, callbackId: String) {
+        if (!isValidCallbackId(callbackId)) {
+            Log.e("JellyfinBridge", "Invalid callback ID: $callbackId")
+            return
+        }
+        
         activity.lifecycleScope.launch {
             try {
                 val segment = gson.fromJson(segmentJson, SegmentCreateRequest::class.java)
@@ -126,21 +146,25 @@ class JellyfinBridge(
                 }
                 
                 val result = if (response?.isSuccessful == true) {
-                    "{\"success\": true, \"data\": ${gson.toJson(response.body())}}"
+                    createSuccessResponse(response.body())
                 } else {
-                    "{\"success\": false, \"error\": \"Failed to update segment: ${response?.code()}\"}"
+                    createErrorResponse("Failed to update segment: ${response?.code()}")
                 }
                 
                 notifyWebView(callbackId, result)
             } catch (e: Exception) {
-                val error = "{\"success\": false, \"error\": \"${e.message}\"}"
-                notifyWebView(callbackId, error)
+                notifyWebView(callbackId, createErrorResponse(e.message ?: "Unknown error"))
             }
         }
     }
     
     @JavascriptInterface
     fun deleteSegment(itemId: String, segmentType: String, callbackId: String) {
+        if (!isValidCallbackId(callbackId)) {
+            Log.e("JellyfinBridge", "Invalid callback ID: $callbackId")
+            return
+        }
+        
         activity.lifecycleScope.launch {
             try {
                 val response = withContext(Dispatchers.IO) {
@@ -148,15 +172,14 @@ class JellyfinBridge(
                 }
                 
                 val result = if (response?.isSuccessful == true) {
-                    "{\"success\": true}"
+                    createSuccessResponse()
                 } else {
-                    "{\"success\": false, \"error\": \"Failed to delete segment: ${response?.code()}\"}"
+                    createErrorResponse("Failed to delete segment: ${response?.code()}")
                 }
                 
                 notifyWebView(callbackId, result)
             } catch (e: Exception) {
-                val error = "{\"success\": false, \"error\": \"${e.message}\"}"
-                notifyWebView(callbackId, error)
+                notifyWebView(callbackId, createErrorResponse(e.message ?: "Unknown error"))
             }
         }
     }
@@ -166,15 +189,45 @@ class JellyfinBridge(
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
         val clip = android.content.ClipData.newPlainText("timestamp", text)
         clipboard.setPrimaryClip(clip)
-        notifyWebView("onClipboardCopy", "{\"success\": true}")
+        notifyWebView("onClipboardCopy", createSuccessResponse())
     }
     
     @JavascriptInterface
     fun openVideoPlayer(videoUrl: String, itemId: String) {
+        if (videoUrl.isBlank()) {
+            Log.e("JellyfinBridge", "Video URL is empty")
+            return
+        }
+        
         val intent = android.content.Intent(context, org.introskipper.segmenteditor.player.VideoPlayerActivity::class.java)
         intent.putExtra("VIDEO_URL", videoUrl)
         intent.putExtra("ITEM_ID", itemId)
         activity.startActivity(intent)
+    }
+    
+    /**
+     * Validate callback ID to prevent JavaScript injection
+     */
+    private fun isValidCallbackId(callbackId: String): Boolean {
+        return callbackId.matches(Regex("^[a-zA-Z0-9_]+$"))
+    }
+    
+    /**
+     * Create a success response with optional data
+     */
+    private fun createSuccessResponse(data: Any? = null): String {
+        return if (data != null) {
+            gson.toJson(mapOf("success" to true, "data" to data))
+        } else {
+            gson.toJson(mapOf("success" to true))
+        }
+    }
+    
+    /**
+     * Create an error response with proper JSON escaping
+     */
+    private fun createErrorResponse(error: String): String {
+        return gson.toJson(mapOf("success" to false, "error" to error))
     }
     
     private fun notifyWebView(callback: String, data: String) {

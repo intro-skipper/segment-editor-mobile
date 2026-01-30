@@ -4,13 +4,13 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -30,12 +30,31 @@ class VideoPlayerActivity : ComponentActivity() {
         val videoUrl = intent.getStringExtra("VIDEO_URL") ?: ""
         val itemId = intent.getStringExtra("ITEM_ID") ?: ""
         
+        // Validate URL
+        if (videoUrl.isBlank()) {
+            Toast.makeText(this, "Invalid video URL", Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
+        
+        // Initialize player
+        player = ExoPlayer.Builder(this).build().apply {
+            try {
+                setMediaItem(MediaItem.fromUri(videoUrl))
+                prepare()
+                playWhenReady = true
+            } catch (e: Exception) {
+                Log.e("VideoPlayerActivity", "Failed to load video", e)
+                Toast.makeText(this@VideoPlayerActivity, "Failed to load video: ${e.message}", Toast.LENGTH_LONG).show()
+                finish()
+            }
+        }
+        
         setContent {
             ReactInMobileTheme {
                 VideoPlayerScreen(
-                    videoUrl = videoUrl,
-                    itemId = itemId,
-                    onPlayerCreated = { player = it }
+                    player = player,
+                    itemId = itemId
                 )
             }
         }
@@ -44,44 +63,43 @@ class VideoPlayerActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         player?.release()
+        player = null
+    }
+    
+    override fun onPause() {
+        super.onPause()
+        player?.pause()
     }
 }
 
 @Composable
 fun VideoPlayerScreen(
-    videoUrl: String,
-    itemId: String,
-    onPlayerCreated: (ExoPlayer) -> Unit
+    player: ExoPlayer?,
+    itemId: String
 ) {
     val context = LocalContext.current
     var currentPosition by remember { mutableStateOf(0L) }
     var isPlaying by remember { mutableStateOf(false) }
     
-    val player = remember {
-        ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(videoUrl))
-            prepare()
-            playWhenReady = true
-            onPlayerCreated(this)
-            
-            addListener(object : Player.Listener {
+    // Update position every 500ms (more efficient than 100ms)
+    LaunchedEffect(player) {
+        if (player != null) {
+            player.addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(playing: Boolean) {
                     isPlaying = playing
                 }
             })
+            
+            while (true) {
+                currentPosition = player.currentPosition
+                kotlinx.coroutines.delay(500)
+            }
         }
     }
     
-    DisposableEffect(Unit) {
+    DisposableEffect(player) {
         onDispose {
-            player.release()
-        }
-    }
-    
-    LaunchedEffect(Unit) {
-        while (true) {
-            currentPosition = player.currentPosition
-            kotlinx.coroutines.delay(100)
+            // Player is released by Activity
         }
     }
     
@@ -89,17 +107,27 @@ fun VideoPlayerScreen(
         modifier = Modifier.fillMaxSize()
     ) {
         // Video player
-        AndroidView(
-            factory = { ctx ->
-                PlayerView(ctx).apply {
-                    this.player = player
-                    useController = true
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-        )
+        if (player != null) {
+            AndroidView(
+                factory = { ctx ->
+                    PlayerView(ctx).apply {
+                        this.player = player
+                        useController = true
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                Text("Player not initialized")
+            }
+        }
         
         // Controls and timestamp display
         Surface(
@@ -153,7 +181,7 @@ fun VideoPlayerScreen(
                     // Seek backward
                     Button(
                         onClick = {
-                            player.seekTo(maxOf(0, player.currentPosition - 10000))
+                            player?.seekTo(maxOf(0, player.currentPosition - 10000))
                         },
                         modifier = Modifier.weight(1f)
                     ) {
@@ -163,7 +191,7 @@ fun VideoPlayerScreen(
                     // Play/Pause
                     Button(
                         onClick = {
-                            if (isPlaying) player.pause() else player.play()
+                            if (isPlaying) player?.pause() else player?.play()
                         },
                         modifier = Modifier.weight(1f)
                     ) {
@@ -173,7 +201,7 @@ fun VideoPlayerScreen(
                     // Seek forward
                     Button(
                         onClick = {
-                            player.seekTo(player.currentPosition + 10000)
+                            player?.seekTo(player.currentPosition + 10000)
                         },
                         modifier = Modifier.weight(1f)
                     ) {
