@@ -23,18 +23,30 @@ Manage Jellyfin Media Segment positions the simple way. This tool is in early st
 
 ## Prerequisites
 
-- Xcode 14.3 or higher for iOS
-
-## Running it on iOS
-
-1. Run `cd web` and run `npm install` to install the dependencies
-2. Open up `ios/Host.xcproj` in Xcode
-3. Run it in a simulator or on a physical device
+- Node.js 20+ (for React Native development)
+- Android Studio and Android SDK for Android development
 
 ## Running on Android
 
-1. Run `cd web` and run `npm install` to install the dependencies
+1. Install dependencies: `npm install`
 2. Open the `android` directory in Android Studio
 3. Build and run the app in an emulator or on a physical device
 
-*Template provided by https://github.com/getditto/react-in-mobile*
+Alternatively, you can build from command line:
+```bash
+npm install
+cd android
+./gradlew assembleDebug
+```
+
+Or use React Native CLI:
+```bash
+npm install
+npm run android
+```
+
+## Architecture
+
+This is a React Native mobile application that provides a native interface for the Jellyfin Segment Editor. The Android version uses Jetpack Compose to integrate with React Native components.
+
+**Note:** iOS support is not currently implemented - only Android is supported.

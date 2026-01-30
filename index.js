@@ -1,3 +1,4 @@
+import {AppRegistry} from 'react-native';
 import React from 'react';
 import {
   SafeAreaView,
@@ -39,5 +40,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+
+AppRegistry.registerComponent('segment-editor-mobile', () => App);
 
 export default App;
