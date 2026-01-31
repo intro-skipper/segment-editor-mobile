@@ -100,7 +100,8 @@ class HomeViewModel @Inject constructor(
                     return@launch
                 }
 
-                val limit = if (_showAllItems.value) null else pageSize
+                // Use a large limit for "show all", otherwise use pageSize
+                val limit = if (_showAllItems.value) 10000 else pageSize
                 val startIndex = if (_showAllItems.value) 0 else (currentPage - 1) * pageSize
 
                 val result = jellyfinRepository.getMediaItems(
@@ -138,3 +139,9 @@ sealed class HomeUiState {
     data class Success(val items: List<JellyfinMediaItem>, val totalItems: Int) : HomeUiState()
     data class Error(val message: String) : HomeUiState()
 }
+
+// Keep for backward compatibility with CollectionChip and CollectionFilterSheet
+data class JellyfinCollection(
+    val id: String,
+    val name: String
+)
