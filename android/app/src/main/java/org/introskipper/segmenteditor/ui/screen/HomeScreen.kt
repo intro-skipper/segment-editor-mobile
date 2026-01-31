@@ -3,6 +3,7 @@ package org.introskipper.segmenteditor.ui.screen
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +21,7 @@ import org.introskipper.segmenteditor.ui.viewmodel.HomeViewModel
 @Composable
 fun HomeScreen(
     onMediaItemClick: (String) -> Unit,
+    onSettingsClick: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -55,6 +57,12 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.Default.FilterList,
                             contentDescription = "Filter collections"
+                        )
+                    }
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings"
                         )
                     }
                 }
