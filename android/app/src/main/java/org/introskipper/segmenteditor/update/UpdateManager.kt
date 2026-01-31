@@ -12,7 +12,6 @@ import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.introskipper.segmenteditor.BuildConfig
 import org.introskipper.segmenteditor.MainActivity
 import org.introskipper.segmenteditor.R
