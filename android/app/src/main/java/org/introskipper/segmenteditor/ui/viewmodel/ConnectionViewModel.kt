@@ -3,6 +3,8 @@ package org.introskipper.segmenteditor.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -160,26 +162,29 @@ class ConnectionViewModel(
             "127.0.0.1:8096"
         )
         
-        // Try to discover servers on common local addresses
-        for (address in commonAddresses) {
-            try {
-                val url = normalizeServerUrl(address)
-                apiService.updateBaseUrl(url)
-                val result = authRepository.getPublicServerInfoResult()
-                result.getOrNull()?.let { info ->
-                    servers.add(
+        // Try to discover servers in parallel for better performance
+        val results = commonAddresses.map { address ->
+            viewModelScope.async {
+                try {
+                    val url = normalizeServerUrl(address)
+                    apiService.updateBaseUrl(url)
+                    val result = authRepository.getPublicServerInfoResult()
+                    result.getOrNull()?.let { info ->
                         DiscoveredServer(
                             name = info.serverName,
                             url = url,
                             version = info.version,
                             id = info.id
                         )
-                    )
+                    }
+                } catch (e: Exception) {
+                    null
                 }
-            } catch (e: Exception) {
-                // Ignore errors for individual servers
             }
-        }
+        }.awaitAll()
+        
+        // Filter out nulls and add to list
+        servers.addAll(results.filterNotNull())
         
         return servers
     }

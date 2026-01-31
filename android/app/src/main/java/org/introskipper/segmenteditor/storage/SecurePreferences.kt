@@ -61,6 +61,14 @@ class SecurePreferences(context: Context) {
         return sharedPreferences.getString(KEY_USERNAME, null)
     }
     
+    fun saveDeviceId(deviceId: String) {
+        sharedPreferences.edit().putString(KEY_DEVICE_ID, deviceId).apply()
+    }
+    
+    fun getDeviceId(): String? {
+        return sharedPreferences.getString(KEY_DEVICE_ID, null)
+    }
+    
     // ========== Playback Settings ==========
     
     fun setAutoPlayNextEpisode(enabled: Boolean) {
@@ -302,6 +310,7 @@ class SecurePreferences(context: Context) {
         private const val KEY_API_KEY = "api_key"
         private const val KEY_USER_ID = "user_id"
         private const val KEY_USERNAME = "username"
+        private const val KEY_DEVICE_ID = "device_id"
         
         // Playback keys
         private const val KEY_AUTO_PLAY_NEXT = "auto_play_next"
