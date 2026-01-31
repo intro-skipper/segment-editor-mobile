@@ -67,6 +67,14 @@ fun SegmentEditorDialog(
                 duration = SnackbarDuration.Short
             )
             onSaved()
+            // Dismiss will be called separately to allow the snackbar to show briefly
+        }
+    }
+    
+    // Auto-dismiss after success
+    LaunchedEffect(state.saveSuccess) {
+        if (state.saveSuccess) {
+            kotlinx.coroutines.delay(500) // Brief delay to show snackbar
             onDismiss()
         }
     }

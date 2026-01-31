@@ -167,14 +167,15 @@ class SegmentEditorViewModel @Inject constructor(
      * Saves the segment (create or update)
      */
     fun saveSegment() {
-        val current = _state.value
-        
         // Re-validate before saving
         validateCurrentState()
         
-        if (current.validationError != null) {
+        // Check validation after updating state
+        if (_state.value.validationError != null) {
             return
         }
+        
+        val current = _state.value
         
         viewModelScope.launch {
             _state.update { it.copy(isSaving = true, saveError = null, saveSuccess = false) }
