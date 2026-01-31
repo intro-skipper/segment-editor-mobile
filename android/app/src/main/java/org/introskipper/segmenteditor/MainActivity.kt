@@ -1,12 +1,30 @@
 package org.introskipper.segmenteditor
 
 import android.os.Bundle
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
+import org.introskipper.segmenteditor.update.UpdateManager
 
 class MainActivity : ReactActivity() {
+    internal var updateManager: UpdateManager? = null
+    internal lateinit var onRequestInstall: ActivityResultLauncher<android.content.Intent>
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // Initialize the activity result launcher
+        onRequestInstall = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            if (packageManager.canRequestPackageInstalls()) updateManager?.onUpdateRequested()
+        }
+        
+        // Initialize update manager
+        updateManager = UpdateManager(this)
+    }
+
     /**
      * Returns the name of the main component registered from JavaScript. This is used to schedule
      * rendering of the component.
