@@ -55,8 +55,12 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         cache: gradle
+
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
+
+    - name: Create react native bundle
+      run: react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
 
     - name: Retrieve commit identification
       run: |
