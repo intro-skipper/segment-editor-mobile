@@ -14,6 +14,10 @@ import com.facebook.soloader.SoLoader
 
 class MainApplication : Application(), ReactApplication {
 
+    @Deprecated(
+        "You should not use ReactNativeHost directly in the New Architecture. Use ReactHost instead.",
+        replaceWith = ReplaceWith("reactHost")
+    )
     override val reactNativeHost: ReactNativeHost =
         object : DefaultReactNativeHost(this) {
             override fun getPackages(): List<ReactPackage> =
