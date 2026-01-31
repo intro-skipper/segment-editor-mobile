@@ -37,8 +37,13 @@ This mobile app uses **React Native** for cross-platform development with native
 ### Prerequisites
 
 - Node.js 20 (see `.nvmrc`)
-- Android Studio for Android development
-- JDK 17
+- **For Android development:**
+  - Android Studio
+  - JDK 17
+- **For iOS development:**
+  - Xcode 14 or later
+  - CocoaPods (`sudo gem install cocoapods`)
+  - macOS (required for iOS development)
 
 ### Running on Android
 
@@ -59,14 +64,48 @@ This mobile app uses **React Native** for cross-platform development with native
 
    Or open the `android` directory in Android Studio and build/run from there.
 
+### Running on iOS
+
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+2. Install CocoaPods dependencies:
+   ```bash
+   cd ios
+   pod install
+   cd ..
+   ```
+
+3. Start Metro bundler:
+   ```bash
+   npm start
+   ```
+
+4. In another terminal, run the iOS app:
+   ```bash
+   npm run ios
+   ```
+
+   Or open `ios/SegmentEditor.xcworkspace` in Xcode and build/run from there.
+
+   **Note:** iOS development requires macOS and Xcode.
+
 ### Building for Production
 
+**Android:**
 ```bash
 cd android
 ./gradlew assembleRelease
 ```
 
 The APK will be in `android/app/build/outputs/apk/release/`
+
+**iOS:**
+1. Open `ios/SegmentEditor.xcworkspace` in Xcode
+2. Select "Product" → "Archive"
+3. Follow Xcode's instructions to distribute the app
 
 ## Migration from WebView
 
@@ -87,6 +126,10 @@ This app was recently migrated from a WebView-based architecture to pure React N
 segment-editor-mobile/
 ├── android/                 # Android native code
 │   └── app/src/main/java/...
+├── ios/                     # iOS native code
+│   ├── SegmentEditor/       # iOS app files
+│   ├── SegmentEditor.xcodeproj/  # Xcode project
+│   └── Podfile              # CocoaPods dependencies
 ├── src/                     # React Native source code
 │   ├── App.tsx             # Main app component
 │   ├── services/           # API services
@@ -103,7 +146,7 @@ segment-editor-mobile/
 Contributions are welcome! Please ensure:
 - Code follows TypeScript best practices
 - Components are properly typed
-- UI is tested on Android
+- UI is tested on both Android and iOS platforms
 
 ## License
 
