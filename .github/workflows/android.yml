@@ -73,8 +73,7 @@ jobs:
         build-root-directory: android
         # Specifies arguments for Gradle execution
         arguments: |
-          --configure-on-demand
-          assembleRelease -x bundleReleaseJsAndAssets
+          assembleRelease
         # Gradle version to use for execution:
         #   wrapper (default), current, rc, nightly, release-nightly, or
         #   versions like 6.6 (see https://services.gradle.org/versions/all)
