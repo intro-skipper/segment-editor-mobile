@@ -120,6 +120,11 @@ class JellyfinApiService {
         return api!!.getPublicSystemInfo()
     }
     
+    suspend fun getUsers(): Response<List<User>> {
+        ensureInitialized()
+        return api!!.getUsers(getApiKey())
+    }
+    
     suspend fun getUserById(userId: String): Response<User> {
         ensureInitialized()
         return api!!.getUserById(userId, getApiKey())
