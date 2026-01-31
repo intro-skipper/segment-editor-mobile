@@ -9,24 +9,46 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import org.introskipper.segmenteditor.api.JellyfinApiService
+import org.introskipper.segmenteditor.storage.SecurePreferences
+import org.introskipper.segmenteditor.ui.navigation.AppNavigation
+import org.introskipper.segmenteditor.ui.navigation.Screen
 import org.introskipper.segmenteditor.ui.theme.ReactInMobileTheme
-import org.introskipper.segmenteditor.update.CustomDialog
 import org.introskipper.segmenteditor.update.UpdateManager
-import java.io.File
 
 class MainActivity : ComponentActivity() {
     var updateManager: UpdateManager? = null
+    private lateinit var securePreferences: SecurePreferences
+    private lateinit var apiService: JellyfinApiService
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         updateManager = UpdateManager(this)
+        
+        // Initialize secure preferences
+        securePreferences = SecurePreferences(this)
+        
+        // Initialize API service
+        apiService = JellyfinApiService(securePreferences)
+        
+        // Determine start destination based on whether user is already configured
+        val startDestination = if (securePreferences.isConfigured()) {
+            Screen.Main.route
+        } else {
+            Screen.ConnectionWizard.route
+        }
+        
         setContent {
             ReactInMobileTheme {
-                // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    ComposeWrappedWebView()
+                    AppNavigation(
+                        startDestination = startDestination,
+                        securePreferences = securePreferences,
+                        apiService = apiService
+                    )
                 }
             }
         }
