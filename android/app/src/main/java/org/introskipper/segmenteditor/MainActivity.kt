@@ -11,16 +11,15 @@ import org.introskipper.segmenteditor.update.UpdateManager
 
 class MainActivity : ReactActivity() {
     internal var updateManager: UpdateManager? = null
-    internal lateinit var onRequestInstall: ActivityResultLauncher<android.content.Intent>
+    internal val onRequestInstall = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (packageManager.canRequestPackageInstalls()) updateManager?.onUpdateRequested()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Initialize the activity result launcher
-        onRequestInstall = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            if (packageManager.canRequestPackageInstalls()) updateManager?.onUpdateRequested()
-        }
-        
+
         // Initialize update manager
         updateManager = UpdateManager(this)
     }
