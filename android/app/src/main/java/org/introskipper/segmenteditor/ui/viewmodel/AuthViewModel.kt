@@ -80,10 +80,13 @@ class AuthViewModel(
                     onSuccess = { isValid ->
                         if (isValid) {
                             // Get the current user information
+                            // Note: API keys can access multiple users. We use the first user,
+                            // which is typically the API key owner or the primary accessible user.
+                            // If specific user selection is needed, this should be enhanced.
                             authRepository.getUsersResult().fold(
                                 onSuccess = { users ->
                                     if (users.isNotEmpty()) {
-                                        // Use the first user (typically the API key owner)
+                                        // Use the first user (typically the API key owner or primary user)
                                         val user = users.first()
                                         securePreferences.saveUserId(user.id)
                                         securePreferences.saveUsername(user.name)
