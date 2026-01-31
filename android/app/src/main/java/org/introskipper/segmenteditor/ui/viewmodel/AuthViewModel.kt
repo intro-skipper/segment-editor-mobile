@@ -198,8 +198,15 @@ class AuthViewModel(
     }
     
     private fun getDeviceId(): String {
-        // Generate or retrieve a persistent device ID
-        return UUID.randomUUID().toString()
+        // Get or generate a persistent device ID
+        val savedDeviceId = securePreferences.getDeviceId()
+        if (!savedDeviceId.isNullOrBlank()) {
+            return savedDeviceId
+        }
+        
+        val newDeviceId = UUID.randomUUID().toString()
+        securePreferences.saveDeviceId(newDeviceId)
+        return newDeviceId
     }
     
     private fun getDeviceName(): String {
