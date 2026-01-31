@@ -17,6 +17,7 @@ import org.introskipper.segmenteditor.ui.navigation.AppNavigation
 import org.introskipper.segmenteditor.ui.navigation.Screen
 import org.introskipper.segmenteditor.ui.state.AppTheme
 import org.introskipper.segmenteditor.ui.theme.ReactInMobileTheme
+import org.introskipper.segmenteditor.update.CustomDialog
 import org.introskipper.segmenteditor.update.UpdateManager
 import javax.inject.Inject
 
@@ -43,6 +44,7 @@ class MainActivity : ComponentActivity() {
         
         setContent {
             var currentTheme by remember { mutableStateOf(securePreferences.getTheme()) }
+            val openDialogCustom = remember { mutableStateOf(false) }
             
             ReactInMobileTheme(appTheme = currentTheme) {
                 Surface(
@@ -56,6 +58,16 @@ class MainActivity : ComponentActivity() {
                         onThemeChanged = { theme -> currentTheme = theme }
                     )
                 }
+            }
+
+            updateManager?.setUpdateListener(object : UpdateManager.UpdateListener {
+                override fun onUpdateFound() {
+                    openDialogCustom.value = true
+                }
+            })
+
+            if (openDialogCustom.value) {
+                CustomDialog(openDialogCustom = openDialogCustom)
             }
         }
     }

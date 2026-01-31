@@ -134,6 +134,17 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            // Connection Section
+            item {
+                SettingsSection(title = "Connection") {
+                    ClickableSettingItem(
+                        title = "Change Server",
+                        subtitle = "Connect to a different Jellyfin server",
+                        onClick = { showChangeServerDialog = true }
+                    )
+                }
+            }
             
             // About Section
             item {
@@ -148,17 +159,6 @@ fun SettingsScreen(
                         title = "GitHub Repository",
                         subtitle = "View source code and contribute",
                         onClick = { showAboutDialog = true }
-                    )
-                }
-            }
-            
-            // Connection Section
-            item {
-                SettingsSection(title = "Connection") {
-                    ClickableSettingItem(
-                        title = "Change Server",
-                        subtitle = "Connect to a different Jellyfin server",
-                        onClick = { showChangeServerDialog = true }
                     )
                 }
             }
