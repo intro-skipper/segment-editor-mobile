@@ -2,7 +2,7 @@ package org.introskipper.segmenteditor.ui.screen
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,16 +20,20 @@ import org.introskipper.segmenteditor.ui.viewmodel.HomeViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    libraryId: String,
     onMediaItemClick: (String) -> Unit,
+    onNavigateBack: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
-    val selectedCollections by viewModel.selectedCollections.collectAsState()
-    val availableCollections by viewModel.availableCollections.collectAsState()
-
-    var showFilterSheet by remember { mutableStateOf(false) }
+    val showAllItems by viewModel.showAllItems.collectAsState()
+    
+    // Load items for the selected library
+    LaunchedEffect(libraryId) {
+        viewModel.setLibraryId(libraryId)
+    }
 
     // Smart navigation based on media type
     val navigateToMedia: (JellyfinMediaItem) -> Unit = { item ->
@@ -44,21 +48,16 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Media Library") },
-                actions = {
-                    Badge(
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        if (selectedCollections.isNotEmpty()) {
-                            Text("${selectedCollections.size}")
-                        }
-                    }
-                    IconButton(onClick = { showFilterSheet = true }) {
+                title = { Text("TV Shows") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
                         Icon(
-                            imageVector = Icons.Default.FilterList,
-                            contentDescription = "Filter collections"
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
                         )
                     }
+                },
+                actions = {
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             imageVector = Icons.Default.Settings,
@@ -114,15 +113,38 @@ fun HomeScreen(
                             modifier = Modifier.weight(1f)
                         )
 
-                        PaginationControls(
-                            currentPage = viewModel.currentPage,
-                            totalPages = viewModel.totalPages,
-                            onPreviousPage = viewModel::previousPage,
-                            onNextPage = viewModel::nextPage,
+                        // Pagination controls - show page navigation or "Show All" option
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 8.dp)
-                        )
+                                .padding(vertical = 8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            if (showAllItems) {
+                                Text(
+                                    text = "Showing all ${state.totalItems} items",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                TextButton(onClick = { viewModel.toggleShowAllItems() }) {
+                                    Text("Show with pagination")
+                                }
+                            } else {
+                                PaginationControls(
+                                    currentPage = viewModel.currentPage,
+                                    totalPages = viewModel.totalPages,
+                                    onPreviousPage = viewModel::previousPage,
+                                    onNextPage = viewModel::nextPage,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                if (viewModel.totalPages > 1) {
+                                    TextButton(onClick = { viewModel.toggleShowAllItems() }) {
+                                        Text("Show all items")
+                                    }
+                                }
+                            }
+                        }
                     }
                     is HomeUiState.Error -> {
                         Box(
@@ -147,15 +169,5 @@ fun HomeScreen(
                 }
             }
         }
-    }
-
-    if (showFilterSheet) {
-        CollectionFilterSheet(
-            collections = availableCollections,
-            selectedCollections = selectedCollections,
-            onToggleCollection = viewModel::toggleCollection,
-            onClearFilter = viewModel::clearCollectionFilter,
-            onDismiss = { showFilterSheet = false }
-        )
     }
 }

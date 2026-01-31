@@ -4,7 +4,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import org.introskipper.segmenteditor.ui.viewmodel.JellyfinCollection
+
+// Data class for collection chip
+data class JellyfinCollection(
+    val id: String,
+    val name: String
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
