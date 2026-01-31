@@ -146,7 +146,13 @@ fun AppNavigation(
         composable(Screen.Settings.route) {
             SettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onThemeChanged = onThemeChanged
+                onThemeChanged = onThemeChanged,
+                onRestartConnection = {
+                    // Clear all back stack and navigate to connection wizard
+                    navController.navigate(Screen.ConnectionWizard.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
     }
