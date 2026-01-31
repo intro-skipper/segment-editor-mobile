@@ -1,13 +1,8 @@
 package org.introskipper.segmenteditor.ui.navigation
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -80,7 +75,16 @@ fun AppNavigation(
         }
         
         composable(Screen.Main.route) {
-            MainScreen()
+            // Main screen displays the library selection (HomeScreen)
+            HomeScreen(
+                onMediaItemClick = { route ->
+                    // Route can be either "itemId" or "series/itemId", "album/itemId", "artist/itemId"
+                    navController.navigate(route)
+                },
+                onSettingsClick = {
+                    navController.navigate(Screen.Settings.route)
+                }
+            )
         }
         
         composable(Screen.Home.route) {
@@ -144,18 +148,6 @@ fun AppNavigation(
                 onNavigateBack = { navController.popBackStack() },
                 onThemeChanged = onThemeChanged
             )
-        }
-    }
-}
-
-@Composable
-fun MainScreen() {
-    androidx.compose.material3.Surface {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            androidx.compose.material3.Text("Main App Screen - Coming Soon")
         }
     }
 }
