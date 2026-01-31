@@ -87,7 +87,7 @@ When clicking a Series, the app navigates to SeriesScreen which displays:
 - Pull-to-refresh support
 - Season sorting (specials at end)
 - Episode cards with thumbnails
-- Segment count indicators
+- Async segment count loading (in progress)
 
 ### 3. Episode Selection
 

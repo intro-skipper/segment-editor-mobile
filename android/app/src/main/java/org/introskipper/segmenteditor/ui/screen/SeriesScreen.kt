@@ -92,12 +92,20 @@ fun SeriesScreen(
                         state.episodesBySeason.keys.sorted()
                     }
                     
-                    // Get episodes for selected season
-                    val selectedSeasonNumber = sortedSeasons.getOrNull(selectedSeasonIndex) ?: 1
-                    val selectedEpisodes = state.episodesBySeason[selectedSeasonNumber] ?: emptyList()
+                    // Get episodes for selected season - handle empty case
+                    val selectedSeasonNumber = if (sortedSeasons.isEmpty()) {
+                        null
+                    } else {
+                        sortedSeasons.getOrNull(selectedSeasonIndex) ?: sortedSeasons.first()
+                    }
+                    val selectedEpisodes = selectedSeasonNumber?.let { 
+                        state.episodesBySeason[it] 
+                    } ?: emptyList()
                     
                     Column(
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp)
                     ) {
                         // Series header
                         val series = state.series
@@ -159,7 +167,6 @@ fun SeriesScreen(
                             // Episodes for selected season
                             LazyColumn(
                                 modifier = Modifier
-                                    .fillMaxSize()
                                     .weight(1f)
                             ) {
                                 items(selectedEpisodes) { episode ->
@@ -181,9 +188,7 @@ fun SeriesScreen(
                         } else {
                             // Single season - no tabs needed
                             LazyColumn(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .weight(1f)
+                                modifier = Modifier.weight(1f)
                             ) {
                                 // Single season header
                                 item {
@@ -194,7 +199,7 @@ fun SeriesScreen(
                                         color = MaterialTheme.colorScheme.secondaryContainer
                                     ) {
                                         Text(
-                                            text = "Season $selectedSeasonNumber",
+                                            text = "Season ${selectedSeasonNumber ?: 1}",
                                             style = MaterialTheme.typography.titleMedium,
                                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                                             modifier = Modifier.padding(12.dp)
