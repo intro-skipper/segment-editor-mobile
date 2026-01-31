@@ -16,10 +16,10 @@ react {
 
 android {
     namespace 'org.introskipper.segmenteditor'
+    compileSdk 36
 
     defaultConfig {
         applicationId "org.introskipper.segmenteditor"
-        compileSdkVersion 36
         minSdk 30
         targetSdk 35
         versionCode 1
@@ -73,7 +73,7 @@ android {
         buildConfig = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion '1.5.5'
+        kotlinCompilerExtensionVersion '1.5.14'
     }
     packagingOptions {
         resources {
