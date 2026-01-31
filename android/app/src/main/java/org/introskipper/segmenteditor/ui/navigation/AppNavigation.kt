@@ -75,11 +75,10 @@ fun AppNavigation(
         }
         
         composable(Screen.Main.route) {
-            // Main screen displays the library selection (HomeScreen)
-            HomeScreen(
-                onMediaItemClick = { route ->
-                    // Route can be either "itemId" or "series/itemId", "album/itemId", "artist/itemId"
-                    navController.navigate(route)
+            // Main screen now shows library selection
+            LibraryScreen(
+                onLibraryClick = { libraryId ->
+                    navController.navigate("${Screen.Home.route}/$libraryId")
                 },
                 onSettingsClick = {
                     navController.navigate(Screen.Settings.route)
@@ -87,11 +86,30 @@ fun AppNavigation(
             )
         }
         
-        composable(Screen.Home.route) {
+        composable(Screen.Library.route) {
+            LibraryScreen(
+                onLibraryClick = { libraryId ->
+                    navController.navigate("${Screen.Home.route}/$libraryId")
+                },
+                onSettingsClick = {
+                    navController.navigate(Screen.Settings.route)
+                }
+            )
+        }
+        
+        composable(
+            route = "${Screen.Home.route}/{libraryId}",
+            arguments = listOf(navArgument("libraryId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val libraryId = backStackEntry.arguments?.getString("libraryId") ?: ""
             HomeScreen(
+                libraryId = libraryId,
                 onMediaItemClick = { route ->
                     // Route can be either "itemId" or "series/itemId", "album/itemId", "artist/itemId"
                     navController.navigate(route)
+                },
+                onNavigateBack = {
+                    navController.navigateUp()
                 },
                 onSettingsClick = {
                     navController.navigate(Screen.Settings.route)
