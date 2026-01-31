@@ -1,0 +1,49 @@
+package org.introskipper.segmenteditor.ui.state
+
+import org.introskipper.segmenteditor.data.model.MediaItem
+import org.introskipper.segmenteditor.data.model.Segment
+
+data class PlayerUiState(
+    val isLoading: Boolean = true,
+    val mediaItem: MediaItem? = null,
+    val segments: List<Segment> = emptyList(),
+    val error: String? = null,
+    
+    // Playback state
+    val isPlaying: Boolean = false,
+    val currentPosition: Long = 0L,
+    val duration: Long = 0L,
+    val bufferedPosition: Long = 0L,
+    
+    // Track selection
+    val audioTracks: List<TrackInfo> = emptyList(),
+    val subtitleTracks: List<TrackInfo> = emptyList(),
+    val selectedAudioTrack: Int? = null,
+    val selectedSubtitleTrack: Int? = null,
+    
+    // Playback settings
+    val playbackSpeed: Float = 1.0f,
+    
+    // UI state
+    val showTrackSelection: Boolean = false,
+    val showSpeedSelection: Boolean = false,
+    val isFullscreen: Boolean = false,
+    
+    // Segment editing (timestamp capture)
+    val capturedStartTime: Long? = null,
+    val capturedEndTime: Long? = null
+)
+
+data class TrackInfo(
+    val index: Int,
+    val language: String?,
+    val displayTitle: String,
+    val codec: String?,
+    val isDefault: Boolean = false
+)
+
+sealed class PlayerEvent {
+    data class Error(val message: String) : PlayerEvent()
+    data class SegmentLoaded(val segments: List<Segment>) : PlayerEvent()
+    object PlaybackEnded : PlayerEvent()
+}

@@ -95,8 +95,7 @@ fun AppNavigation(
             arguments = listOf(navArgument("itemId") { type = NavType.StringType })
         ) { backStackEntry ->
             val itemId = backStackEntry.arguments?.getString("itemId") ?: ""
-            // Placeholder for player screen
-            PlayerPlaceholder(itemId = itemId, navController = navController)
+            PlayerScreen(itemId = itemId, navController = navController)
         }
     }
 }
@@ -109,18 +108,6 @@ fun MainScreen() {
             contentAlignment = Alignment.Center
         ) {
             androidx.compose.material3.Text("Main App Screen - Coming Soon")
-        }
-    }
-}
-
-@Composable
-fun PlayerPlaceholder(itemId: String, navController: NavHostController) {
-    androidx.compose.material3.Surface {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            androidx.compose.material3.Text("Player Screen for Item: $itemId - Coming Soon")
         }
     }
 }
