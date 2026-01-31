@@ -34,6 +34,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         updateManager = UpdateManager(this)
         
+        // Check for updates when app launches
+        updateManager?.setUpdateListener(null)
+        
         // Determine start destination based on whether user is already logged in
         val startDestination = if (securePreferences.isLoggedIn()) {
             Screen.Main.route

@@ -19,10 +19,12 @@ import org.introskipper.segmenteditor.ui.viewmodel.SettingsViewModel
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onThemeChanged: (AppTheme) -> Unit,
+    onRestartConnection: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showAboutDialog by remember { mutableStateOf(false) }
+    var showChangeServerDialog by remember { mutableStateOf(false) }
     
     Scaffold(
         topBar = {
@@ -150,6 +152,17 @@ fun SettingsScreen(
                 }
             }
             
+            // Connection Section
+            item {
+                SettingsSection(title = "Connection") {
+                    ClickableSettingItem(
+                        title = "Change Server",
+                        subtitle = "Connect to a different Jellyfin server",
+                        onClick = { showChangeServerDialog = true }
+                    )
+                }
+            }
+            
             // Add bottom padding
             item {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -159,5 +172,29 @@ fun SettingsScreen(
     
     if (showAboutDialog) {
         AboutDialog(onDismiss = { showAboutDialog = false })
+    }
+    
+    if (showChangeServerDialog) {
+        AlertDialog(
+            onDismissRequest = { showChangeServerDialog = false },
+            title = { Text("Change Server") },
+            text = { Text("This will disconnect from the current server and return to the connection wizard. Are you sure?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showChangeServerDialog = false
+                        viewModel.clearAuthenticationAndRestart()
+                        onRestartConnection()
+                    }
+                ) {
+                    Text("Continue")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showChangeServerDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }

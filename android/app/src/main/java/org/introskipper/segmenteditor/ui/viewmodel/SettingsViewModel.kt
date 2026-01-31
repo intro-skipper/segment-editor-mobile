@@ -82,4 +82,8 @@ class SettingsViewModel @Inject constructor(
         securePreferences.setPrettyPrintJson(enabled)
         _uiState.value = _uiState.value.copy(prettyPrintJson = enabled)
     }
+
+    fun clearAuthenticationAndRestart() {
+        securePreferences.clearAuthentication()
+    }
 }
