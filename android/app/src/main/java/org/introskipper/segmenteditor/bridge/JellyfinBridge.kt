@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.introskipper.segmenteditor.MainActivity
 import org.introskipper.segmenteditor.api.JellyfinApiService
-import org.introskipper.segmenteditor.model.SegmentCreateRequest
+import org.introskipper.segmenteditor.data.model.SegmentCreateRequest
 import org.introskipper.segmenteditor.storage.SecurePreferences
 
 class JellyfinBridge(

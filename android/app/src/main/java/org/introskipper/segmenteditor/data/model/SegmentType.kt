@@ -1,4 +1,4 @@
-package org.introskipper.segmenteditor.model
+package org.introskipper.segmenteditor.data.model
 
 enum class SegmentType(val value: String) {
     INTRO("Intro"),
