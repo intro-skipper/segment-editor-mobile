@@ -84,8 +84,9 @@ fun AppNavigation(
         
         composable(Screen.Home.route) {
             HomeScreen(
-                onMediaItemClick = { itemId ->
-                    navController.navigate("${Screen.Player.route}/$itemId")
+                onMediaItemClick = { route ->
+                    // Route can be either "itemId" or "series/itemId", "album/itemId", "artist/itemId"
+                    navController.navigate(route)
                 }
             )
         }
@@ -96,6 +97,42 @@ fun AppNavigation(
         ) { backStackEntry ->
             val itemId = backStackEntry.arguments?.getString("itemId") ?: ""
             PlayerScreen(itemId = itemId, navController = navController)
+        }
+        
+        composable(
+            route = "${Screen.Series.route}/{seriesId}",
+            arguments = listOf(navArgument("seriesId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val seriesId = backStackEntry.arguments?.getString("seriesId") ?: ""
+            SeriesScreen(
+                seriesId = seriesId,
+                navController = navController,
+                securePreferences = securePreferences
+            )
+        }
+        
+        composable(
+            route = "${Screen.Album.route}/{albumId}",
+            arguments = listOf(navArgument("albumId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val albumId = backStackEntry.arguments?.getString("albumId") ?: ""
+            AlbumScreen(
+                albumId = albumId,
+                navController = navController,
+                securePreferences = securePreferences
+            )
+        }
+        
+        composable(
+            route = "${Screen.Artist.route}/{artistId}",
+            arguments = listOf(navArgument("artistId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val artistId = backStackEntry.arguments?.getString("artistId") ?: ""
+            ArtistScreen(
+                artistId = artistId,
+                navController = navController,
+                securePreferences = securePreferences
+            )
         }
     }
 }

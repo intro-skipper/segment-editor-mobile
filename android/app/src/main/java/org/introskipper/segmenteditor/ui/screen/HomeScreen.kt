@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import org.introskipper.segmenteditor.data.model.JellyfinMediaItem
 import org.introskipper.segmenteditor.ui.component.*
 import org.introskipper.segmenteditor.ui.viewmodel.HomeUiState
 import org.introskipper.segmenteditor.ui.viewmodel.HomeViewModel
@@ -27,6 +28,16 @@ fun HomeScreen(
     val availableCollections by viewModel.availableCollections.collectAsState()
 
     var showFilterSheet by remember { mutableStateOf(false) }
+
+    // Smart navigation based on media type
+    val navigateToMedia: (JellyfinMediaItem) -> Unit = { item ->
+        when (item.type) {
+            "Series" -> onMediaItemClick("series/${item.id}")
+            "MusicAlbum" -> onMediaItemClick("album/${item.id}")
+            "MusicArtist" -> onMediaItemClick("artist/${item.id}")
+            else -> onMediaItemClick("player/${item.id}") // Movies, Episodes, Audio, etc.
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -91,7 +102,14 @@ fun HomeScreen(
                     is HomeUiState.Success -> {
                         MediaGrid(
                             items = state.items,
-                            onItemClick = onMediaItemClick,
+                            onItemClick = { itemId ->
+                                val item = state.items.find { it.id == itemId }
+                                if (item != null) {
+                                    navigateToMedia(item)
+                                } else {
+                                    onMediaItemClick(itemId)
+                                }
+                            },
                             modifier = Modifier.weight(1f)
                         )
 
