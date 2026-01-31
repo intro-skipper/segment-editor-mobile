@@ -18,7 +18,7 @@ class MainActivity : ReactActivity() {
         
         // Initialize the activity result launcher
         onRequestInstall = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            // Handle result if needed
+            if (packageManager.canRequestPackageInstalls()) updateManager?.onUpdateRequested()
         }
         
         // Initialize update manager
