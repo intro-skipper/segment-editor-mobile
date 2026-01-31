@@ -23,6 +23,7 @@
     "react-native-video": "^6.19.0"
   },
   "devDependencies": {
+    "@react-native-community/cli": "latest",
     "@react-native-community/cli-platform-android": "^20.1.1",
     "@react-native/babel-preset": "^0.83.1",
     "@react-native/gradle-plugin": "^0.83.1",
