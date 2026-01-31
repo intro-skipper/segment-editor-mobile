@@ -30,11 +30,10 @@ class HomeViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
-    private val _selectedCollections = MutableStateFlow<Set<String>>(emptySet())
-    val selectedCollections: StateFlow<Set<String>> = _selectedCollections
+    private val _showAllItems = MutableStateFlow(false)
+    val showAllItems: StateFlow<Boolean> = _showAllItems
 
-    private val _availableCollections = MutableStateFlow<List<JellyfinCollection>>(emptyList())
-    val availableCollections: StateFlow<List<JellyfinCollection>> = _availableCollections
+    private var currentLibraryId: String? = null
 
     var currentPage by mutableStateOf(1)
         private set
@@ -51,28 +50,23 @@ class HomeViewModel @Inject constructor(
                 loadMediaItems()
             }
         }
-        loadCollections()
-        loadMediaItems()
+    }
+    
+    fun setLibraryId(libraryId: String) {
+        if (currentLibraryId != libraryId) {
+            currentLibraryId = libraryId
+            currentPage = 1
+            _showAllItems.value = false
+            loadMediaItems()
+        }
     }
 
     fun onSearchQueryChange(query: String) {
         _searchQuery.value = query
     }
 
-    fun toggleCollection(collectionId: String) {
-        val current = _selectedCollections.value.toMutableSet()
-        if (current.contains(collectionId)) {
-            current.remove(collectionId)
-        } else {
-            current.add(collectionId)
-        }
-        _selectedCollections.value = current
-        currentPage = 1
-        loadMediaItems()
-    }
-
-    fun clearCollectionFilter() {
-        _selectedCollections.value = emptySet()
+    fun toggleShowAllItems() {
+        _showAllItems.value = !_showAllItems.value
         currentPage = 1
         loadMediaItems()
     }
@@ -94,43 +88,34 @@ class HomeViewModel @Inject constructor(
     fun refresh() {
         currentPage = 1
         loadMediaItems()
-        loadCollections()
-    }
-
-    private fun loadCollections() {
-        viewModelScope.launch {
-            try {
-                val collections = jellyfinRepository.getLibraries()
-                _availableCollections.value = collections.map {
-                    JellyfinCollection(
-                        id = it.id,
-                        name = it.name ?: "Unknown"
-                    )
-                }
-            } catch (e: Exception) {
-                // Silently fail for collections
-            }
-        }
     }
 
     private fun loadMediaItems() {
         viewModelScope.launch {
             _uiState.value = HomeUiState.Loading
             try {
-                val parentIds = if (_selectedCollections.value.isEmpty()) {
-                    null
-                } else {
-                    _selectedCollections.value.toList()
+                val libraryId = currentLibraryId
+                if (libraryId == null) {
+                    _uiState.value = HomeUiState.Empty
+                    return@launch
                 }
+
+                val limit = if (_showAllItems.value) null else pageSize
+                val startIndex = if (_showAllItems.value) 0 else (currentPage - 1) * pageSize
 
                 val result = jellyfinRepository.getMediaItems(
                     searchTerm = _searchQuery.value.ifBlank { null },
-                    parentIds = parentIds,
-                    startIndex = (currentPage - 1) * pageSize,
-                    limit = pageSize
+                    parentIds = listOf(libraryId),
+                    startIndex = startIndex,
+                    limit = limit,
+                    includeItemTypes = listOf("Series") // Only show TV series in library view
                 )
 
-                totalPages = (result.totalRecordCount + pageSize - 1) / pageSize
+                totalPages = if (_showAllItems.value) {
+                    1
+                } else {
+                    (result.totalRecordCount + pageSize - 1) / pageSize
+                }
 
                 val serverUrl = securePreferences.getServerUrl() ?: ""
                 val jellyfinItems = result.items.map { it.toJellyfinMediaItem(serverUrl) }
@@ -138,7 +123,7 @@ class HomeViewModel @Inject constructor(
                 _uiState.value = if (jellyfinItems.isEmpty()) {
                     HomeUiState.Empty
                 } else {
-                    HomeUiState.Success(jellyfinItems)
+                    HomeUiState.Success(jellyfinItems, result.totalRecordCount)
                 }
             } catch (e: Exception) {
                 _uiState.value = HomeUiState.Error(e.message ?: "Unknown error")
@@ -150,11 +135,6 @@ class HomeViewModel @Inject constructor(
 sealed class HomeUiState {
     object Loading : HomeUiState()
     object Empty : HomeUiState()
-    data class Success(val items: List<JellyfinMediaItem>) : HomeUiState()
+    data class Success(val items: List<JellyfinMediaItem>, val totalItems: Int) : HomeUiState()
     data class Error(val message: String) : HomeUiState()
 }
-
-data class JellyfinCollection(
-    val id: String,
-    val name: String
-)
