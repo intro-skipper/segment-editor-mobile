@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.introskipper.segmenteditor.ui.component.CollectionChip
-import org.introskipper.segmenteditor.ui.viewmodel.JellyfinCollection
+import org.introskipper.segmenteditor.ui.component.JellyfinCollection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

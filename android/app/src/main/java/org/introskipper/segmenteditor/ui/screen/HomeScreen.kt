@@ -29,8 +29,6 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val showAllItems by viewModel.showAllItems.collectAsState()
-
-    var showFilterSheet by remember { mutableStateOf(false) }
     
     // Load items for the selected library
     LaunchedEffect(libraryId) {
