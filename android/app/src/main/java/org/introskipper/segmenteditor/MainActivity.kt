@@ -9,27 +9,28 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import dagger.hilt.android.AndroidEntryPoint
 import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.navigation.AppNavigation
 import org.introskipper.segmenteditor.ui.navigation.Screen
 import org.introskipper.segmenteditor.ui.theme.ReactInMobileTheme
 import org.introskipper.segmenteditor.update.UpdateManager
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     var updateManager: UpdateManager? = null
-    private lateinit var securePreferences: SecurePreferences
-    private lateinit var apiService: JellyfinApiService
+    
+    @Inject
+    lateinit var securePreferences: SecurePreferences
+    
+    @Inject
+    lateinit var apiService: JellyfinApiService
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         updateManager = UpdateManager(this)
-        
-        // Initialize secure preferences
-        securePreferences = SecurePreferences(this)
-        
-        // Initialize API service
-        apiService = JellyfinApiService(securePreferences)
         
         // Determine start destination based on whether user is already configured
         val startDestination = if (securePreferences.isConfigured()) {

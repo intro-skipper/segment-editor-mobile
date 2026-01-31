@@ -8,9 +8,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.data.repository.AuthRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
@@ -79,6 +81,23 @@ fun AppNavigation(
         composable(Screen.Main.route) {
             MainScreen()
         }
+        
+        composable(Screen.Home.route) {
+            HomeScreen(
+                onMediaItemClick = { itemId ->
+                    navController.navigate("${Screen.Player.route}/$itemId")
+                }
+            )
+        }
+        
+        composable(
+            route = "${Screen.Player.route}/{itemId}",
+            arguments = listOf(navArgument("itemId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val itemId = backStackEntry.arguments?.getString("itemId") ?: ""
+            // Placeholder for player screen
+            PlayerPlaceholder(itemId = itemId, navController = navController)
+        }
     }
 }
 
@@ -90,6 +109,18 @@ fun MainScreen() {
             contentAlignment = Alignment.Center
         ) {
             androidx.compose.material3.Text("Main App Screen - Coming Soon")
+        }
+    }
+}
+
+@Composable
+fun PlayerPlaceholder(itemId: String, navController: NavHostController) {
+    androidx.compose.material3.Surface {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            androidx.compose.material3.Text("Player Screen for Item: $itemId - Coming Soon")
         }
     }
 }
