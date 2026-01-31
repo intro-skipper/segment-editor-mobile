@@ -79,20 +79,48 @@ class AuthViewModel(
                 result.fold(
                     onSuccess = { isValid ->
                         if (isValid) {
-                            // Get server info to verify connection
-                            authRepository.getServerInfoResult().fold(
-                                onSuccess = { serverInfo ->
-                                    _state.value = _state.value.copy(
-                                        isLoading = false,
-                                        isAuthenticated = true,
-                                        serverName = serverInfo.serverName
-                                    )
+                            // Get the current user information
+                            authRepository.getUsersResult().fold(
+                                onSuccess = { users ->
+                                    if (users.isNotEmpty()) {
+                                        // Use the first user (typically the API key owner)
+                                        val user = users.first()
+                                        securePreferences.saveUserId(user.id)
+                                        securePreferences.saveUsername(user.name)
+                                        
+                                        // Get server info to complete authentication
+                                        authRepository.getServerInfoResult().fold(
+                                            onSuccess = { serverInfo ->
+                                                _state.value = _state.value.copy(
+                                                    isLoading = false,
+                                                    isAuthenticated = true,
+                                                    user = user,
+                                                    serverName = serverInfo.serverName
+                                                )
+                                            },
+                                            onFailure = { error ->
+                                                // Server info failed, but we have user info so continue
+                                                _state.value = _state.value.copy(
+                                                    isLoading = false,
+                                                    isAuthenticated = true,
+                                                    user = user,
+                                                    serverName = ""
+                                                )
+                                            }
+                                        )
+                                    } else {
+                                        securePreferences.clearAuthentication()
+                                        _state.value = _state.value.copy(
+                                            isLoading = false,
+                                            error = "No users found for this API key"
+                                        )
+                                    }
                                 },
                                 onFailure = { error ->
                                     securePreferences.clearAuthentication()
                                     _state.value = _state.value.copy(
                                         isLoading = false,
-                                        error = "Failed to verify server: ${error.message}"
+                                        error = "Failed to get user information: ${error.message}"
                                     )
                                 }
                             )

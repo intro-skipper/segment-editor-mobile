@@ -34,8 +34,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         updateManager = UpdateManager(this)
         
-        // Determine start destination based on whether user is already configured
-        val startDestination = if (securePreferences.isConfigured()) {
+        // Determine start destination based on whether user is already logged in
+        val startDestination = if (securePreferences.isLoggedIn()) {
             Screen.Main.route
         } else {
             Screen.ConnectionWizard.route
