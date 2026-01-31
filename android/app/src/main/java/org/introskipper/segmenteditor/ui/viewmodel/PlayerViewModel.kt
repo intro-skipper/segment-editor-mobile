@@ -229,6 +229,11 @@ class PlayerViewModel @Inject constructor(
         }
     }
     
+    fun refreshSegments() {
+        val itemId = _uiState.value.mediaItem?.id ?: return
+        loadSegments(itemId)
+    }
+    
     fun clearEvent() {
         _events.value = null
     }

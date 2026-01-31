@@ -25,6 +25,7 @@ import kotlinx.coroutines.delay
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.TimeUtils
 import org.introskipper.segmenteditor.ui.component.*
+import org.introskipper.segmenteditor.ui.component.segment.SegmentEditorDialog
 import org.introskipper.segmenteditor.ui.viewmodel.PlayerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,6 +42,10 @@ fun PlayerScreen(
     // Track selection state
     var showAudioTracks by remember { mutableStateOf(false) }
     var showSubtitleTracks by remember { mutableStateOf(false) }
+    
+    // Segment editor state
+    var showSegmentEditor by remember { mutableStateOf(false) }
+    var editingSegment by remember { mutableStateOf<Segment?>(null) }
     
     // Load media item on first composition
     LaunchedEffect(itemId) {
@@ -134,6 +139,14 @@ fun PlayerScreen(
                 onPlayerReady = { player = it },
                 onAudioTracksClick = { showAudioTracks = true },
                 onSubtitleTracksClick = { showSubtitleTracks = true },
+                onCreateSegment = { 
+                    editingSegment = null
+                    showSegmentEditor = true 
+                },
+                onEditSegment = { segment ->
+                    editingSegment = segment
+                    showSegmentEditor = true
+                },
                 modifier = Modifier.padding(paddingValues)
             )
         }
@@ -181,6 +194,29 @@ fun PlayerScreen(
             onDismiss = { viewModel.showSpeedSelection(false) }
         )
     }
+    
+    // Segment editor dialog
+    if (showSegmentEditor) {
+        val durationSeconds = TimeUtils.ticksToMilliseconds(uiState.duration) / 1000.0
+        
+        SegmentEditorDialog(
+            itemId = itemId,
+            duration = durationSeconds,
+            existingSegments = uiState.segments,
+            initialStartTime = uiState.capturedStartTime?.let { it / 1000.0 },
+            initialEndTime = uiState.capturedEndTime?.let { it / 1000.0 },
+            editSegment = editingSegment,
+            currentPosition = uiState.currentPosition / 1000.0,
+            onDismiss = { 
+                showSegmentEditor = false
+                editingSegment = null
+            },
+            onSaved = {
+                viewModel.refreshSegments()
+                viewModel.clearCapturedTimes()
+            }
+        )
+    }
 }
 
 @Composable
@@ -190,6 +226,8 @@ private fun PlayerContent(
     onPlayerReady: (ExoPlayer) -> Unit,
     onAudioTracksClick: () -> Unit,
     onSubtitleTracksClick: () -> Unit,
+    onCreateSegment: () -> Unit,
+    onEditSegment: (Segment) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -283,6 +321,18 @@ private fun PlayerContent(
                     )
                 }
                 
+                // Create segment button
+                item {
+                    Button(
+                        onClick = onCreateSegment,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Create Segment")
+                    }
+                }
+                
                 // Segments list
                 if (uiState.segments.isNotEmpty()) {
                     item {
@@ -293,7 +343,10 @@ private fun PlayerContent(
                     }
                     
                     items(uiState.segments) { segment ->
-                        SegmentCard(segment = segment)
+                        SegmentCard(
+                            segment = segment,
+                            onEdit = { onEditSegment(segment) }
+                        )
                     }
                 }
             }
@@ -342,9 +395,14 @@ private fun PlayerControlsRow(
 }
 
 @Composable
-private fun SegmentCard(segment: Segment) {
+private fun SegmentCard(
+    segment: Segment,
+    onEdit: () -> Unit
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onEdit),
         colors = CardDefaults.cardColors(
             containerColor = when (segment.type.lowercase()) {
                 "intro" -> MaterialTheme.colorScheme.primaryContainer
@@ -358,7 +416,8 @@ private fun SegmentCard(segment: Segment) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -371,6 +430,11 @@ private fun SegmentCard(segment: Segment) {
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
+            Icon(
+                imageVector = Icons.Default.Edit,
+                contentDescription = "Edit segment",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
