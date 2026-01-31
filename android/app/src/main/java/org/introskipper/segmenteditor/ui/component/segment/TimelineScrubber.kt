@@ -89,11 +89,11 @@ fun TimelineScrubber(
                             
                             when (target) {
                                 DragTarget.START -> {
-                                    val newStart = (startTime + deltaTime).coerceIn(0.0, endTime - 1.0)
+                                    val newStart = (startTime + deltaTime).coerceIn(0.0, endTime - 0.1)
                                     onStartTimeChanged(newStart)
                                 }
                                 DragTarget.END -> {
-                                    val newEnd = (endTime + deltaTime).coerceIn(startTime + 1.0, duration)
+                                    val newEnd = (endTime + deltaTime).coerceIn(startTime + 0.1, duration)
                                     onEndTimeChanged(newEnd)
                                 }
                                 DragTarget.BOTH -> {
