@@ -8,25 +8,53 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import dagger.hilt.android.AndroidEntryPoint
+import org.introskipper.segmenteditor.api.JellyfinApiService
+import org.introskipper.segmenteditor.storage.SecurePreferences
+import org.introskipper.segmenteditor.ui.navigation.AppNavigation
+import org.introskipper.segmenteditor.ui.navigation.Screen
+import org.introskipper.segmenteditor.ui.state.AppTheme
 import org.introskipper.segmenteditor.ui.theme.ReactInMobileTheme
-import org.introskipper.segmenteditor.update.CustomDialog
 import org.introskipper.segmenteditor.update.UpdateManager
-import java.io.File
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     var updateManager: UpdateManager? = null
+    
+    @Inject
+    lateinit var securePreferences: SecurePreferences
+    
+    @Inject
+    lateinit var apiService: JellyfinApiService
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         updateManager = UpdateManager(this)
+        
+        // Determine start destination based on whether user is already configured
+        val startDestination = if (securePreferences.isConfigured()) {
+            Screen.Main.route
+        } else {
+            Screen.ConnectionWizard.route
+        }
+        
         setContent {
-            ReactInMobileTheme {
-                // A surface container using the 'background' color from the theme
+            var currentTheme by remember { mutableStateOf(securePreferences.getTheme()) }
+            
+            ReactInMobileTheme(appTheme = currentTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    ComposeWrappedWebView()
+                    AppNavigation(
+                        startDestination = startDestination,
+                        securePreferences = securePreferences,
+                        apiService = apiService,
+                        onThemeChanged = { theme -> currentTheme = theme }
+                    )
                 }
             }
         }
