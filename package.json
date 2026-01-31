@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "android": "react-native run-android",
+    "ios": "react-native run-ios",
     "start": "react-native start",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -25,6 +26,7 @@
   "devDependencies": {
     "@react-native-community/cli": "latest",
     "@react-native-community/cli-platform-android": "^20.1.1",
+    "@react-native-community/cli-platform-ios": "^20.1.1",
     "@react-native/babel-preset": "^0.83.1",
     "@react-native/gradle-plugin": "^0.83.1",
     "@react-native/metro-config": "^0.83.1",
