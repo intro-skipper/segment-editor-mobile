@@ -1,6 +1,7 @@
 package org.introskipper.segmenteditor.update
 
 import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.PackageInstaller
@@ -144,10 +145,30 @@ class UpdateManager internal constructor(activity: MainActivity) {
             if (isUpdateAvailable) {
                 updateUrl = asset["browser_download_url"] as String
                 updateListener?.onUpdateFound()
+                // Show update dialog on main thread
+                CoroutineScope(Dispatchers.Main).launch {
+                    showUpdateDialog()
+                }
             }
         } catch (e: JSONException) {
 
         }
+    }
+
+    private fun showUpdateDialog() {
+        AlertDialog.Builder(browserActivity)
+            .setTitle(R.string.update_heading)
+            .setMessage(R.string.update_message)
+            .setIcon(R.mipmap.ic_launcher)
+            .setPositiveButton(R.string.button_install) { dialog, _ ->
+                dialog.dismiss()
+                onUpdateRequested()
+            }
+            .setNegativeButton(R.string.button_dismiss) { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setCancelable(true)
+            .show()
     }
 
     fun onUpdateRequested() {

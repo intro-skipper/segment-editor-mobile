@@ -1,16 +1,35 @@
 pluginManagement {
+    includeBuild("../node_modules/@react-native/gradle-plugin")
     repositories {
         google()
         mavenCentral()
         gradlePluginPortal()
     }
 }
+
+plugins {
+    id("com.facebook.react.settings")
+}
+
+extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
+    ex.autolinkLibrariesFromCommand()
+}
+
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
         google()
         mavenCentral()
+        maven {
+            url = uri("$rootDir/../node_modules/react-native/android")
+        }
+        maven {
+            url = uri("$rootDir/../node_modules/jsc-android/dist")
+        }
     }
 }
+
 rootProject.name = "SegmentEditor"
 include ':app'
+
+includeBuild('../node_modules/@react-native/gradle-plugin')
