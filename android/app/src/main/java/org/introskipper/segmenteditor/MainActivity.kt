@@ -10,8 +10,8 @@ import com.facebook.react.defaults.DefaultReactActivityDelegate
 import org.introskipper.segmenteditor.update.UpdateManager
 
 class MainActivity : ReactActivity() {
-    var updateManager: UpdateManager? = null
-    lateinit var onRequestInstall: ActivityResultLauncher<android.content.Intent>
+    internal var updateManager: UpdateManager? = null
+    internal lateinit var onRequestInstall: ActivityResultLauncher<android.content.Intent>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
