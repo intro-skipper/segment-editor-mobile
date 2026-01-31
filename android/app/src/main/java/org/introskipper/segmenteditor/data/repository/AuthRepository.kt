@@ -49,6 +49,14 @@ class AuthRepository(private val apiService: JellyfinApiService) {
     }
     
     /**
+     * Gets all users (requires authentication)
+     * @return Response containing list of users
+     */
+    suspend fun getUsers(): Response<List<User>> {
+        return apiService.getUsers()
+    }
+    
+    /**
      * Gets user information by ID
      * @param userId The user ID
      * @return Response containing user info
@@ -135,6 +143,22 @@ class AuthRepository(private val apiService: JellyfinApiService) {
                 Result.success(response.body()!!)
             } else {
                 Result.failure(Exception("Failed to get user: ${response.code()} ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    /**
+     * Gets all users and returns a Result
+     */
+    suspend fun getUsersResult(): Result<List<User>> {
+        return try {
+            val response = getUsers()
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Failed to get users: ${response.code()} ${response.message()}"))
             }
         } catch (e: Exception) {
             Result.failure(e)

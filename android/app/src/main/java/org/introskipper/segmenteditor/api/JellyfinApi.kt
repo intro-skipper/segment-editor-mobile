@@ -51,6 +51,11 @@ interface JellyfinApi {
     @GET("System/Info/Public")
     suspend fun getPublicSystemInfo(): Response<PublicSystemInfo>
     
+    @GET("Users")
+    suspend fun getUsers(
+        @Header("X-Emby-Token") apiKey: String
+    ): Response<List<User>>
+    
     @GET("Users/{userId}")
     suspend fun getUserById(
         @Path("userId") userId: String,
