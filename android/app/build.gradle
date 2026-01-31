@@ -9,6 +9,7 @@ plugins {
  * React Native configuration
  */
 react {
+    entryFile = file("../../index.js")
     /* Autolinking */
     autolinkLibrariesWithApp()
 }
