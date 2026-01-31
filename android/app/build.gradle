@@ -19,7 +19,7 @@ android {
 
     defaultConfig {
         applicationId "org.introskipper.segmenteditor"
-        compileSdk 36
+        compileSdkVersion 36
         minSdk 30
         targetSdk 35
         versionCode 1
