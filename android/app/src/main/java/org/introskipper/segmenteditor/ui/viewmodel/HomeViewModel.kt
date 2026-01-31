@@ -42,6 +42,12 @@ class HomeViewModel @Inject constructor(
         private set
 
     private var pageSize = 20
+    
+    companion object {
+        // Maximum items to load when "show all" is enabled
+        // This prevents performance issues with extremely large libraries
+        private const val SHOW_ALL_LIMIT = 10000
+    }
 
     init {
         viewModelScope.launch {
@@ -101,7 +107,7 @@ class HomeViewModel @Inject constructor(
                 }
 
                 // Use a large limit for "show all", otherwise use pageSize
-                val limit = if (_showAllItems.value) 10000 else pageSize
+                val limit = if (_showAllItems.value) SHOW_ALL_LIMIT else pageSize
                 val startIndex = if (_showAllItems.value) 0 else (currentPage - 1) * pageSize
 
                 val result = jellyfinRepository.getMediaItems(
@@ -139,9 +145,3 @@ sealed class HomeUiState {
     data class Success(val items: List<JellyfinMediaItem>, val totalItems: Int) : HomeUiState()
     data class Error(val message: String) : HomeUiState()
 }
-
-// Keep for backward compatibility with CollectionChip and CollectionFilterSheet
-data class JellyfinCollection(
-    val id: String,
-    val name: String
-)
