@@ -12,4 +12,5 @@ sealed class Screen(val route: String) {
     object Series : Screen("series")
     object Album : Screen("album")
     object Artist : Screen("artist")
+    object Settings : Screen("settings")
 }

@@ -26,7 +26,8 @@ import org.introskipper.segmenteditor.ui.viewmodel.ConnectionViewModelFactory
 fun AppNavigation(
     startDestination: String,
     securePreferences: SecurePreferences,
-    apiService: JellyfinApiService
+    apiService: JellyfinApiService,
+    onThemeChanged: (org.introskipper.segmenteditor.ui.state.AppTheme) -> Unit = {}
 ) {
     val navController = rememberNavController()
     val authRepository = remember { AuthRepository(apiService) }
@@ -87,6 +88,9 @@ fun AppNavigation(
                 onMediaItemClick = { route ->
                     // Route can be either "itemId" or "series/itemId", "album/itemId", "artist/itemId"
                     navController.navigate(route)
+                },
+                onSettingsClick = {
+                    navController.navigate(Screen.Settings.route)
                 }
             )
         }
@@ -132,6 +136,13 @@ fun AppNavigation(
                 artistId = artistId,
                 navController = navController,
                 securePreferences = securePreferences
+            )
+        }
+        
+        composable(Screen.Settings.route) {
+            SettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onThemeChanged = onThemeChanged
             )
         }
     }
