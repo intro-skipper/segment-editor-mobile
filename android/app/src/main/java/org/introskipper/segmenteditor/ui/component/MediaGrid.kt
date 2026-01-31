@@ -13,7 +13,7 @@ import org.introskipper.segmenteditor.data.model.JellyfinMediaItem
 @Composable
 fun MediaGrid(
     items: List<JellyfinMediaItem>,
-    onItemClick: (String) -> Unit,
+    onItemClick: (JellyfinMediaItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyVerticalGrid(
@@ -26,7 +26,7 @@ fun MediaGrid(
         items(items) { item ->
             MediaCard(
                 item = item,
-                onClick = { onItemClick(item.id) }
+                onClick = { onItemClick(item) }
             )
         }
     }

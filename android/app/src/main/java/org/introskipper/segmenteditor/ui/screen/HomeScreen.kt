@@ -102,14 +102,7 @@ fun HomeScreen(
                     is HomeUiState.Success -> {
                         MediaGrid(
                             items = state.items,
-                            onItemClick = { itemId ->
-                                val item = state.items.find { it.id == itemId }
-                                if (item != null) {
-                                    navigateToMedia(item)
-                                } else {
-                                    onMediaItemClick(itemId)
-                                }
-                            },
+                            onItemClick = navigateToMedia,
                             modifier = Modifier.weight(1f)
                         )
 
