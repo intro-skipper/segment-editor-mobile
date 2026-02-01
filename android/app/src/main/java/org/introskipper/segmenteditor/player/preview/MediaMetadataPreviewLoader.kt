@@ -28,8 +28,9 @@ class MediaMetadataPreviewLoader(
     }
     
     init {
+        var ret: MediaMetadataRetriever? = null
         try {
-            val ret = MediaMetadataRetriever()
+            ret = MediaMetadataRetriever()
             
             // For network URLs, we need to use setDataSource with headers
             if (videoUri.startsWith("http://") || videoUri.startsWith("https://")) {
@@ -51,7 +52,8 @@ class MediaMetadataPreviewLoader(
             Log.d(TAG, "Initialized MediaMetadataRetriever for video: $videoUri, duration: ${durationMs}ms")
         } catch (e: Exception) {
             Log.e(TAG, "Error initializing MediaMetadataRetriever for $videoUri", e)
-            retriever?.release()
+            // Clean up the local retriever if it was created
+            ret?.release()
             retriever = null
             // Re-throw the exception so the caller knows initialization failed
             throw IllegalStateException("Failed to initialize MediaMetadataRetriever for $videoUri", e)
