@@ -24,6 +24,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.TimeUtils
+import org.introskipper.segmenteditor.ui.validation.SegmentValidator
 import kotlin.math.max
 import kotlin.math.min
 
@@ -54,6 +55,11 @@ fun SegmentSlider(
     val segmentColor = getSegmentColor(segment.type)
     val duration = localEndSeconds - localStartSeconds
     val minGap = 0.5 // Minimum gap between start and end in seconds
+    
+    // Validate segment boundaries
+    val validation = remember(localStartSeconds, localEndSeconds, runtimeSeconds) {
+        SegmentValidator.validate(localStartSeconds, localEndSeconds, runtimeSeconds)
+    }
     
     // Update local state when segment prop changes
     LaunchedEffect(segment.startTicks, segment.endTicks) {
@@ -212,6 +218,26 @@ fun SegmentSlider(
                     onSeek = { onSeekTo(localEndSeconds) },
                     modifier = Modifier.weight(1f)
                 )
+            }
+            
+            // Validation error message
+            if (!validation.isValid && validation.errorMessage != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .background(MaterialTheme.colorScheme.error, androidx.compose.foundation.shape.CircleShape)
+                    )
+                    Text(
+                        text = validation.errorMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         }
     }
