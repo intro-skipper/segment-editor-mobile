@@ -8,13 +8,13 @@ interface JellyfinApi {
     
     // ========== Segment Endpoints ==========
     
-    @GET("Episode/{itemId}/IntroSkipperSegments")
+    @GET("MediaSegments/{itemId}")
     suspend fun getSegments(
         @Path("itemId") itemId: String,
         @Header("X-Emby-Token") apiKey: String
     ): Response<List<Segment>>
     
-    @POST("MediaSegmentsApi/{itemId}")
+    @POST("MediaSegments/{itemId}")
     suspend fun createSegment(
         @Path("itemId") itemId: String,
         @Query("providerId") providerId: String,
@@ -22,7 +22,7 @@ interface JellyfinApi {
         @Header("X-Emby-Token") apiKey: String
     ): Response<Segment>
     
-    @DELETE("MediaSegmentsApi/{segmentId}")
+    @DELETE("MediaSegments/{segmentId}")
     suspend fun deleteSegment(
         @Path("segmentId") segmentId: String,
         @Query("itemId") itemId: String,
