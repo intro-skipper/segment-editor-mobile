@@ -86,7 +86,7 @@ fun LibraryScreen(
                             LibraryCard(
                                 library = library,
                                 onClick = { onLibraryClick(library.id) },
-                                getBackdropUrl = { itemId -> viewModel.getBackdropUrl(itemId) }
+                                getPrimaryImageUrl = { itemId, imageTag -> viewModel.getPrimaryImageUrl(itemId, imageTag) }
                             )
                         }
                     }
@@ -120,11 +120,11 @@ fun LibraryScreen(
 private fun LibraryCard(
     library: Library,
     onClick: () -> Unit,
-    getBackdropUrl: (String) -> String,
+    getPrimaryImageUrl: (String, String) -> String,
     modifier: Modifier = Modifier
 ) {
-    val backdropUrl = if (library.backdropImageTag != null) {
-        getBackdropUrl(library.id)
+    val primaryImageUrl = if (library.primaryImageTag != null) {
+        getPrimaryImageUrl(library.id, library.primaryImageTag)
     } else {
         null
     }
@@ -138,9 +138,9 @@ private fun LibraryCard(
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             // Background image
-            if (backdropUrl != null) {
+            if (primaryImageUrl != null) {
                 AsyncImage(
-                    model = backdropUrl,
+                    model = primaryImageUrl,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
@@ -172,7 +172,7 @@ private fun LibraryCard(
                     Text(
                         text = library.name,
                         style = MaterialTheme.typography.titleLarge,
-                        color = if (backdropUrl != null) Color.White else MaterialTheme.colorScheme.onSurface,
+                        color = if (primaryImageUrl != null) Color.White else MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -180,7 +180,7 @@ private fun LibraryCard(
                         Text(
                             text = it,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = if (backdropUrl != null) Color.White.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (primaryImageUrl != null) Color.White.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

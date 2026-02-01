@@ -28,28 +28,35 @@ class MediaMetadataPreviewLoader(
     }
     
     init {
+        var ret: MediaMetadataRetriever? = null
         try {
-            retriever = MediaMetadataRetriever()
+            ret = MediaMetadataRetriever()
             
             // For network URLs, we need to use setDataSource with headers
             if (videoUri.startsWith("http://") || videoUri.startsWith("https://")) {
                 // Use empty headers map for network streams
                 // Note: This may not work for all network streams (e.g., HLS with authentication)
-                retriever?.setDataSource(videoUri, mapOf())
+                ret.setDataSource(videoUri, mapOf())
             } else {
                 // Local file path
-                retriever?.setDataSource(videoUri)
+                ret.setDataSource(videoUri)
             }
             
-            // Get video duration
-            val durationStr = retriever?.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+            // Get video duration - validate that retriever is properly initialized
+            val durationStr = ret.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
             durationMs = durationStr?.toLongOrNull() ?: 0L
+            
+            // Only set retriever if initialization was successful
+            retriever = ret
             
             Log.d(TAG, "Initialized MediaMetadataRetriever for video: $videoUri, duration: ${durationMs}ms")
         } catch (e: Exception) {
-            Log.e(TAG, "Error initializing MediaMetadataRetriever", e)
-            retriever?.release()
+            Log.e(TAG, "Error initializing MediaMetadataRetriever for $videoUri", e)
+            // Clean up the local retriever if it was created
+            ret?.release()
             retriever = null
+            // Re-throw the exception so the caller knows initialization failed
+            throw IllegalStateException("Failed to initialize MediaMetadataRetriever for $videoUri", e)
         }
     }
     
@@ -62,8 +69,9 @@ class MediaMetadataPreviewLoader(
                 return@withContext cached
             }
             
+            // Retriever should always be non-null if init succeeded
             val ret = retriever ?: run {
-                Log.w(TAG, "MediaMetadataRetriever not initialized")
+                Log.e(TAG, "MediaMetadataRetriever is null - this should not happen if init succeeded")
                 return@withContext null
             }
             
