@@ -118,7 +118,7 @@ private fun PageNumberChips(
         verticalAlignment = Alignment.CenterVertically,
         contentPadding = PaddingValues(horizontal = 8.dp)
     ) {
-        items(pageNumbers) { pageNumber ->
+        items(pageNumbers, key = { it }) { pageNumber ->
             when (pageNumber) {
                 ELLIPSIS_PLACEHOLDER -> {
                     // Ellipsis
@@ -152,7 +152,7 @@ private fun PageNumberChips(
  */
 private fun getPageNumbersToDisplay(currentPage: Int, totalPages: Int): List<Int> {
     if (totalPages <= MAX_PAGES_WITHOUT_ELLIPSIS) {
-        // Show all pages if 7 or fewer
+        // Show all pages if MAX_PAGES_WITHOUT_ELLIPSIS or fewer
         return (1..totalPages).toList()
     }
     
