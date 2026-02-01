@@ -42,6 +42,23 @@ fun PlayerScreen(
     val context = LocalContext.current
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     
+    // Preview loader
+    val streamUrl = viewModel.getStreamUrl(useHls = true)
+    val previewLoader = remember(streamUrl) {
+        if (streamUrl != null) {
+            viewModel.createPreviewLoader(itemId, streamUrl)
+        } else {
+            null
+        }
+    }
+    
+    // Clean up preview loader on dispose
+    DisposableEffect(previewLoader) {
+        onDispose {
+            previewLoader?.release()
+        }
+    }
+    
     // Track selection state
     var showAudioTracks by remember { mutableStateOf(false) }
     var showSubtitleTracks by remember { mutableStateOf(false) }
@@ -141,6 +158,8 @@ fun PlayerScreen(
                 uiState = uiState,
                 viewModel = viewModel,
                 player = player,
+                streamUrl = streamUrl,
+                previewLoader = previewLoader,
                 activeSegmentIndex = activeSegmentIndex,
                 onPlayerReady = { player = it },
                 onAudioTracksClick = { showAudioTracks = true },
@@ -233,6 +252,8 @@ private fun PlayerContent(
     uiState: org.introskipper.segmenteditor.ui.state.PlayerUiState,
     viewModel: PlayerViewModel,
     player: ExoPlayer?,
+    streamUrl: String?,
+    previewLoader: org.introskipper.segmenteditor.player.preview.PreviewLoader?,
     activeSegmentIndex: Int,
     onPlayerReady: (ExoPlayer) -> Unit,
     onAudioTracksClick: () -> Unit,
@@ -252,11 +273,11 @@ private fun PlayerContent(
                 .aspectRatio(16f / 9f)
                 .background(Color.Black)
         ) {
-            val streamUrl = viewModel.getStreamUrl(useHls = true)
             if (streamUrl != null) {
                 VideoPlayer(
                     streamUrl = streamUrl,
                     useController = true,
+                    previewLoader = previewLoader,
                     onPlayerReady = onPlayerReady,
                     onPlaybackStateChanged = { isPlaying, currentPos, bufferedPos ->
                         viewModel.updatePlaybackState(isPlaying, currentPos, bufferedPos)

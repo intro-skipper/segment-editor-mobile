@@ -1,28 +1,37 @@
 package org.introskipper.segmenteditor.ui.viewmodel
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
 import org.introskipper.segmenteditor.data.model.MediaStream
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
+import org.introskipper.segmenteditor.player.preview.MediaMetadataPreviewLoader
+import org.introskipper.segmenteditor.player.preview.PreviewLoader
+import org.introskipper.segmenteditor.player.preview.TrickplayPreviewLoader
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.state.PlayerEvent
 import org.introskipper.segmenteditor.ui.state.PlayerUiState
+import org.introskipper.segmenteditor.ui.state.PreviewSource
 import org.introskipper.segmenteditor.ui.state.TrackInfo
 import javax.inject.Inject
 
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val mediaRepository: MediaRepository,
     private val segmentRepository: SegmentRepository,
-    private val securePreferences: SecurePreferences
+    private val securePreferences: SecurePreferences,
+    private val httpClient: OkHttpClient
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(PlayerUiState())
@@ -241,6 +250,36 @@ class PlayerViewModel @Inject constructor(
     
     fun clearEvent() {
         _events.value = null
+    }
+    
+    /**
+     * Creates a preview loader based on the current settings
+     */
+    fun createPreviewLoader(itemId: String, streamUrl: String): PreviewLoader? {
+        val previewSource = securePreferences.getPreviewSource()
+        
+        return when (previewSource) {
+            PreviewSource.TRICKPLAY -> {
+                val serverUrl = securePreferences.getServerUrl()
+                val apiKey = securePreferences.getApiKey()
+                
+                if (serverUrl != null && apiKey != null) {
+                    TrickplayPreviewLoader(serverUrl, apiKey, itemId, httpClient)
+                } else {
+                    Log.w(TAG, "Cannot create TrickplayPreviewLoader: missing server URL or API key")
+                    null
+                }
+            }
+            PreviewSource.MEDIA_METADATA -> {
+                try {
+                    MediaMetadataPreviewLoader(streamUrl)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to create MediaMetadataPreviewLoader", e)
+                    null
+                }
+            }
+            PreviewSource.DISABLED -> null
+        }
     }
     
     companion object {

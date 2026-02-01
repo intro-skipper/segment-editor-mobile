@@ -117,7 +117,8 @@ dependencies {
     implementation "androidx.media3:media3-common:$media3_version"
     
     // PreviewSeekBar for video scrub previews
-    implementation 'com.github.rubensousa.previewseekbar:media3:1.2.1'
+    // Note: This library may not be available in the current environment
+    // implementation 'com.github.rubensousa:previewseekbar-media3:1.2.0-beta01'
     
     // Security for encrypted preferences
     implementation 'androidx.security:security-crypto:1.1.0-alpha06'
