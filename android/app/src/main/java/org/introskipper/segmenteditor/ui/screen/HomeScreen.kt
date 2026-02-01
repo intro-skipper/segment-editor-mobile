@@ -121,14 +121,18 @@ fun HomeScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            if (showAllItems) {
+                            val isShowingAll = showAllItems || viewModel.totalPages == 1
+                            
+                            if (isShowingAll) {
                                 Text(
                                     text = "Showing all ${state.totalItems} items",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                TextButton(onClick = { viewModel.toggleShowAllItems() }) {
-                                    Text("Show with pagination")
+                                if (showAllItems && viewModel.totalPages > 1) {
+                                    TextButton(onClick = { viewModel.toggleShowAllItems() }) {
+                                        Text("Show with pagination")
+                                    }
                                 }
                             } else {
                                 PaginationControls(

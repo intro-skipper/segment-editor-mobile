@@ -8,30 +8,25 @@ interface JellyfinApi {
     
     // ========== Segment Endpoints ==========
     
-    @GET("MediaSegments/{itemId}")
+    @GET("Episode/{itemId}/IntroSkipperSegments")
     suspend fun getSegments(
         @Path("itemId") itemId: String,
         @Header("X-Emby-Token") apiKey: String
     ): Response<List<Segment>>
     
-    @POST("MediaSegments")
+    @POST("MediaSegmentsApi/{itemId}")
     suspend fun createSegment(
-        @Body segment: SegmentCreateRequest,
-        @Header("X-Emby-Token") apiKey: String
-    ): Response<Segment>
-    
-    @PUT("MediaSegments/{itemId}/{segmentType}")
-    suspend fun updateSegment(
         @Path("itemId") itemId: String,
-        @Path("segmentType") segmentType: String,
+        @Query("providerId") providerId: String,
         @Body segment: SegmentCreateRequest,
         @Header("X-Emby-Token") apiKey: String
     ): Response<Segment>
     
-    @DELETE("MediaSegments/{itemId}/{segmentType}")
+    @DELETE("MediaSegmentsApi/{segmentId}")
     suspend fun deleteSegment(
-        @Path("itemId") itemId: String,
-        @Path("segmentType") segmentType: String,
+        @Path("segmentId") segmentId: String,
+        @Query("itemId") itemId: String,
+        @Query("type") segmentType: String,
         @Header("X-Emby-Token") apiKey: String
     ): Response<Unit>
     

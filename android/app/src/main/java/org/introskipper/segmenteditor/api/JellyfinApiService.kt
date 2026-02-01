@@ -82,23 +82,14 @@ class JellyfinApiService {
         return api!!.getSegments(itemId, getApiKey())
     }
     
-    suspend fun createSegment(segment: SegmentCreateRequest): Response<Segment> {
+    suspend fun createSegment(itemId: String, segment: SegmentCreateRequest, providerId: String = "intros kipper"): Response<Segment> {
         ensureInitialized()
-        return api!!.createSegment(segment, getApiKey())
+        return api!!.createSegment(itemId, providerId, segment, getApiKey())
     }
     
-    suspend fun updateSegment(
-        itemId: String,
-        segmentType: String,
-        segment: SegmentCreateRequest
-    ): Response<Segment> {
+    suspend fun deleteSegment(segmentId: String, itemId: String, segmentType: String): Response<Unit> {
         ensureInitialized()
-        return api!!.updateSegment(itemId, segmentType, segment, getApiKey())
-    }
-    
-    suspend fun deleteSegment(itemId: String, segmentType: String): Response<Unit> {
-        ensureInitialized()
-        return api!!.deleteSegment(itemId, segmentType, getApiKey())
+        return api!!.deleteSegment(segmentId, itemId, segmentType, getApiKey())
     }
     
     // ========== Authentication Operations ==========

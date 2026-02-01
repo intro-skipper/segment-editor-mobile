@@ -3,6 +3,9 @@ package org.introskipper.segmenteditor.data.model
 import com.google.gson.annotations.SerializedName
 
 data class Segment(
+    @SerializedName("Id")
+    val id: String? = null,
+    
     @SerializedName("ItemId")
     val itemId: String,
     
