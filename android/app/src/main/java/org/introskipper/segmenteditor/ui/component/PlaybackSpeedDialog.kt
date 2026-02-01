@@ -6,7 +6,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import org.introskipper.segmenteditor.R
 
 @Composable
 fun PlaybackSpeedDialog(
@@ -19,7 +21,7 @@ fun PlaybackSpeedDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Playback Speed")
+            Text(stringResource(R.string.playback_speed_title))
         },
         text = {
             Column(
@@ -39,7 +41,7 @@ fun PlaybackSpeedDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

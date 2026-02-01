@@ -10,10 +10,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
+import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.ui.state.EditorMode
 import org.introskipper.segmenteditor.ui.viewmodel.SegmentEditorViewModel
@@ -35,6 +38,7 @@ fun SegmentEditorDialog(
     val state by viewModel.state.collectAsState()
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
     
     // Initialize view model
     LaunchedEffect(Unit) {
@@ -60,9 +64,9 @@ fun SegmentEditorDialog(
         if (state.saveSuccess) {
             snackbarHostState.showSnackbar(
                 message = if (state.mode == EditorMode.Create) {
-                    "Segment created successfully"
+                    context.getString(R.string.segment_created)
                 } else {
-                    "Segment updated successfully"
+                    context.getString(R.string.segment_updated)
                 },
                 duration = SnackbarDuration.Short
             )
@@ -104,15 +108,15 @@ fun SegmentEditorDialog(
                     title = { 
                         Text(
                             if (state.mode == EditorMode.Create) {
-                                "Create Segment"
+                                stringResource(R.string.segment_create_title)
                             } else {
-                                "Edit Segment"
+                                stringResource(R.string.segment_edit_title)
                             }
                         ) 
                     },
                     navigationIcon = {
                         IconButton(onClick = onDismiss) {
-                            Icon(Icons.Default.Close, contentDescription = "Close")
+                            Icon(Icons.Default.Close, contentDescription = null)
                         }
                     },
                     actions = {
@@ -123,7 +127,7 @@ fun SegmentEditorDialog(
                             ) {
                                 Icon(
                                     Icons.Default.Delete,
-                                    contentDescription = "Delete",
+                                    contentDescription = null,
                                     tint = MaterialTheme.colorScheme.error
                                 )
                             }

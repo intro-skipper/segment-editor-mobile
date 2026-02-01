@@ -160,6 +160,8 @@
     <string name="segment_delete_message">Möchten Sie dieses %1$s-Segment wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.</string>
     <string name="segment_created">Segment erfolgreich erstellt</string>
     <string name="segment_updated">Segment erfolgreich aktualisiert</string>
+    <string name="segment_create_title">Segment erstellen</string>
+    <string name="segment_edit_title">Segment bearbeiten</string>
 
     <!-- Playback Speed Dialog -->
     <string name="playback_speed_title">Wiedergabegeschwindigkeit</string>

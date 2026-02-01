@@ -161,6 +161,8 @@
     <string name="segment_delete_message">Are you sure you want to delete this %1$s segment? This action cannot be undone.</string>
     <string name="segment_created">Segment created successfully</string>
     <string name="segment_updated">Segment updated successfully</string>
+    <string name="segment_create_title">Create Segment</string>
+    <string name="segment_edit_title">Edit Segment</string>
 
     <!-- Playback Speed Dialog -->
     <string name="playback_speed_title">Playback Speed</string>
