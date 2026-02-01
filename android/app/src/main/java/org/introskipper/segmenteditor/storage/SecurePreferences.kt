@@ -241,6 +241,19 @@ class SecurePreferences(context: Context) {
         return sharedPreferences.getString(KEY_PREFERRED_SUBTITLE_LANG, "") ?: ""
     }
     
+    fun setPreviewSource(source: org.introskipper.segmenteditor.ui.state.PreviewSource) {
+        sharedPreferences.edit { putString(KEY_PREVIEW_SOURCE, source.name) }
+    }
+    
+    fun getPreviewSource(): org.introskipper.segmenteditor.ui.state.PreviewSource {
+        val sourceName = sharedPreferences.getString(KEY_PREVIEW_SOURCE, org.introskipper.segmenteditor.ui.state.PreviewSource.TRICKPLAY.name)
+        return try {
+            org.introskipper.segmenteditor.ui.state.PreviewSource.valueOf(sourceName ?: org.introskipper.segmenteditor.ui.state.PreviewSource.TRICKPLAY.name)
+        } catch (e: IllegalArgumentException) {
+            org.introskipper.segmenteditor.ui.state.PreviewSource.TRICKPLAY
+        }
+    }
+    
     // ========== Tracking Preferences ==========
     
     fun setTrackSegmentEdits(enabled: Boolean) {
@@ -328,6 +341,7 @@ class SecurePreferences(context: Context) {
         private const val KEY_PREFER_DIRECT_PLAY = "prefer_direct_play"
         private const val KEY_PREFERRED_AUDIO_LANG = "preferred_audio_lang"
         private const val KEY_PREFERRED_SUBTITLE_LANG = "preferred_subtitle_lang"
+        private const val KEY_PREVIEW_SOURCE = "preview_source"
         
         // Tracking keys
         private const val KEY_TRACK_EDITS = "track_edits"

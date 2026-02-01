@@ -15,6 +15,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.PlayerView
+import org.introskipper.segmenteditor.player.preview.PreviewLoader
 
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
@@ -22,6 +23,7 @@ fun VideoPlayer(
     streamUrl: String,
     modifier: Modifier = Modifier,
     useController: Boolean = true,
+    previewLoader: PreviewLoader? = null,
     onPlayerReady: (ExoPlayer) -> Unit = {},
     onPlaybackStateChanged: (isPlaying: Boolean, currentPosition: Long, bufferedPosition: Long) -> Unit = { _, _, _ -> }
 ) {
@@ -38,7 +40,7 @@ fun VideoPlayer(
             }
     }
     
-    DisposableEffect(exoPlayer) {
+    DisposableEffect(exoPlayer, previewLoader) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 onPlaybackStateChanged(
@@ -67,6 +69,7 @@ fun VideoPlayer(
         onDispose {
             exoPlayer.removeListener(listener)
             exoPlayer.release()
+            // Note: previewLoader is released by PlayerScreen, not here
         }
     }
     
@@ -80,6 +83,9 @@ fun VideoPlayer(
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
                 setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                
+                // TODO: Custom preview implementation can be added here
+                // The previewLoader is available for future custom UI integration
             }
         },
         modifier = modifier.fillMaxSize()
