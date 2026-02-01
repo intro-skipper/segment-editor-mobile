@@ -274,7 +274,7 @@ private fun PlayerContent(
                 .background(Color.Black)
         ) {
             if (streamUrl != null) {
-                VideoPlayer(
+                VideoPlayerWithPreview(
                     streamUrl = streamUrl,
                     useController = true,
                     previewLoader = previewLoader,
