@@ -12,11 +12,10 @@ This PR addresses multiple UI improvements and fixes the critical segment loadin
 **Root Cause:** The API endpoints did not match the intro-skipper plugin's actual endpoints.
 
 **Solution:**
-- Updated GET endpoint: `/Episode/{itemId}/IntroSkipperSegments`
-- Updated POST endpoint: `/MediaSegmentsApi/{itemId}?providerId=intro-skipper`
-- Updated DELETE endpoint: `/MediaSegmentsApi/{segmentId}?itemId={itemId}&type={type}`
-- Added `id` field to `Segment` model (required for deletion)
-- Fixed update operation to work as delete + create (matching plugin behavior)
+- Updated GET endpoint: `/MediaSegments/{itemId}` (was incorrectly using `/Episode/{itemId}/IntroSkipperSegments`)
+- Updated POST endpoint: `/MediaSegments/{itemId}?providerId=intro-skipper` (was incorrectly using `/MediaSegmentsApi/{itemId}`)
+- Updated DELETE endpoint: `/MediaSegments/{segmentId}?itemId={itemId}&type={type}` (was incorrectly using `/MediaSegmentsApi/{segmentId}`)
+- These endpoints now match the standard Jellyfin MediaSegments API as documented
 
 **Files Modified:**
 - `android/app/src/main/java/org/introskipper/segmenteditor/api/JellyfinApi.kt`
@@ -147,10 +146,10 @@ This PR addresses multiple UI improvements and fixes the critical segment loadin
 ## Technical Notes
 
 ### API Endpoint Changes
-The intro-skipper plugin uses different endpoints than the standard Jellyfin MediaSegments API:
-- **Read**: Uses Jellyfin's native `/Episode/{itemId}/IntroSkipperSegments`
-- **Create**: Uses plugin's custom `/MediaSegmentsApi/{itemId}` with provider ID
-- **Delete**: Uses plugin's custom `/MediaSegmentsApi/{segmentId}` with itemId and type params
+Updated to use the standard Jellyfin MediaSegments API:
+- **Read**: `/MediaSegments/{itemId}` - Get all segments for an item
+- **Create**: `/MediaSegments/{itemId}` with provider ID query parameter
+- **Delete**: `/MediaSegments/{segmentId}` with itemId and type query parameters
 
 ### Segment Model Update
 Added optional `id` field to support proper deletion:
