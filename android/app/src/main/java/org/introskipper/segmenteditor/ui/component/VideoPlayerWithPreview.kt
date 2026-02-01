@@ -1,5 +1,7 @@
 package org.introskipper.segmenteditor.ui.component
 
+import android.content.Context
+import android.os.Looper
 import android.view.ViewGroup
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
@@ -12,9 +14,13 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.Renderer
+import androidx.media3.exoplayer.text.TextOutput
+import androidx.media3.exoplayer.text.TextRenderer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.TimeBar
+import com.google.common.collect.Iterables
 import org.introskipper.segmenteditor.player.preview.PreviewLoader
 
 /**
@@ -38,6 +44,7 @@ fun VideoPlayerWithPreview(
     val exoPlayer = remember {
         val trackSelector = DefaultTrackSelector(context)
         ExoPlayer.Builder(context)
+            .setRenderersFactory(NextRenderersFactory(context))
             .setTrackSelector(trackSelector)
             .build().apply {
                 setMediaItem(MediaItem.fromUri(streamUrl))
