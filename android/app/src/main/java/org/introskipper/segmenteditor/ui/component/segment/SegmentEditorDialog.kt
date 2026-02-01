@@ -149,7 +149,7 @@ fun SegmentEditorDialog(
                             modifier = Modifier.weight(1f),
                             enabled = !state.isSaving && !state.isDeleting
                         ) {
-                            Text("Cancel")
+                            Text(stringResource(R.string.cancel))
                         }
                         
                         Button(
@@ -166,7 +166,7 @@ fun SegmentEditorDialog(
                                 )
                             } else {
                                 Text(
-                                    if (state.mode == EditorMode.Create) "Create" else "Save"
+                                    if (state.mode == EditorMode.Create) stringResource(R.string.create) else stringResource(R.string.save)
                                 )
                             }
                         }
@@ -282,9 +282,9 @@ fun SegmentEditorDialog(
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false },
             icon = { Icon(Icons.Default.Delete, contentDescription = null) },
-            title = { Text("Delete Segment?") },
+            title = { Text(stringResource(R.string.segment_delete_title)) },
             text = { 
-                Text("Are you sure you want to delete this ${state.segmentType} segment? This action cannot be undone.") 
+                Text(stringResource(R.string.segment_delete_message, state.segmentType)) 
             },
             confirmButton = {
                 TextButton(
@@ -296,12 +296,12 @@ fun SegmentEditorDialog(
                         contentColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("Delete")
+                    Text(stringResource(R.string.delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirmation = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )

@@ -22,6 +22,8 @@
     <string name="done">Listo</string>
     <string name="apply">Aplicar</string>
     <string name="delete">Eliminar</string>
+    <string name="save">Guardar</string>
+    <string name="create">Crear</string>
     <string name="error_prefix">Error: %1$s</string>
 
     <!-- Settings Screen -->
