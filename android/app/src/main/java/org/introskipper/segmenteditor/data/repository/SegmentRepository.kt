@@ -22,36 +22,24 @@ class SegmentRepository(private val apiService: JellyfinApiService) {
     
     /**
      * Creates a new segment
+     * @param itemId The media item ID
      * @param segment The segment to create
+     * @param providerId The provider ID (default: "intro-skipper")
      * @return Response containing the created segment
      */
-    suspend fun createSegment(segment: SegmentCreateRequest): Response<Segment> {
-        return apiService.createSegment(segment)
-    }
-    
-    /**
-     * Updates an existing segment
-     * @param itemId The media item ID
-     * @param segmentType The segment type
-     * @param segment The updated segment data
-     * @return Response containing the updated segment
-     */
-    suspend fun updateSegment(
-        itemId: String,
-        segmentType: String,
-        segment: SegmentCreateRequest
-    ): Response<Segment> {
-        return apiService.updateSegment(itemId, segmentType, segment)
+    suspend fun createSegment(itemId: String, segment: SegmentCreateRequest, providerId: String = "intro-skipper"): Response<Segment> {
+        return apiService.createSegment(itemId, segment, providerId)
     }
     
     /**
      * Deletes a segment
+     * @param segmentId The segment ID to delete
      * @param itemId The media item ID
      * @param segmentType The segment type to delete
      * @return Response indicating success or failure
      */
-    suspend fun deleteSegment(itemId: String, segmentType: String): Response<Unit> {
-        return apiService.deleteSegment(itemId, segmentType)
+    suspend fun deleteSegment(segmentId: String, itemId: String, segmentType: String): Response<Unit> {
+        return apiService.deleteSegment(segmentId, itemId, segmentType)
     }
     
     /**
@@ -73,9 +61,9 @@ class SegmentRepository(private val apiService: JellyfinApiService) {
     /**
      * Creates a segment and returns a Result
      */
-    suspend fun createSegmentResult(segment: SegmentCreateRequest): Result<Segment> {
+    suspend fun createSegmentResult(itemId: String, segment: SegmentCreateRequest, providerId: String = "intro-skipper"): Result<Segment> {
         return try {
-            val response = createSegment(segment)
+            val response = createSegment(itemId, segment, providerId)
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
@@ -87,31 +75,11 @@ class SegmentRepository(private val apiService: JellyfinApiService) {
     }
     
     /**
-     * Updates a segment and returns a Result
-     */
-    suspend fun updateSegmentResult(
-        itemId: String,
-        segmentType: String,
-        segment: SegmentCreateRequest
-    ): Result<Segment> {
-        return try {
-            val response = updateSegment(itemId, segmentType, segment)
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
-            } else {
-                Result.failure(Exception("Failed to update segment: ${response.code()} ${response.message()}"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-    
-    /**
      * Deletes a segment and returns a Result
      */
-    suspend fun deleteSegmentResult(itemId: String, segmentType: String): Result<Unit> {
+    suspend fun deleteSegmentResult(segmentId: String, itemId: String, segmentType: String): Result<Unit> {
         return try {
-            val response = deleteSegment(itemId, segmentType)
+            val response = deleteSegment(segmentId, itemId, segmentType)
             if (response.isSuccessful) {
                 Result.success(Unit)
             } else {

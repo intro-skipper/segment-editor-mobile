@@ -190,12 +190,32 @@ class SegmentEditorViewModel @Inject constructor(
                 
                 val result = when (current.mode) {
                     EditorMode.Create -> {
-                        segmentRepository.createSegmentResult(segmentRequest)
+                        segmentRepository.createSegmentResult(
+                            itemId = current.itemId,
+                            segment = segmentRequest
+                        )
                     }
                     EditorMode.Edit -> {
-                        segmentRepository.updateSegmentResult(
+                        // Update = Delete old + Create new
+                        val originalSegment = current.originalSegment
+                        if (originalSegment?.id != null) {
+                            // Delete the old segment first
+                            val deleteResult = segmentRepository.deleteSegmentResult(
+                                segmentId = originalSegment.id,
+                                itemId = current.itemId,
+                                segmentType = originalSegment.type
+                            )
+                            
+                            if (deleteResult.isFailure) {
+                                return@launch Result.failure(
+                                    deleteResult.exceptionOrNull() ?: Exception("Failed to delete old segment")
+                                )
+                            }
+                        }
+                        
+                        // Create the new segment
+                        segmentRepository.createSegmentResult(
                             itemId = current.itemId,
-                            segmentType = current.originalSegment?.type ?: current.segmentType,
                             segment = segmentRequest
                         )
                     }
@@ -246,11 +266,18 @@ class SegmentEditorViewModel @Inject constructor(
             return
         }
         
+        val segmentId = current.originalSegment.id
+        if (segmentId == null) {
+            _state.update { it.copy(saveError = "Cannot delete segment: missing ID") }
+            return
+        }
+        
         viewModelScope.launch {
             _state.update { it.copy(isDeleting = true, saveError = null) }
             
             try {
                 val result = segmentRepository.deleteSegmentResult(
+                    segmentId = segmentId,
                     itemId = current.itemId,
                     segmentType = current.originalSegment.type
                 )

@@ -41,7 +41,8 @@ class HomeViewModel @Inject constructor(
     var totalPages by mutableStateOf(1)
         private set
 
-    private var pageSize = 20
+    private val pageSize: Int
+        get() = securePreferences.getItemsPerPage()
     
     companion object {
         // Maximum items to load when "show all" is enabled
@@ -106,9 +107,20 @@ class HomeViewModel @Inject constructor(
                     return@launch
                 }
 
+                val currentPageSize = pageSize
+                
                 // Use a large limit for "show all", otherwise use pageSize
-                val limit = if (_showAllItems.value) SHOW_ALL_LIMIT else pageSize
-                val startIndex = if (_showAllItems.value) 0 else (currentPage - 1) * pageSize
+                val limit = if (_showAllItems.value || currentPageSize == Int.MAX_VALUE) {
+                    SHOW_ALL_LIMIT
+                } else {
+                    currentPageSize
+                }
+                
+                val startIndex = if (_showAllItems.value || currentPageSize == Int.MAX_VALUE) {
+                    0
+                } else {
+                    (currentPage - 1) * currentPageSize
+                }
 
                 val result = jellyfinRepository.getMediaItems(
                     searchTerm = _searchQuery.value.ifBlank { null },
@@ -118,10 +130,10 @@ class HomeViewModel @Inject constructor(
                     includeItemTypes = listOf("Series") // Only show TV series in library view
                 )
 
-                totalPages = if (_showAllItems.value) {
+                totalPages = if (_showAllItems.value || currentPageSize == Int.MAX_VALUE) {
                     1
                 } else {
-                    (result.totalRecordCount + pageSize - 1) / pageSize
+                    (result.totalRecordCount + currentPageSize - 1) / currentPageSize
                 }
 
                 val serverUrl = securePreferences.getServerUrl() ?: ""
