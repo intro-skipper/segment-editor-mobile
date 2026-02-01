@@ -96,29 +96,39 @@ fun VideoPlayerWithPreview(
                     // Hook into the TimeBar to detect scrubbing
                     // Note: This depends on media3 library's internal view structure
                     // The exo_progress ID may not exist in custom layouts or future versions
-                    post {
-                        val timeBarView = this.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_progress)
-                        if (timeBarView is TimeBar) {
-                            timeBarView.addListener(object : TimeBar.OnScrubListener {
-                                override fun onScrubStart(timeBar: TimeBar, position: Long) {
-                                    isScrubbing = true
-                                    scrubPosition = position
-                                }
-                                
-                                override fun onScrubMove(timeBar: TimeBar, position: Long) {
-                                    scrubPosition = position
-                                }
-                                
-                                override fun onScrubStop(timeBar: TimeBar, position: Long, canceled: Boolean) {
-                                    isScrubbing = false
-                                    scrubPosition = null
-                                }
-                            })
-                        } else {
-                            // TimeBar not found - preview scrubbing won't work but video playback will
-                            android.util.Log.w("VideoPlayerWithPreview", "TimeBar (exo_progress) not found in PlayerView")
+                    viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+                        override fun onGlobalLayout() {
+                            // Remove listener to avoid multiple calls
+                            viewTreeObserver.removeOnGlobalLayoutListener(this)
+                            
+                            // Now the view hierarchy is fully laid out
+                            val timeBarView = this@apply.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_progress)
+                            if (timeBarView is TimeBar) {
+                                android.util.Log.d("VideoPlayerWithPreview", "TimeBar found, attaching scrub listener")
+                                timeBarView.addListener(object : TimeBar.OnScrubListener {
+                                    override fun onScrubStart(timeBar: TimeBar, position: Long) {
+                                        android.util.Log.d("VideoPlayerWithPreview", "Scrub started at position: $position")
+                                        isScrubbing = true
+                                        scrubPosition = position
+                                    }
+                                    
+                                    override fun onScrubMove(timeBar: TimeBar, position: Long) {
+                                        android.util.Log.d("VideoPlayerWithPreview", "Scrub moved to position: $position")
+                                        scrubPosition = position
+                                    }
+                                    
+                                    override fun onScrubStop(timeBar: TimeBar, position: Long, canceled: Boolean) {
+                                        android.util.Log.d("VideoPlayerWithPreview", "Scrub stopped at position: $position")
+                                        isScrubbing = false
+                                        scrubPosition = null
+                                    }
+                                })
+                            } else {
+                                // TimeBar not found - preview scrubbing won't work but video playback will
+                                android.util.Log.w("VideoPlayerWithPreview", "TimeBar (exo_progress) not found in PlayerView. Found: ${timeBarView?.javaClass?.name}")
+                            }
                         }
-                    }
+                    })
                 }
             },
             modifier = Modifier.fillMaxSize()

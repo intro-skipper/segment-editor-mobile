@@ -34,9 +34,16 @@ fun ScrubPreviewOverlay(
     isVisible: Boolean,
     modifier: Modifier = Modifier
 ) {
-    if (!isVisible || previewLoader == null) {
+    if (!isVisible) {
+        android.util.Log.d("ScrubPreviewOverlay", "Overlay not visible")
         return
     }
+    if (previewLoader == null) {
+        android.util.Log.w("ScrubPreviewOverlay", "PreviewLoader is null, cannot show preview")
+        return
+    }
+    
+    android.util.Log.d("ScrubPreviewOverlay", "Showing preview overlay at position: $positionMs")
     
     var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isLoading by remember { mutableStateOf(false) }
@@ -44,13 +51,20 @@ fun ScrubPreviewOverlay(
     // Load preview image when position changes
     LaunchedEffect(positionMs, previewLoader) {
         isLoading = true
+        android.util.Log.d("ScrubPreviewOverlay", "Loading preview for position: $positionMs")
         try {
             val bitmap = withContext(Dispatchers.IO) {
                 previewLoader.loadPreview(positionMs)
             }
             previewBitmap = bitmap
+            if (bitmap != null) {
+                android.util.Log.d("ScrubPreviewOverlay", "Preview loaded successfully: ${bitmap.width}x${bitmap.height}")
+            } else {
+                android.util.Log.w("ScrubPreviewOverlay", "Preview loader returned null bitmap")
+            }
         } catch (e: Exception) {
             // Silently fail - preview is optional
+            android.util.Log.e("ScrubPreviewOverlay", "Failed to load preview", e)
             previewBitmap = null
         } finally {
             isLoading = false
