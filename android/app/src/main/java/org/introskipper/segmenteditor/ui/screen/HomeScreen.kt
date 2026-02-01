@@ -155,6 +155,7 @@ fun HomeScreen(
                                     totalPages = viewModel.totalPages,
                                     onPreviousPage = viewModel::previousPage,
                                     onNextPage = viewModel::nextPage,
+                                    onGoToPage = viewModel::goToPage,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
