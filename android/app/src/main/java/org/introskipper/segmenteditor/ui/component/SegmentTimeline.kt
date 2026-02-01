@@ -10,6 +10,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.introskipper.segmenteditor.data.model.Segment
 
+/**
+ * Timeline component that displays segment markers over a video timeline.
+ * 
+ * @param segments List of segments to display
+ * @param duration Video duration in milliseconds
+ * @param currentPosition Current playback position in milliseconds
+ * @param modifier Modifier for the component
+ */
 @Composable
 fun SegmentTimeline(
     segments: List<Segment>,
@@ -31,8 +39,11 @@ fun SegmentTimeline(
         // Draw segment markers
         if (duration > 0) {
             segments.forEach { segment ->
-                val startPos = (segment.getStartSeconds() * 1000 / duration * width).toFloat()
-                val endPos = (segment.getEndSeconds() * 1000 / duration * width).toFloat()
+                // Convert segment times (in seconds) to milliseconds, then calculate position
+                val startMs = segment.getStartSeconds() * 1000
+                val endMs = segment.getEndSeconds() * 1000
+                val startPos = (startMs / duration * width).toFloat()
+                val endPos = (endMs / duration * width).toFloat()
                 
                 val color = when (segment.type.lowercase()) {
                     "intro" -> Color(0xFF4CAF50) // Green
