@@ -113,7 +113,7 @@ fun HomeScreen(
                             modifier = Modifier.weight(1f)
                         )
 
-                        // Pagination controls - show page navigation or "Show All" option
+                        // Pagination controls - only show navigation when not displaying all items
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -124,17 +124,14 @@ fun HomeScreen(
                             val isShowingAll = showAllItems || viewModel.totalPages == 1
                             
                             if (isShowingAll) {
+                                // Show count when displaying all items
                                 Text(
                                     text = "Showing all ${state.totalItems} items",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                if (showAllItems && viewModel.totalPages > 1) {
-                                    TextButton(onClick = { viewModel.toggleShowAllItems() }) {
-                                        Text("Show with pagination")
-                                    }
-                                }
                             } else {
+                                // Show pagination controls when not displaying all items
                                 PaginationControls(
                                     currentPage = viewModel.currentPage,
                                     totalPages = viewModel.totalPages,
@@ -142,11 +139,6 @@ fun HomeScreen(
                                     onNextPage = viewModel::nextPage,
                                     modifier = Modifier.fillMaxWidth()
                                 )
-                                if (viewModel.totalPages > 1) {
-                                    TextButton(onClick = { viewModel.toggleShowAllItems() }) {
-                                        Text("Show all items")
-                                    }
-                                }
                             }
                         }
                     }
