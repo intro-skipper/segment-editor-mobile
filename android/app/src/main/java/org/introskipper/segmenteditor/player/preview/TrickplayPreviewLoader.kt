@@ -135,12 +135,10 @@ class TrickplayPreviewLoader(
             
             // Extract the trickplay section
             val trickplayStartIdx = json.indexOf("\"Trickplay\"")
-            if (trickplayStartIdx == -1) return null
-            
             val trickplaySection = json.substring(trickplayStartIdx)
             
-            // Find first mediaSourceId section (any UUID pattern)
-            val mediaSourcePattern = """"[a-f0-9-]{36}"\s*:\s*\{""".toRegex()
+            // Find first mediaSourceId section (any UUID pattern - case insensitive for hex digits)
+            val mediaSourcePattern = """"[a-fA-F0-9-]{36}"\s*:\s*\{""".toRegex()
             val mediaSourceMatch = mediaSourcePattern.find(trickplaySection)
             
             if (mediaSourceMatch == null) {

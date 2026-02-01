@@ -92,12 +92,10 @@ fun VideoPlayerWithPreview(
                     )
                     setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
                     
-                    // Set up scrub listener on the TimeBar
-                    setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { visibility ->
-                        // Controller visibility changed
-                    })
                     
                     // Hook into the TimeBar to detect scrubbing
+                    // Note: This depends on media3 library's internal view structure
+                    // The exo_progress ID may not exist in custom layouts or future versions
                     post {
                         val timeBarView = this.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_progress)
                         if (timeBarView is TimeBar) {
@@ -116,6 +114,9 @@ fun VideoPlayerWithPreview(
                                     scrubPosition = null
                                 }
                             })
+                        } else {
+                            // TimeBar not found - preview scrubbing won't work but video playback will
+                            android.util.Log.w("VideoPlayerWithPreview", "TimeBar (exo_progress) not found in PlayerView")
                         }
                     }
                 }
