@@ -396,7 +396,7 @@ private fun PlayerControlsRow(
         ) {
             Icon(Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text("${playbackSpeed}x")
+            Text(stringResource(R.string.player_playback_speed, playbackSpeed))
         }
         
         OutlinedButton(
