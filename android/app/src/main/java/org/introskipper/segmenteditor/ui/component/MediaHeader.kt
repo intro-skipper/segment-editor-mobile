@@ -47,7 +47,9 @@ fun MediaHeader(
                 // Primary image
                 imageUrl?.let { url ->
                     Card(
-                        modifier = Modifier.size(120.dp)
+                        modifier = Modifier
+                            .width(120.dp)
+                            .aspectRatio(2f / 3f)
                     ) {
                         AsyncImage(
                             model = url,
