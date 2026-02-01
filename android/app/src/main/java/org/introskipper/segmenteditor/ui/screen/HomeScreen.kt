@@ -33,12 +33,13 @@ fun HomeScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val showAllItems by viewModel.showAllItems.collectAsState()
     
-    // Refresh data when screen resumes (e.g., returning from settings)
+    // Refresh data when screen resumes if settings might have changed
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                viewModel.refresh()
+                // Check if page size setting has changed and refresh if needed
+                viewModel.refreshIfPageSizeChanged()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
