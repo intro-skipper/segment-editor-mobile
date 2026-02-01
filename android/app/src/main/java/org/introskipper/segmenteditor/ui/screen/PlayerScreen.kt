@@ -204,7 +204,8 @@ fun PlayerScreen(
     
     // Segment editor dialog
     if (showSegmentEditor) {
-        val durationSeconds = TimeUtils.ticksToMilliseconds(uiState.duration) / 1000.0
+        // uiState.duration is already in milliseconds, convert to seconds
+        val durationSeconds = uiState.duration / 1000.0
         
         SegmentEditorDialog(
             itemId = itemId,
@@ -321,7 +322,8 @@ private fun PlayerContent(
                 
                 // Segments list or empty message
                 if (uiState.segments.isNotEmpty()) {
-                    val runtimeSeconds = TimeUtils.ticksToMilliseconds(uiState.duration) / 1000.0
+                    // uiState.duration is already in milliseconds, convert to seconds
+                    val runtimeSeconds = uiState.duration / 1000.0
                     
                     items(uiState.segments.size) { index ->
                         val segment = uiState.segments[index]
