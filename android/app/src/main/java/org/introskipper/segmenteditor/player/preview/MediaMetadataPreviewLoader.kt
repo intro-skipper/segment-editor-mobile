@@ -33,7 +33,7 @@ class MediaMetadataPreviewLoader(
             if (videoUri.startsWith("http://") || videoUri.startsWith("https://")) {
                 // Use empty headers map for network streams
                 // Note: This may not work for all network streams (e.g., HLS with authentication)
-                retriever?.setDataSource(videoUri, HashMap<String, String>())
+                retriever?.setDataSource(videoUri, mapOf())
             } else {
                 // Local file path
                 retriever?.setDataSource(videoUri)
