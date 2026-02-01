@@ -66,23 +66,6 @@ fun SettingsScreen(
                 }
             }
             
-            // Language Section
-            item {
-                SettingsSection(title = "Language") {
-                    RadioGroupSettingItem(
-                        title = "App Language",
-                        subtitle = "Select your preferred language",
-                        options = listOf(
-                            "en" to "🇺🇸 English",
-                            "de" to "🇩🇪 Deutsch",
-                            "fr" to "🇫🇷 Français"
-                        ),
-                        selectedOption = uiState.language,
-                        onOptionSelected = viewModel::setLanguage
-                    )
-                }
-            }
-            
             // Playback Section
             item {
                 SettingsSection(title = "Playback") {
