@@ -210,8 +210,8 @@ fun PlayerScreen(
             itemId = itemId,
             duration = durationSeconds,
             existingSegments = uiState.segments,
-            initialStartTime = uiState.capturedStartTime?.let { it / 1000.0 },
-            initialEndTime = uiState.capturedEndTime?.let { it / 1000.0 },
+            initialStartTime = null,
+            initialEndTime = null,
             editSegment = editingSegment,
             currentPosition = uiState.currentPosition / 1000.0,
             onDismiss = { 
@@ -220,7 +220,6 @@ fun PlayerScreen(
             },
             onSaved = {
                 viewModel.refreshSegments()
-                viewModel.clearCapturedTimes()
             }
         )
     }
@@ -317,17 +316,6 @@ private fun PlayerContent(
                         onSpeedClick = { viewModel.showSpeedSelection(true) },
                         onAudioTracksClick = onAudioTracksClick,
                         onSubtitleTracksClick = onSubtitleTracksClick
-                    )
-                }
-                
-                // Timestamp capture
-                item {
-                    TimestampCaptureBar(
-                        capturedStartTime = uiState.capturedStartTime,
-                        capturedEndTime = uiState.capturedEndTime,
-                        onCaptureStart = { viewModel.captureStartTime() },
-                        onCaptureEnd = { viewModel.captureEndTime() },
-                        onClear = { viewModel.clearCapturedTimes() }
                     )
                 }
                 
