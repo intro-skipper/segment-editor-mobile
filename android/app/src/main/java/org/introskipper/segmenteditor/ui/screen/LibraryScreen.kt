@@ -1,5 +1,7 @@
 package org.introskipper.segmenteditor.ui.screen
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
@@ -7,13 +9,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import org.introskipper.segmenteditor.R
+import org.introskipper.segmenteditor.ui.viewmodel.Library
 import org.introskipper.segmenteditor.ui.viewmodel.LibraryUiState
 import org.introskipper.segmenteditor.ui.viewmodel.LibraryViewModel
 
@@ -75,10 +83,10 @@ fun LibraryScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         state.libraries.forEach { library ->
-                            LibraryButton(
-                                name = library.name,
-                                collectionType = library.collectionType,
-                                onClick = { onLibraryClick(library.id) }
+                            LibraryCard(
+                                library = library,
+                                onClick = { onLibraryClick(library.id) },
+                                getBackdropUrl = { itemId -> viewModel.getBackdropUrl(itemId) }
                             )
                         }
                     }
@@ -101,6 +109,79 @@ fun LibraryScreen(
                                 Text(stringResource(R.string.retry))
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LibraryCard(
+    library: Library,
+    onClick: () -> Unit,
+    getBackdropUrl: (String) -> String,
+    modifier: Modifier = Modifier
+) {
+    val backdropUrl = if (library.backdropImageTag != null) {
+        getBackdropUrl(library.id)
+    } else {
+        null
+    }
+    
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(120.dp)
+            .clickable(onClick = onClick, role = Role.Button),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Background image
+            if (backdropUrl != null) {
+                AsyncImage(
+                    model = backdropUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+                // Gradient overlay for text readability
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.7f)
+                                )
+                            )
+                        )
+                )
+            }
+            
+            // Library info
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = library.name,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = if (backdropUrl != null) Color.White else MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    library.collectionType?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (backdropUrl != null) Color.White.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }

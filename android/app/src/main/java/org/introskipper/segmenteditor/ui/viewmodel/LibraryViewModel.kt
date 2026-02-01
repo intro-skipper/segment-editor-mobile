@@ -6,12 +6,14 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.data.repository.JellyfinRepository
 import javax.inject.Inject
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
-    private val jellyfinRepository: JellyfinRepository
+    private val jellyfinRepository: JellyfinRepository,
+    private val jellyfinApiService: JellyfinApiService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<LibraryUiState>(LibraryUiState.Loading)
@@ -24,6 +26,22 @@ class LibraryViewModel @Inject constructor(
     fun refresh() {
         loadLibraries()
     }
+    
+    /**
+     * Gets the backdrop image URL for a library
+     * @param itemId The ID of the library item (must not be blank)
+     * @param maxWidth Optional maximum width for the image (default: 800px)
+     * @return The URL string for the backdrop image
+     * @throws IllegalArgumentException if itemId is blank (empty or whitespace)
+     */
+    fun getBackdropUrl(itemId: String, maxWidth: Int = 800): String {
+        require(itemId.isNotBlank()) { "itemId must not be blank" }
+        return jellyfinApiService.getBackdropUrl(
+            itemId = itemId,
+            backdropIndex = 0,
+            maxWidth = maxWidth
+        )
+    }
 
     private fun loadLibraries() {
         viewModelScope.launch {
@@ -34,7 +52,8 @@ class LibraryViewModel @Inject constructor(
                     Library(
                         id = mediaItem.id,
                         name = mediaItem.name ?: "Unknown Library",
-                        collectionType = mediaItem.collectionType
+                        collectionType = mediaItem.collectionType,
+                        backdropImageTag = mediaItem.backdropImageTags?.firstOrNull()
                     )
                 }
                 
@@ -60,5 +79,6 @@ sealed class LibraryUiState {
 data class Library(
     val id: String,
     val name: String,
-    val collectionType: String?
+    val collectionType: String?,
+    val backdropImageTag: String? = null
 )

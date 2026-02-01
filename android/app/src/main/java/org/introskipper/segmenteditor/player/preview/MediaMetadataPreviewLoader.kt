@@ -23,6 +23,8 @@ class MediaMetadataPreviewLoader(
         private const val DEFAULT_INTERVAL_MS = 10000L // 10 seconds
         private const val FRAME_WIDTH = 320 // Width of preview frames
         private const val FRAME_HEIGHT = 180 // Height of preview frames (16:9 aspect ratio)
+        private const val MAX_CACHE_SIZE = 20 // Maximum number of cached preview frames
+        private const val CACHE_CLEANUP_COUNT = 5 // Number of oldest entries to remove when cache is full
     }
     
     init {
@@ -54,7 +56,11 @@ class MediaMetadataPreviewLoader(
     override suspend fun loadPreview(positionMs: Long): Bitmap? = withContext(Dispatchers.IO) {
         try {
             // Check cache first
-            previewCache[positionMs]?.let { return@withContext it }
+            val cached = previewCache[positionMs]
+            if (cached != null) {
+                Log.d(TAG, "Returning cached preview for position $positionMs")
+                return@withContext cached
+            }
             
             val ret = retriever ?: run {
                 Log.w(TAG, "MediaMetadataRetriever not initialized")
@@ -63,41 +69,60 @@ class MediaMetadataPreviewLoader(
             
             // Ensure position is within bounds
             val clampedPosition = positionMs.coerceIn(0, durationMs)
+            Log.d(TAG, "Extracting frame at position $clampedPosition (original: $positionMs, duration: $durationMs)")
             
             // Extract frame at the given position
             // Note: getFrameAtTime uses microseconds
+            // Try OPTION_CLOSEST_SYNC first (faster, uses keyframes) then fallback to OPTION_CLOSEST for accuracy
             val frame = ret.getFrameAtTime(
                 clampedPosition * 1000, // Convert ms to microseconds
                 MediaMetadataRetriever.OPTION_CLOSEST_SYNC
-            )
+            ) ?: run {
+                // If OPTION_CLOSEST_SYNC fails, try OPTION_CLOSEST as fallback (slower but more accurate)
+                Log.d(TAG, "OPTION_CLOSEST_SYNC failed, trying OPTION_CLOSEST")
+                ret.getFrameAtTime(
+                    clampedPosition * 1000,
+                    MediaMetadataRetriever.OPTION_CLOSEST
+                )
+            }
             
-            frame ?: run {
-                Log.w(TAG, "Failed to extract frame at position $positionMs")
+            if (frame == null) {
+                Log.w(TAG, "Failed to extract frame - getFrameAtTime returned null")
                 return@withContext null
             }
             
-            // Scale the frame to a smaller size for preview
-            val scaledFrame = Bitmap.createScaledBitmap(
-                frame,
-                FRAME_WIDTH,
-                FRAME_HEIGHT,
-                true
-            )
+            Log.d(TAG, "Frame extracted successfully: ${frame.width}x${frame.height}")
             
-            // Recycle the original frame to free memory
+            // Scale the frame to a smaller size for preview
+            val scaledFrame = try {
+                Bitmap.createScaledBitmap(
+                    frame,
+                    FRAME_WIDTH,
+                    FRAME_HEIGHT,
+                    true
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to scale bitmap", e)
+                // If scaling fails, use the original frame
+                frame
+            }
+            
+            // Recycle the original frame to free memory (only if it's different from scaled)
             if (frame != scaledFrame) {
                 frame.recycle()
             }
             
             // Cache the result
             previewCache[positionMs] = scaledFrame
+            Log.d(TAG, "Cached preview for position $positionMs (cache size: ${previewCache.size})")
             
             // Limit cache size to avoid memory issues
-            if (previewCache.size > 20) {
+            if (previewCache.size > MAX_CACHE_SIZE) {
                 // Remove oldest entries
-                previewCache.keys.take(5).forEach { key ->
+                previewCache.keys.take(CACHE_CLEANUP_COUNT).forEach { key ->
                     previewCache.remove(key)?.recycle()
                 }
+                Log.d(TAG, "Cleaned up cache")
             }
             
             scaledFrame
