@@ -210,8 +210,8 @@ fun PlayerScreen(
             itemId = itemId,
             duration = durationSeconds,
             existingSegments = uiState.segments,
-            initialStartTime = uiState.capturedStartTime?.let { it / 1000.0 },
-            initialEndTime = uiState.capturedEndTime?.let { it / 1000.0 },
+            initialStartTime = null,
+            initialEndTime = null,
             editSegment = editingSegment,
             currentPosition = uiState.currentPosition / 1000.0,
             onDismiss = { 
@@ -220,7 +220,6 @@ fun PlayerScreen(
             },
             onSaved = {
                 viewModel.refreshSegments()
-                viewModel.clearCapturedTimes()
             }
         )
     }
@@ -320,38 +319,16 @@ private fun PlayerContent(
                     )
                 }
                 
-                // Timestamp capture
+                // Segments section header
                 item {
-                    TimestampCaptureBar(
-                        capturedStartTime = uiState.capturedStartTime,
-                        capturedEndTime = uiState.capturedEndTime,
-                        onCaptureStart = { viewModel.captureStartTime() },
-                        onCaptureEnd = { viewModel.captureEndTime() },
-                        onClear = { viewModel.clearCapturedTimes() }
+                    Text(
+                        text = "Segments (${uiState.segments.size})",
+                        style = MaterialTheme.typography.titleMedium
                     )
                 }
                 
-                // Create segment button
-                item {
-                    Button(
-                        onClick = onCreateSegment,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Create Segment")
-                    }
-                }
-                
-                // Segments list
+                // Segments list or empty message
                 if (uiState.segments.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = "Segments (${uiState.segments.size})",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
-                    
                     val runtimeSeconds = TimeUtils.ticksToMilliseconds(uiState.duration) / 1000.0
                     
                     items(uiState.segments.size) { index ->
@@ -378,6 +355,27 @@ private fun PlayerContent(
                             },
                             modifier = Modifier.padding(vertical = 4.dp)
                         )
+                    }
+                } else {
+                    item {
+                        Text(
+                            text = "No segments found for this media item. Create one below.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+                }
+                
+                // Create segment button - now appears after segments
+                item {
+                    Button(
+                        onClick = onCreateSegment,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Create Segment")
                     }
                 }
             }
