@@ -12,7 +12,7 @@ interface JellyfinApi {
     suspend fun getSegments(
         @Path("itemId") itemId: String,
         @Header("X-Emby-Token") apiKey: String
-    ): Response<List<Segment>>
+    ): Response<SegmentResponse>
     
     @POST("MediaSegments/{itemId}")
     suspend fun createSegment(
