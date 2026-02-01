@@ -352,9 +352,10 @@ private fun PlayerContent(
                         )
                     }
                     
+                    val runtimeSeconds = TimeUtils.ticksToMilliseconds(uiState.duration) / 1000.0
+                    
                     items(uiState.segments.size) { index ->
                         val segment = uiState.segments[index]
-                        val runtimeSeconds = TimeUtils.ticksToMilliseconds(uiState.duration) / 1000.0
                         
                         SegmentSlider(
                             segment = segment,

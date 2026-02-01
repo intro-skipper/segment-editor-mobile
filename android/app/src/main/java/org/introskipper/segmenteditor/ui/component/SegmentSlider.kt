@@ -275,7 +275,7 @@ private fun SliderTrack(
             // Draw segment range
             val startX = startPercent * width
             val endX = endPercent * width
-            val segmentWidth = kotlin.math.max(endX - startX, 2f)
+            val segmentWidth = max(endX - startX, 2f)
             
             drawRect(
                 color = segmentColor.copy(alpha = 0.7f),
