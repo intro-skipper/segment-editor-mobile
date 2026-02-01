@@ -54,7 +54,10 @@ class MediaMetadataPreviewLoader(
     override suspend fun loadPreview(positionMs: Long): Bitmap? = withContext(Dispatchers.IO) {
         try {
             // Check cache first
-            previewCache[positionMs]?.let { return@withContext it }
+            previewCache[positionMs]?.let { 
+                Log.d(TAG, "Returning cached preview for position $positionMs")
+                return@withContext it 
+            }
             
             val ret = retriever ?: run {
                 Log.w(TAG, "MediaMetadataRetriever not initialized")
@@ -63,41 +66,63 @@ class MediaMetadataPreviewLoader(
             
             // Ensure position is within bounds
             val clampedPosition = positionMs.coerceIn(0, durationMs)
+            Log.d(TAG, "Extracting frame at position $clampedPosition (original: $positionMs, duration: $durationMs)")
             
             // Extract frame at the given position
             // Note: getFrameAtTime uses microseconds
-            val frame = ret.getFrameAtTime(
+            // Try OPTION_CLOSEST first for more accurate preview, fallback to OPTION_CLOSEST_SYNC
+            var frame = ret.getFrameAtTime(
                 clampedPosition * 1000, // Convert ms to microseconds
-                MediaMetadataRetriever.OPTION_CLOSEST_SYNC
+                MediaMetadataRetriever.OPTION_CLOSEST
             )
             
-            frame ?: run {
-                Log.w(TAG, "Failed to extract frame at position $positionMs")
+            // If OPTION_CLOSEST fails, try OPTION_CLOSEST_SYNC as fallback
+            if (frame == null) {
+                Log.d(TAG, "OPTION_CLOSEST failed, trying OPTION_CLOSEST_SYNC")
+                frame = ret.getFrameAtTime(
+                    clampedPosition * 1000,
+                    MediaMetadataRetriever.OPTION_CLOSEST_SYNC
+                )
+            }
+            
+            if (frame == null) {
+                Log.w(TAG, "Failed to extract frame at position $positionMs - getFrameAtTime returned null")
                 return@withContext null
             }
             
-            // Scale the frame to a smaller size for preview
-            val scaledFrame = Bitmap.createScaledBitmap(
-                frame,
-                FRAME_WIDTH,
-                FRAME_HEIGHT,
-                true
-            )
+            Log.d(TAG, "Frame extracted successfully: ${frame.width}x${frame.height}")
             
-            // Recycle the original frame to free memory
+            // Scale the frame to a smaller size for preview
+            val scaledFrame = try {
+                Bitmap.createScaledBitmap(
+                    frame,
+                    FRAME_WIDTH,
+                    FRAME_HEIGHT,
+                    true
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to scale bitmap", e)
+                // If scaling fails, use the original frame
+                frame
+            }
+            
+            // Recycle the original frame to free memory (only if it's different from scaled)
             if (frame != scaledFrame) {
                 frame.recycle()
             }
             
             // Cache the result
             previewCache[positionMs] = scaledFrame
+            Log.d(TAG, "Cached preview for position $positionMs (cache size: ${previewCache.size})")
             
             // Limit cache size to avoid memory issues
             if (previewCache.size > 20) {
                 // Remove oldest entries
-                previewCache.keys.take(5).forEach { key ->
+                val keysToRemove = previewCache.keys.take(5)
+                keysToRemove.forEach { key ->
                     previewCache.remove(key)?.recycle()
                 }
+                Log.d(TAG, "Cleaned up cache, removed ${keysToRemove.size} entries")
             }
             
             scaledFrame
