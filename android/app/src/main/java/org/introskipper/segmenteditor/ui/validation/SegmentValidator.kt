@@ -1,5 +1,7 @@
 package org.introskipper.segmenteditor.ui.validation
 
+import android.content.Context
+import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.Segment
 
 data class ValidationResult(
@@ -14,34 +16,36 @@ object SegmentValidator {
      * @param startTime Start time in seconds
      * @param endTime End time in seconds
      * @param duration Total video duration in seconds
+     * @param context Android Context for string resources
      * @return ValidationResult with error message if invalid
      */
     fun validate(
         startTime: Double,
         endTime: Double,
-        duration: Double
+        duration: Double,
+        context: Context
     ): ValidationResult {
         // Check for negative times
         if (startTime < 0) {
-            return ValidationResult(false, "Start time cannot be negative")
+            return ValidationResult(false, context.getString(R.string.validation_error_start_negative))
         }
         
         if (endTime < 0) {
-            return ValidationResult(false, "End time cannot be negative")
+            return ValidationResult(false, context.getString(R.string.validation_error_end_negative))
         }
         
         // Check start < end
         if (startTime >= endTime) {
-            return ValidationResult(false, "Start time must be before end time")
+            return ValidationResult(false, context.getString(R.string.validation_error_start_after_end))
         }
         
         // Check within video duration
         if (endTime > duration) {
-            return ValidationResult(false, "End time exceeds video duration")
+            return ValidationResult(false, context.getString(R.string.validation_error_end_exceeds_duration))
         }
         
         if (startTime > duration) {
-            return ValidationResult(false, "Start time exceeds video duration")
+            return ValidationResult(false, context.getString(R.string.validation_error_start_exceeds_duration))
         }
         
         return ValidationResult(true)
@@ -53,13 +57,15 @@ object SegmentValidator {
      * @param endTime End time in seconds
      * @param existingSegments List of existing segments to check against
      * @param excludeSegmentType Segment type to exclude from overlap check (for editing)
+     * @param context Android Context for string resources
      * @return ValidationResult with warning if overlaps exist
      */
     fun checkOverlaps(
         startTime: Double,
         endTime: Double,
         existingSegments: List<Segment>,
-        excludeSegmentType: String? = null
+        excludeSegmentType: String? = null,
+        context: Context
     ): ValidationResult {
         val overlaps = existingSegments
             .filter { it.type != excludeSegmentType }
@@ -75,7 +81,7 @@ object SegmentValidator {
             val types = overlaps.joinToString(", ") { it.type }
             return ValidationResult(
                 false, 
-                "Overlaps with existing segment(s): $types"
+                context.getString(R.string.validation_error_overlaps, types)
             )
         }
         

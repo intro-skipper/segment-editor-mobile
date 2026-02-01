@@ -1,9 +1,11 @@
 package org.introskipper.segmenteditor.ui.viewmodel
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,7 +22,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SegmentEditorViewModel @Inject constructor(
-    private val segmentRepository: SegmentRepository
+    private val segmentRepository: SegmentRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
     
     private val _state = MutableStateFlow(SegmentEditorState())
@@ -132,7 +135,8 @@ class SegmentEditorViewModel @Inject constructor(
         val basicValidation = SegmentValidator.validate(
             current.startTime,
             current.endTime,
-            current.duration
+            current.duration,
+            context
         )
         
         if (!basicValidation.isValid) {
@@ -151,7 +155,8 @@ class SegmentEditorViewModel @Inject constructor(
             current.startTime,
             current.endTime,
             existingSegments,
-            excludeType
+            excludeType,
+            context
         )
         
         if (!overlapValidation.isValid) {
