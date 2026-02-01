@@ -41,3 +41,8 @@ data class SegmentCreateRequest(
     @SerializedName("EndTicks")
     val endTicks: Long
 )
+
+data class SegmentResponse(
+    @SerializedName("Items")
+    val items: List<Segment>
+)

@@ -17,7 +17,19 @@ class SegmentRepository(private val apiService: JellyfinApiService) {
      * @return Response containing list of segments
      */
     suspend fun getSegments(itemId: String): Response<List<Segment>> {
-        return apiService.getSegments(itemId)
+        val response = apiService.getSegments(itemId)
+        return if (response.isSuccessful && response.body() != null) {
+            Response.success(response.body()!!.items)
+        } else {
+            // Create an error response with the same code and error body
+            val errorBody = response.errorBody()
+            if (errorBody != null) {
+                Response.error(response.code(), errorBody)
+            } else {
+                // If no error body, return empty list as success
+                Response.success(emptyList())
+            }
+        }
     }
     
     /**
