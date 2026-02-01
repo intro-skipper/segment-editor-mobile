@@ -331,15 +331,16 @@ private fun PlayerContent(
                     )
                 }
                 
-                // Segments list - now appears before create button
+                // Segments section header
+                item {
+                    Text(
+                        text = "Segments (${uiState.segments.size})",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+                
+                // Segments list or empty message
                 if (uiState.segments.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = "Segments (${uiState.segments.size})",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
-                    
                     val runtimeSeconds = TimeUtils.ticksToMilliseconds(uiState.duration) / 1000.0
                     
                     items(uiState.segments.size) { index ->
@@ -365,6 +366,15 @@ private fun PlayerContent(
                                 onSetActiveSegment(index)
                             },
                             modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    }
+                } else {
+                    item {
+                        Text(
+                            text = "No segments found for this media item. Create one below.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 8.dp)
                         )
                     }
                 }

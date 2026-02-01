@@ -89,19 +89,24 @@ class PlayerViewModel @Inject constructor(
     private fun loadSegments(itemId: String) {
         viewModelScope.launch {
             try {
+                Log.d(TAG, "Loading segments for item: $itemId")
                 val result = segmentRepository.getSegmentsResult(itemId)
                 result.fold(
                     onSuccess = { segments ->
+                        Log.d(TAG, "Successfully loaded ${segments.size} segments")
+                        segments.forEachIndexed { index, segment ->
+                            Log.d(TAG, "Segment $index: type=${segment.type}, start=${segment.getStartSeconds()}s, end=${segment.getEndSeconds()}s")
+                        }
                         _uiState.update { it.copy(segments = segments) }
                         _events.value = PlayerEvent.SegmentLoaded(segments)
                     },
                     onFailure = { error ->
-                        Log.w(TAG, "Failed to load segments (non-critical)", error)
+                        Log.w(TAG, "Failed to load segments (non-critical): ${error.message}", error)
                         // Segments are optional, don't show error to user
                     }
                 )
             } catch (e: Exception) {
-                Log.w(TAG, "Exception loading segments (non-critical)", e)
+                Log.w(TAG, "Exception loading segments (non-critical): ${e.message}", e)
             }
         }
     }
