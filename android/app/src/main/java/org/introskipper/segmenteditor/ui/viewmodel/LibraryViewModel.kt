@@ -28,17 +28,18 @@ class LibraryViewModel @Inject constructor(
     }
     
     /**
-     * Gets the backdrop image URL for a library
+     * Gets the primary image URL for a library
      * @param itemId The ID of the library item (must not be blank)
+     * @param imageTag The image tag for the primary image
      * @param maxWidth Optional maximum width for the image (default: 800px)
-     * @return The URL string for the backdrop image
+     * @return The URL string for the primary image
      * @throws IllegalArgumentException if itemId is blank (empty or whitespace)
      */
-    fun getBackdropUrl(itemId: String, maxWidth: Int = 800): String {
+    fun getPrimaryImageUrl(itemId: String, imageTag: String, maxWidth: Int = 800): String {
         require(itemId.isNotBlank()) { "itemId must not be blank" }
-        return jellyfinApiService.getBackdropUrl(
+        return jellyfinApiService.getPrimaryImageUrl(
             itemId = itemId,
-            backdropIndex = 0,
+            imageTag = imageTag,
             maxWidth = maxWidth
         )
     }
@@ -53,7 +54,7 @@ class LibraryViewModel @Inject constructor(
                         id = mediaItem.id,
                         name = mediaItem.name ?: "Unknown Library",
                         collectionType = mediaItem.collectionType,
-                        backdropImageTag = mediaItem.backdropImageTags?.firstOrNull()
+                        primaryImageTag = mediaItem.imageTags?.get("Primary")
                     )
                 }
                 
@@ -80,5 +81,5 @@ data class Library(
     val id: String,
     val name: String,
     val collectionType: String?,
-    val backdropImageTag: String? = null
+    val primaryImageTag: String? = null
 )
