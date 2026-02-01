@@ -135,6 +135,26 @@ fun SettingsScreen(
                 }
             }
 
+            // Pagination Section
+            item {
+                SettingsSection(title = "Browsing") {
+                    RadioGroupSettingItem(
+                        title = "Items Per Page",
+                        subtitle = "Number of items to show per page",
+                        options = listOf(
+                            10 to "10",
+                            20 to "20",
+                            30 to "30",
+                            50 to "50",
+                            100 to "100",
+                            Int.MAX_VALUE to "Show All"
+                        ),
+                        selectedOption = uiState.itemsPerPage,
+                        onOptionSelected = viewModel::setItemsPerPage
+                    )
+                }
+            }
+
             // Connection Section
             item {
                 SettingsSection(title = "Connection") {

@@ -29,7 +29,7 @@ fun MediaCard(
                 contentDescription = item.name,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(16f / 9f),
+                    .aspectRatio(2f / 3f),
                 contentScale = ContentScale.Crop
             )
 

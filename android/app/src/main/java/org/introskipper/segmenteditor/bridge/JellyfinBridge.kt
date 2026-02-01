@@ -115,7 +115,7 @@ class JellyfinBridge(
             try {
                 val segment = gson.fromJson(segmentJson, SegmentCreateRequest::class.java)
                 val response = withContext(Dispatchers.IO) {
-                    apiService?.createSegment(segment)
+                    apiService?.createSegment(segment.itemId, segment)
                 }
                 
                 val result = if (response?.isSuccessful == true) {
@@ -141,16 +141,12 @@ class JellyfinBridge(
         activity.lifecycleScope.launch {
             try {
                 val segment = gson.fromJson(segmentJson, SegmentCreateRequest::class.java)
-                val response = withContext(Dispatchers.IO) {
-                    apiService?.updateSegment(itemId, segmentType, segment)
-                }
+                // Update = delete old + create new
+                // Note: This bridge method needs segmentId from the original segment
+                // For now, we'll just log that this needs to be updated
+                Log.w("JellyfinBridge", "updateSegment not fully implemented - needs segment ID")
                 
-                val result = if (response?.isSuccessful == true) {
-                    createSuccessResponse(response.body())
-                } else {
-                    createErrorResponse("Failed to update segment: ${response?.code()}")
-                }
-                
+                val result = createErrorResponse("Update not supported via bridge - use native editor")
                 notifyWebView(callbackId, result)
             } catch (e: Exception) {
                 notifyWebView(callbackId, createErrorResponse(e.message ?: "Unknown error"))
@@ -159,7 +155,7 @@ class JellyfinBridge(
     }
     
     @JavascriptInterface
-    fun deleteSegment(itemId: String, segmentType: String, callbackId: String) {
+    fun deleteSegment(segmentId: String, itemId: String, segmentType: String, callbackId: String) {
         if (!isValidCallbackId(callbackId)) {
             Log.e("JellyfinBridge", "Invalid callback ID: $callbackId")
             return
@@ -168,7 +164,7 @@ class JellyfinBridge(
         activity.lifecycleScope.launch {
             try {
                 val response = withContext(Dispatchers.IO) {
-                    apiService?.deleteSegment(itemId, segmentType)
+                    apiService?.deleteSegment(segmentId, itemId, segmentType)
                 }
                 
                 val result = if (response?.isSuccessful == true) {

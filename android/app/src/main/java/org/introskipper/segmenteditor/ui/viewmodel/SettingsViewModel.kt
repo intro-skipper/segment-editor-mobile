@@ -19,7 +19,8 @@ data class SettingsUiState(
     val skipIntroAutomatically: Boolean = true,
     val skipCreditsAutomatically: Boolean = false,
     val exportFormat: ExportFormat = ExportFormat.JSON,
-    val prettyPrintJson: Boolean = true
+    val prettyPrintJson: Boolean = true,
+    val itemsPerPage: Int = 20
 )
 
 @HiltViewModel
@@ -43,7 +44,8 @@ class SettingsViewModel @Inject constructor(
                 skipIntroAutomatically = securePreferences.getSkipIntroAutomatically(),
                 skipCreditsAutomatically = securePreferences.getSkipCreditsAutomatically(),
                 exportFormat = securePreferences.getExportFormat(),
-                prettyPrintJson = securePreferences.getPrettyPrintJson()
+                prettyPrintJson = securePreferences.getPrettyPrintJson(),
+                itemsPerPage = securePreferences.getItemsPerPage()
             )
         }
     }
@@ -81,6 +83,11 @@ class SettingsViewModel @Inject constructor(
     fun setPrettyPrintJson(enabled: Boolean) {
         securePreferences.setPrettyPrintJson(enabled)
         _uiState.value = _uiState.value.copy(prettyPrintJson = enabled)
+    }
+
+    fun setItemsPerPage(count: Int) {
+        securePreferences.setItemsPerPage(count)
+        _uiState.value = _uiState.value.copy(itemsPerPage = count)
     }
 
     fun clearAuthenticationAndRestart() {
