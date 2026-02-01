@@ -34,6 +34,9 @@ class HomeViewModel @Inject constructor(
     val showAllItems: StateFlow<Boolean> = _showAllItems
 
     private var currentLibraryId: String? = null
+    
+    // Track the last known page size to detect changes
+    private var lastPageSize: Int = 0
 
     var currentPage by mutableStateOf(1)
         private set
@@ -96,6 +99,16 @@ class HomeViewModel @Inject constructor(
         currentPage = 1
         loadMediaItems()
     }
+    
+    fun refreshIfPageSizeChanged() {
+        val currentPageSize = pageSize
+        if (lastPageSize != 0 && lastPageSize != currentPageSize) {
+            // Page size has changed, refresh the data
+            currentPage = 1
+            _showAllItems.value = false
+            loadMediaItems()
+        }
+    }
 
     private fun loadMediaItems() {
         viewModelScope.launch {
@@ -108,6 +121,9 @@ class HomeViewModel @Inject constructor(
                 }
 
                 val currentPageSize = pageSize
+                
+                // Track the page size for detecting changes
+                lastPageSize = currentPageSize
                 
                 // Use a large limit for "show all", otherwise use pageSize
                 val limit = if (_showAllItems.value || currentPageSize == Int.MAX_VALUE) {

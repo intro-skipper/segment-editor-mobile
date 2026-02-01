@@ -8,8 +8,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import org.introskipper.segmenteditor.data.model.JellyfinMediaItem
@@ -29,6 +32,21 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val showAllItems by viewModel.showAllItems.collectAsState()
+    
+    // Refresh data when screen resumes if settings might have changed
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                // Check if page size setting has changed and refresh if needed
+                viewModel.refreshIfPageSizeChanged()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
     
     // Load items for the selected library
     LaunchedEffect(libraryId) {
@@ -113,7 +131,7 @@ fun HomeScreen(
                             modifier = Modifier.weight(1f)
                         )
 
-                        // Pagination controls - show page navigation or "Show All" option
+                        // Pagination controls - only show navigation when not displaying all items
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -124,17 +142,14 @@ fun HomeScreen(
                             val isShowingAll = showAllItems || viewModel.totalPages == 1
                             
                             if (isShowingAll) {
+                                // Show count when displaying all items
                                 Text(
                                     text = "Showing all ${state.totalItems} items",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                if (showAllItems && viewModel.totalPages > 1) {
-                                    TextButton(onClick = { viewModel.toggleShowAllItems() }) {
-                                        Text("Show with pagination")
-                                    }
-                                }
                             } else {
+                                // Show pagination controls when not displaying all items
                                 PaginationControls(
                                     currentPage = viewModel.currentPage,
                                     totalPages = viewModel.totalPages,
@@ -142,11 +157,6 @@ fun HomeScreen(
                                     onNextPage = viewModel::nextPage,
                                     modifier = Modifier.fillMaxWidth()
                                 )
-                                if (viewModel.totalPages > 1) {
-                                    TextButton(onClick = { viewModel.toggleShowAllItems() }) {
-                                        Text("Show all items")
-                                    }
-                                }
                             }
                         }
                     }
