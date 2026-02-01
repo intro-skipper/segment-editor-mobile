@@ -207,23 +207,27 @@ class SegmentEditorViewModel @Inject constructor(
                             )
                             
                             if (deleteResult.isFailure) {
-                                return@launch Result.failure(
-                                    deleteResult.exceptionOrNull() ?: Exception("Failed to delete old segment")
+                                deleteResult // Return the failure
+                            } else {
+                                // Create the new segment
+                                segmentRepository.createSegmentResult(
+                                    itemId = current.itemId,
+                                    segment = segmentRequest
                                 )
                             }
+                        } else {
+                            // Create the new segment directly if no ID
+                            segmentRepository.createSegmentResult(
+                                itemId = current.itemId,
+                                segment = segmentRequest
+                            )
                         }
-                        
-                        // Create the new segment
-                        segmentRepository.createSegmentResult(
-                            itemId = current.itemId,
-                            segment = segmentRequest
-                        )
                     }
                 }
                 
                 result.fold(
                     onSuccess = { segment ->
-                        Log.d(TAG, "Segment saved successfully: ${segment.type}")
+                        Log.d(TAG, "Segment saved successfully")
                         _state.update { 
                             it.copy(
                                 isSaving = false,
