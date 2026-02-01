@@ -84,29 +84,39 @@ fun VideoPlayer(
                 )
                 setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
                 
-                // Custom preview implementation for scrubbing
-                // If a previewLoader is provided, we can hook into the TimeBar for preview display
+                // Note: This basic VideoPlayer component accepts previewLoader for API compatibility,
+                // but does not display preview overlays. For full preview support with overlay UI,
+                // use VideoPlayerWithPreview component instead.
+                // The code below detects the TimeBar for potential custom implementations.
                 if (previewLoader != null) {
                     // Use ViewTreeObserver to ensure view is fully laid out before finding TimeBar
-                    viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+                    val layoutListener = object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
                         override fun onGlobalLayout() {
-                            // Remove listener to avoid multiple calls
-                            viewTreeObserver.removeOnGlobalLayoutListener(this)
+                            // Remove listener to avoid multiple calls and prevent memory leaks
+                            if (viewTreeObserver.isAlive) {
+                                viewTreeObserver.removeOnGlobalLayoutListener(this)
+                            }
+                            
+                            // Check if view is still attached
+                            if (!isAttachedToWindow) {
+                                return
+                            }
                             
                             // Find the TimeBar in the PlayerView
                             val timeBarView = this@apply.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_progress)
                             if (timeBarView is androidx.media3.ui.TimeBar) {
-                                android.util.Log.d("VideoPlayer", "TimeBar found, preview loader available for integration")
-                                // Note: This basic VideoPlayer doesn't display preview overlay
-                                // For full preview support, use VideoPlayerWithPreview component instead
-                                // The previewLoader is available here for custom implementations
+                                android.util.Log.d("VideoPlayer", "TimeBar found, preview loader available for custom integration")
+                                // Custom preview implementations can hook into the TimeBar here
+                                // For example: add scrub listener and integrate with previewLoader
+                                // See VideoPlayerWithPreview.kt for a complete implementation
                             } else {
-                                android.util.Log.d("VideoPlayer", "TimeBar not found, but previewLoader is available")
+                                android.util.Log.d("VideoPlayer", "TimeBar not found, but previewLoader is available for custom use")
                             }
                         }
-                    })
+                    }
+                    viewTreeObserver.addOnGlobalLayoutListener(layoutListener)
                 } else {
-                    android.util.Log.d("VideoPlayer", "No previewLoader provided")
+                    android.util.Log.d("VideoPlayer", "No previewLoader provided, preview features disabled")
                 }
             }
         },

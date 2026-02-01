@@ -96,10 +96,17 @@ fun VideoPlayerWithPreview(
                     // Hook into the TimeBar to detect scrubbing
                     // Note: This depends on media3 library's internal view structure
                     // The exo_progress ID may not exist in custom layouts or future versions
-                    viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+                    val layoutListener = object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
                         override fun onGlobalLayout() {
-                            // Remove listener to avoid multiple calls
-                            viewTreeObserver.removeOnGlobalLayoutListener(this)
+                            // Remove listener to avoid multiple calls and prevent memory leaks
+                            if (viewTreeObserver.isAlive) {
+                                viewTreeObserver.removeOnGlobalLayoutListener(this)
+                            }
+                            
+                            // Check if view is still attached
+                            if (!isAttachedToWindow) {
+                                return
+                            }
                             
                             // Now the view hierarchy is fully laid out
                             val timeBarView = this@apply.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_progress)
@@ -128,7 +135,8 @@ fun VideoPlayerWithPreview(
                                 android.util.Log.w("VideoPlayerWithPreview", "TimeBar (exo_progress) not found in PlayerView. Found: ${timeBarView?.javaClass?.name}")
                             }
                         }
-                    })
+                    }
+                    viewTreeObserver.addOnGlobalLayoutListener(layoutListener)
                 }
             },
             modifier = Modifier.fillMaxSize()
