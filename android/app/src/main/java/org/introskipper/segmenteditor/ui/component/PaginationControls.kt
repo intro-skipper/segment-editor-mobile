@@ -147,7 +147,10 @@ private fun PageNumberChips(
  * - Use ellipsis for gaps
  */
 private fun getPageNumbersToDisplay(currentPage: Int, totalPages: Int): List<Int> {
-    if (totalPages <= 7) {
+    // Maximum number of pages to display without ellipsis
+    val maxPagesWithoutEllipsis = 7
+    
+    if (totalPages <= maxPagesWithoutEllipsis) {
         // Show all pages if 7 or fewer
         return (1..totalPages).toList()
     }
