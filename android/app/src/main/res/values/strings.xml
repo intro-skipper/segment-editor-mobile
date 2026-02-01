@@ -43,6 +43,11 @@
     <string name="settings_skip_intro_subtitle">Auto-skip intros when detected</string>
     <string name="settings_skip_credits">Skip Credits Automatically</string>
     <string name="settings_skip_credits_subtitle">Auto-skip end credits when detected</string>
+    <string name="settings_preview_source">Video Scrub Previews</string>
+    <string name="settings_preview_source_subtitle">Source for video thumbnail previews</string>
+    <string name="settings_preview_trickplay">🌐 Jellyfin Trickplay</string>
+    <string name="settings_preview_metadata">📱 Local Generation</string>
+    <string name="settings_preview_disabled">🚫 Disabled</string>
     
     <string name="settings_section_export">Export</string>
     <string name="settings_export_format">Default Export Format</string>
