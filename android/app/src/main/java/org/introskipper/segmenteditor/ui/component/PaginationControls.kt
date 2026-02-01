@@ -12,6 +12,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
+// Constants for pagination display
+private const val MAX_PAGES_WITHOUT_ELLIPSIS = 7
+private const val ELLIPSIS_PLACEHOLDER = -1
+
 @Composable
 fun PaginationControls(
     currentPage: Int,
@@ -116,7 +120,7 @@ private fun PageNumberChips(
     ) {
         items(pageNumbers) { pageNumber ->
             when (pageNumber) {
-                -1 -> {
+                ELLIPSIS_PLACEHOLDER -> {
                     // Ellipsis
                     Text(
                         text = "...",
