@@ -319,14 +319,6 @@ private fun PlayerContent(
                     )
                 }
                 
-                // Segments section header
-                item {
-                    Text(
-                        text = "Segments (${uiState.segments.size})",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-                
                 // Segments list or empty message
                 if (uiState.segments.isNotEmpty()) {
                     val runtimeSeconds = TimeUtils.ticksToMilliseconds(uiState.duration) / 1000.0

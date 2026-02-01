@@ -77,7 +77,7 @@ class JellyfinApiService {
     
     // ========== Segment Operations ==========
     
-    suspend fun getSegments(itemId: String): Response<List<Segment>> {
+    suspend fun getSegments(itemId: String): Response<SegmentResponse> {
         ensureInitialized()
         return api!!.getSegments(itemId, getApiKey())
     }
