@@ -171,7 +171,8 @@ class TrickplayPreviewLoader(
     }
     
     override fun getPreviewInterval(): Long {
-        return (trickplayInfo?.interval?.toLong() ?: DEFAULT_INTERVAL_MS / 1000) * 1000
+        // interval is in milliseconds
+        return trickplayInfo?.interval?.toLong() ?: DEFAULT_INTERVAL_MS
     }
     
     override fun release() {

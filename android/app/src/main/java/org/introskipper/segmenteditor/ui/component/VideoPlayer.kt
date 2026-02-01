@@ -69,7 +69,7 @@ fun VideoPlayer(
         onDispose {
             exoPlayer.removeListener(listener)
             exoPlayer.release()
-            previewLoader?.release()
+            // Note: previewLoader is released by PlayerScreen, not here
         }
     }
     

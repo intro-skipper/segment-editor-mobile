@@ -8,6 +8,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * Loads preview images using MediaMetadataRetriever to extract frames from local video
+ * Note: This works best with local file URIs. For network streams, consider using TrickplayPreviewLoader instead.
  */
 class MediaMetadataPreviewLoader(
     private val videoUri: String
@@ -27,7 +28,16 @@ class MediaMetadataPreviewLoader(
     init {
         try {
             retriever = MediaMetadataRetriever()
-            retriever?.setDataSource(videoUri)
+            
+            // For network URLs, we need to use setDataSource with headers
+            if (videoUri.startsWith("http://") || videoUri.startsWith("https://")) {
+                // Use empty headers map for network streams
+                // Note: This may not work for all network streams (e.g., HLS with authentication)
+                retriever?.setDataSource(videoUri, HashMap<String, String>())
+            } else {
+                // Local file path
+                retriever?.setDataSource(videoUri)
+            }
             
             // Get video duration
             val durationStr = retriever?.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
