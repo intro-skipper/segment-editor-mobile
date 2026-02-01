@@ -1,8 +1,23 @@
 package org.introskipper.segmenteditor.api
 
-import org.introskipper.segmenteditor.data.model.*
+import org.introskipper.segmenteditor.data.model.AuthenticationRequest
+import org.introskipper.segmenteditor.data.model.AuthenticationResult
+import org.introskipper.segmenteditor.data.model.ItemsResponse
+import org.introskipper.segmenteditor.data.model.MediaItem
+import org.introskipper.segmenteditor.data.model.PublicSystemInfo
+import org.introskipper.segmenteditor.data.model.Segment
+import org.introskipper.segmenteditor.data.model.SegmentCreateRequest
+import org.introskipper.segmenteditor.data.model.SegmentResponse
+import org.introskipper.segmenteditor.data.model.ServerInfo
+import org.introskipper.segmenteditor.data.model.User
 import retrofit2.Response
-import retrofit2.http.*
+import retrofit2.http.Body
+import retrofit2.http.DELETE
+import retrofit2.http.GET
+import retrofit2.http.Header
+import retrofit2.http.POST
+import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface JellyfinApi {
     

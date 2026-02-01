@@ -2,6 +2,7 @@ package org.introskipper.segmenteditor.player.preview
 
 import android.graphics.Bitmap
 import android.util.Log
+import androidx.core.graphics.scale
 import io.github.anilbeesetti.nextlib.mediainfo.MediaInfo
 import io.github.anilbeesetti.nextlib.mediainfo.MediaInfoBuilder
 import kotlinx.coroutines.Dispatchers
@@ -93,12 +94,7 @@ class MediaMetadataPreviewLoader(
             
             // Scale the frame to a smaller size for preview
             val scaledFrame = try {
-                Bitmap.createScaledBitmap(
-                    frame,
-                    FRAME_WIDTH,
-                    FRAME_HEIGHT,
-                    true
-                )
+                frame.scale(FRAME_WIDTH, FRAME_HEIGHT)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to scale bitmap", e)
                 // If scaling fails, use the original frame

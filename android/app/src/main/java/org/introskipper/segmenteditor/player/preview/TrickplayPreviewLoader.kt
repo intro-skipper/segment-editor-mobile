@@ -110,9 +110,8 @@ class TrickplayPreviewLoader(
                     Log.w(TAG, "Item request failed: ${response.code}")
                     return@withContext null
                 }
-                
-                val body = response.body?.string()
-                body?.let { parseTrickplayInfo(it) }
+
+                response.body.string().let { parseTrickplayInfo(it) }
             }
         } catch (e: IOException) {
             Log.e(TAG, "Error loading trickplay info", e)
@@ -203,9 +202,10 @@ class TrickplayPreviewLoader(
                     Log.w(TAG, "Tile sheet request failed: ${response.code}")
                     return@withContext null
                 }
-                
-                val bytes = response.body?.bytes()
-                bytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+
+                response.body.bytes().let {
+                    BitmapFactory.decodeByteArray(it, 0, it.size)
+                }
             }
         } catch (e: IOException) {
             Log.e(TAG, "Error loading tile sheet $imageIndex", e)

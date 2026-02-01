@@ -4,7 +4,16 @@ import android.net.Uri
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.introskipper.segmenteditor.BuildConfig
-import org.introskipper.segmenteditor.data.model.*
+import org.introskipper.segmenteditor.data.model.AuthenticationRequest
+import org.introskipper.segmenteditor.data.model.AuthenticationResult
+import org.introskipper.segmenteditor.data.model.ItemsResponse
+import org.introskipper.segmenteditor.data.model.MediaItem
+import org.introskipper.segmenteditor.data.model.PublicSystemInfo
+import org.introskipper.segmenteditor.data.model.Segment
+import org.introskipper.segmenteditor.data.model.SegmentCreateRequest
+import org.introskipper.segmenteditor.data.model.SegmentResponse
+import org.introskipper.segmenteditor.data.model.ServerInfo
+import org.introskipper.segmenteditor.data.model.User
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import retrofit2.Response
 import retrofit2.Retrofit

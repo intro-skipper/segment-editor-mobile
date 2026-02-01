@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.api.JellyfinApiService
-import org.introskipper.segmenteditor.data.model.PublicSystemInfo
 import org.introskipper.segmenteditor.data.repository.AuthRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import java.net.URL

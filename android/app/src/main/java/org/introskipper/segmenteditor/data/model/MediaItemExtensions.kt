@@ -1,7 +1,5 @@
 package org.introskipper.segmenteditor.data.model
 
-import org.introskipper.segmenteditor.storage.SecurePreferences
-
 /**
  * Extension properties for MediaItem to provide Jellyfin-specific data.
  */

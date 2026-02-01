@@ -1,9 +1,7 @@
 package org.introskipper.segmenteditor
 
-import android.app.Activity
 import android.app.Application
 import android.app.UiModeManager
-import android.content.Context
 import android.content.res.Configuration
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
