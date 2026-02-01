@@ -122,18 +122,6 @@ fun SettingsScreen(
                         checked = uiState.skipCreditsAutomatically,
                         onCheckedChange = viewModel::setSkipCreditsAutomatically
                     )
-                    
-                    RadioGroupSettingItem(
-                        title = stringResource(R.string.settings_preview_source),
-                        subtitle = stringResource(R.string.settings_preview_source_subtitle),
-                        options = listOf(
-                            org.introskipper.segmenteditor.ui.state.PreviewSource.TRICKPLAY to stringResource(R.string.settings_preview_trickplay),
-                            org.introskipper.segmenteditor.ui.state.PreviewSource.MEDIA_METADATA to stringResource(R.string.settings_preview_metadata),
-                            org.introskipper.segmenteditor.ui.state.PreviewSource.DISABLED to stringResource(R.string.settings_preview_disabled)
-                        ),
-                        selectedOption = uiState.previewSource,
-                        onOptionSelected = viewModel::setPreviewSource
-                    )
                 }
             }
             

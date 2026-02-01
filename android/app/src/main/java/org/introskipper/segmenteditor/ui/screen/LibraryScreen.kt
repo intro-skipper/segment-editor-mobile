@@ -132,7 +132,7 @@ private fun LibraryCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .height(120.dp)
+            .height(180.dp)
             .clickable(onClick = onClick, role = Role.Button),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
