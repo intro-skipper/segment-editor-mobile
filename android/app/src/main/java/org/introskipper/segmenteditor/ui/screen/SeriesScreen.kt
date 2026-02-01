@@ -9,11 +9,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.component.EpisodeCard
 import org.introskipper.segmenteditor.ui.component.MediaHeader
@@ -38,10 +40,10 @@ fun SeriesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Series") },
+                title = { Text(stringResource(R.string.series_title)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -76,7 +78,7 @@ fun SeriesScreen(
                                 color = MaterialTheme.colorScheme.error
                             )
                             Button(onClick = { viewModel.refresh(seriesId) }) {
-                                Text("Retry")
+                                Text(stringResource(R.string.retry))
                             }
                         }
                     }
@@ -117,7 +119,7 @@ fun SeriesScreen(
                         }
 
                         MediaHeader(
-                            title = series.name ?: "Unknown Series",
+                            title = series.name ?: stringResource(R.string.series_unknown),
                             subtitle = buildString {
                                 series.productionYear?.let { append(it.toString()) }
                                 val totalEpisodes = state.episodesBySeason.values.sumOf { it.size }

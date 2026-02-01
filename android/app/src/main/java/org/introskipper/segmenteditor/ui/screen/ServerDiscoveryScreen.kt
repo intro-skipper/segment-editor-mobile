@@ -9,8 +9,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.component.ErrorMessage
 import org.introskipper.segmenteditor.ui.component.LoadingIndicator
 import org.introskipper.segmenteditor.ui.component.ServerCard
@@ -40,10 +42,10 @@ fun ServerDiscoveryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Discover Servers") },
+                title = { Text(stringResource(R.string.server_discovery_title)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                     }
                 }
             )
@@ -84,18 +86,18 @@ fun ServerDiscoveryScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "No servers found",
+                                text = stringResource(R.string.server_discovery_no_servers),
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Make sure your Jellyfin server is running and accessible on your network",
+                                text = stringResource(R.string.server_discovery_help_text),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Button(onClick = { viewModel.discoverServers() }) {
-                                Text("Try Again")
+                                Text(stringResource(R.string.server_discovery_try_again))
                             }
                         }
                     }
@@ -126,7 +128,7 @@ fun ServerDiscoveryScreen(
                     .fillMaxWidth()
                     .height(56.dp)
             ) {
-                Text("Enter URL Manually")
+                Text(stringResource(R.string.server_discovery_manual))
             }
         }
     }

@@ -11,10 +11,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.component.ErrorMessage
 import org.introskipper.segmenteditor.ui.component.LoadingIndicator
 import org.introskipper.segmenteditor.ui.component.PrimaryButton
@@ -42,10 +44,10 @@ fun ServerEntryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Server URL") },
+                title = { Text(stringResource(R.string.server_url)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                     }
                 }
             )
@@ -67,8 +69,8 @@ fun ServerEntryScreen(
             TextInputField(
                 value = state.serverUrl,
                 onValueChange = { viewModel.onServerUrlChange(it) },
-                label = "Server URL",
-                placeholder = "https://jellyfin.example.com",
+                label = stringResource(R.string.server_url),
+                placeholder = stringResource(R.string.server_url_placeholder),
                 leadingIcon = {
                     Icon(Icons.Default.Language, contentDescription = null)
                 },
@@ -109,7 +111,7 @@ fun ServerEntryScreen(
                 LoadingIndicator(message = "Connecting to server...")
             } else {
                 PrimaryButton(
-                    text = "Connect",
+                    text = stringResource(R.string.server_connect),
                     onClick = { viewModel.validateAndSaveServer() },
                     enabled = state.isValidUrl
                 )

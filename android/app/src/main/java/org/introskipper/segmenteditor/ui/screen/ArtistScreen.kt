@@ -12,11 +12,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.MediaItem
 import org.introskipper.segmenteditor.data.model.toJellyfinMediaItem
 import org.introskipper.segmenteditor.storage.SecurePreferences
@@ -46,10 +48,10 @@ fun ArtistScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Artist") },
+                title = { Text(stringResource(R.string.artist_title)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -84,7 +86,7 @@ fun ArtistScreen(
                                 color = MaterialTheme.colorScheme.error
                             )
                             Button(onClick = { viewModel.refresh(artistId) }) {
-                                Text("Retry")
+                                Text(stringResource(R.string.retry))
                             }
                         }
                     }
@@ -101,7 +103,7 @@ fun ArtistScreen(
                         }
 
                         MediaHeader(
-                            title = artist.name ?: "Unknown Artist",
+                            title = artist.name ?: stringResource(R.string.artist_unknown),
                             subtitle = buildString {
                                 val albumCount = state.albums.size
                                 val trackCount = state.tracks.size
@@ -122,12 +124,12 @@ fun ArtistScreen(
                             Tab(
                                 selected = selectedTab == ArtistTab.ALBUMS,
                                 onClick = { selectedTab = ArtistTab.ALBUMS },
-                                text = { Text("Albums") }
+                                text = { Text(stringResource(R.string.artist_albums)) }
                             )
                             Tab(
                                 selected = selectedTab == ArtistTab.TRACKS,
                                 onClick = { selectedTab = ArtistTab.TRACKS },
-                                text = { Text("Tracks") }
+                                text = { Text(stringResource(R.string.artist_tracks)) }
                             )
                         }
 
@@ -140,7 +142,7 @@ fun ArtistScreen(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            text = "No albums found",
+                                            text = stringResource(R.string.artist_no_albums),
                                             style = MaterialTheme.typography.bodyLarge
                                         )
                                     }

@@ -8,9 +8,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.validation.SegmentValidator
 
 @Composable
@@ -41,11 +43,11 @@ fun TimeInputField(
             }
         },
         label = { Text(label) },
-        placeholder = { Text("MM:SS or HH:MM:SS") },
+        placeholder = { Text(stringResource(R.string.time_format_hint)) },
         isError = isError || localError,
         supportingText = {
             if (localError) {
-                Text("Invalid format. Use MM:SS or HH:MM:SS")
+                Text(stringResource(R.string.time_format_error))
             }
         },
         keyboardOptions = KeyboardOptions(

@@ -17,11 +17,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
 import kotlinx.coroutines.delay
+import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.TimeUtils
 import org.introskipper.segmenteditor.ui.component.*
@@ -94,10 +96,10 @@ fun PlayerScreen(
         topBar = {
             if (!uiState.isFullscreen) {
                 TopAppBar(
-                    title = { Text(uiState.mediaItem?.name ?: "Player") },
+                    title = { Text(uiState.mediaItem?.name ?: stringResource(R.string.player_title)) },
                     navigationIcon = {
                         IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                         }
                     }
                 )
@@ -130,7 +132,7 @@ fun PlayerScreen(
                         color = MaterialTheme.colorScheme.error
                     )
                     Button(onClick = { viewModel.loadMediaItem(itemId) }) {
-                        Text("Retry")
+                        Text(stringResource(R.string.retry))
                     }
                 }
             }
@@ -162,7 +164,7 @@ fun PlayerScreen(
     // Audio track selection sheet
     if (showAudioTracks) {
         TrackSelectionSheet(
-            title = "Audio Tracks",
+            title = stringResource(R.string.player_audio_tracks),
             tracks = uiState.audioTracks,
             selectedTrackIndex = uiState.selectedAudioTrack,
             onTrackSelected = { trackIndex ->
@@ -179,7 +181,7 @@ fun PlayerScreen(
     // Subtitle track selection sheet
     if (showSubtitleTracks) {
         TrackSelectionSheet(
-            title = "Subtitle Tracks",
+            title = stringResource(R.string.player_subtitle_tracks),
             tracks = uiState.subtitleTracks,
             selectedTrackIndex = uiState.selectedSubtitleTrack,
             onTrackSelected = { trackIndex ->
@@ -266,7 +268,7 @@ private fun PlayerContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Unable to load video",
+                        text = stringResource(R.string.player_error_load),
                         color = Color.White
                     )
                 }
@@ -285,7 +287,7 @@ private fun PlayerContent(
                     } else {
                         Icons.Default.Fullscreen
                     },
-                    contentDescription = "Toggle fullscreen",
+                    contentDescription = stringResource(R.string.player_toggle_fullscreen),
                     tint = Color.White
                 )
             }
@@ -369,7 +371,7 @@ private fun PlayerContent(
                     ) {
                         Icon(Icons.Default.Add, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Create Segment")
+                        Text(stringResource(R.string.player_create_segment))
                     }
                 }
             }
@@ -394,7 +396,7 @@ private fun PlayerControlsRow(
         ) {
             Icon(Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text("${playbackSpeed}x")
+            Text(stringResource(R.string.player_playback_speed, playbackSpeed))
         }
         
         OutlinedButton(
@@ -403,7 +405,7 @@ private fun PlayerControlsRow(
         ) {
             Icon(Icons.Default.Audiotrack, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text("Audio")
+            Text(stringResource(R.string.player_audio))
         }
         
         OutlinedButton(
@@ -412,7 +414,7 @@ private fun PlayerControlsRow(
         ) {
             Icon(Icons.Default.Subtitles, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text("Subs")
+            Text(stringResource(R.string.player_subtitles))
         }
     }
 }

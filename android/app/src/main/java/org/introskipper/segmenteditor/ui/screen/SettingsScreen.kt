@@ -7,8 +7,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.component.settings.*
 import org.introskipper.segmenteditor.ui.state.AppTheme
 import org.introskipper.segmenteditor.ui.state.ExportFormat
@@ -29,12 +31,12 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.back)
                         )
                     }
                 }
@@ -48,14 +50,14 @@ fun SettingsScreen(
         ) {
             // Theme Section
             item {
-                SettingsSection(title = "Appearance") {
+                SettingsSection(title = stringResource(R.string.settings_section_appearance)) {
                     RadioGroupSettingItem(
-                        title = "Theme",
-                        subtitle = "Choose app theme",
+                        title = stringResource(R.string.settings_theme),
+                        subtitle = stringResource(R.string.settings_theme_subtitle),
                         options = listOf(
-                            AppTheme.LIGHT to "☀️ Light",
-                            AppTheme.DARK to "🌙 Dark",
-                            AppTheme.SYSTEM to "📱 System Default"
+                            AppTheme.LIGHT to stringResource(R.string.settings_theme_light),
+                            AppTheme.DARK to stringResource(R.string.settings_theme_dark),
+                            AppTheme.SYSTEM to stringResource(R.string.settings_theme_system)
                         ),
                         selectedOption = uiState.theme,
                         onOptionSelected = { theme ->
@@ -68,24 +70,24 @@ fun SettingsScreen(
             
             // Playback Section
             item {
-                SettingsSection(title = "Playback") {
+                SettingsSection(title = stringResource(R.string.settings_section_playback)) {
                     SwitchSettingItem(
-                        title = "Auto-play Next Episode",
-                        subtitle = "Automatically play the next episode",
+                        title = stringResource(R.string.settings_autoplay_next),
+                        subtitle = stringResource(R.string.settings_autoplay_next_subtitle),
                         checked = uiState.autoPlayNextEpisode,
                         onCheckedChange = viewModel::setAutoPlayNextEpisode
                     )
                     
                     SwitchSettingItem(
-                        title = "Skip Intro Automatically",
-                        subtitle = "Auto-skip intros when detected",
+                        title = stringResource(R.string.settings_skip_intro),
+                        subtitle = stringResource(R.string.settings_skip_intro_subtitle),
                         checked = uiState.skipIntroAutomatically,
                         onCheckedChange = viewModel::setSkipIntroAutomatically
                     )
                     
                     SwitchSettingItem(
-                        title = "Skip Credits Automatically",
-                        subtitle = "Auto-skip end credits when detected",
+                        title = stringResource(R.string.settings_skip_credits),
+                        subtitle = stringResource(R.string.settings_skip_credits_subtitle),
                         checked = uiState.skipCreditsAutomatically,
                         onCheckedChange = viewModel::setSkipCreditsAutomatically
                     )
@@ -94,14 +96,14 @@ fun SettingsScreen(
             
             // Export Section
             item {
-                SettingsSection(title = "Export") {
+                SettingsSection(title = stringResource(R.string.settings_section_export)) {
                     RadioGroupSettingItem(
-                        title = "Default Export Format",
-                        subtitle = "Format for exporting segments",
+                        title = stringResource(R.string.settings_export_format),
+                        subtitle = stringResource(R.string.settings_export_format_subtitle),
                         options = listOf(
-                            ExportFormat.JSON to "JSON",
-                            ExportFormat.CSV to "CSV",
-                            ExportFormat.XML to "XML"
+                            ExportFormat.JSON to stringResource(R.string.settings_export_json),
+                            ExportFormat.CSV to stringResource(R.string.settings_export_csv),
+                            ExportFormat.XML to stringResource(R.string.settings_export_xml)
                         ),
                         selectedOption = uiState.exportFormat,
                         onOptionSelected = viewModel::setExportFormat
@@ -109,8 +111,8 @@ fun SettingsScreen(
                     
                     if (uiState.exportFormat == ExportFormat.JSON) {
                         SwitchSettingItem(
-                            title = "Pretty Print JSON",
-                            subtitle = "Format JSON with indentation",
+                            title = stringResource(R.string.settings_pretty_print),
+                            subtitle = stringResource(R.string.settings_pretty_print_subtitle),
                             checked = uiState.prettyPrintJson,
                             onCheckedChange = viewModel::setPrettyPrintJson
                         )
@@ -120,17 +122,17 @@ fun SettingsScreen(
 
             // Pagination Section
             item {
-                SettingsSection(title = "Browsing") {
+                SettingsSection(title = stringResource(R.string.settings_section_browsing)) {
                     RadioGroupSettingItem(
-                        title = "Items Per Page",
-                        subtitle = "Number of items to show per page",
+                        title = stringResource(R.string.settings_items_per_page),
+                        subtitle = stringResource(R.string.settings_items_per_page_subtitle),
                         options = listOf(
                             10 to "10",
                             20 to "20",
                             30 to "30",
                             50 to "50",
                             100 to "100",
-                            Int.MAX_VALUE to "Show All"
+                            Int.MAX_VALUE to stringResource(R.string.settings_show_all)
                         ),
                         selectedOption = uiState.itemsPerPage,
                         onOptionSelected = viewModel::setItemsPerPage
@@ -140,10 +142,10 @@ fun SettingsScreen(
 
             // Connection Section
             item {
-                SettingsSection(title = "Connection") {
+                SettingsSection(title = stringResource(R.string.settings_section_connection)) {
                     ClickableSettingItem(
-                        title = "Change Server",
-                        subtitle = "Connect to a different Jellyfin server",
+                        title = stringResource(R.string.settings_change_server),
+                        subtitle = stringResource(R.string.settings_change_server_subtitle),
                         onClick = { showChangeServerDialog = true }
                     )
                 }
@@ -151,16 +153,16 @@ fun SettingsScreen(
             
             // About Section
             item {
-                SettingsSection(title = "About") {
+                SettingsSection(title = stringResource(R.string.settings_section_about)) {
                     ClickableSettingItem(
-                        title = "About Segment Editor",
-                        subtitle = "Version info and credits",
+                        title = stringResource(R.string.settings_about),
+                        subtitle = stringResource(R.string.settings_about_subtitle),
                         onClick = { showAboutDialog = true }
                     )
                     
                     ClickableSettingItem(
-                        title = "GitHub Repository",
-                        subtitle = "View source code and contribute",
+                        title = stringResource(R.string.settings_github),
+                        subtitle = stringResource(R.string.settings_github_subtitle),
                         onClick = { showAboutDialog = true }
                     )
                 }
@@ -180,8 +182,8 @@ fun SettingsScreen(
     if (showChangeServerDialog) {
         AlertDialog(
             onDismissRequest = { showChangeServerDialog = false },
-            title = { Text("Change Server") },
-            text = { Text("This will disconnect from the current server and return to the connection wizard. Are you sure?") },
+            title = { Text(stringResource(R.string.settings_change_server)) },
+            text = { Text(stringResource(R.string.settings_change_server_dialog_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -190,12 +192,12 @@ fun SettingsScreen(
                         onRestartConnection()
                     }
                 ) {
-                    Text("Continue")
+                    Text(stringResource(R.string.continue_button))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showChangeServerDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )

@@ -12,11 +12,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.component.MediaHeader
 import org.introskipper.segmenteditor.ui.component.TrackCard
@@ -41,10 +43,10 @@ fun AlbumScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Album") },
+                title = { Text(stringResource(R.string.album_title)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -79,7 +81,7 @@ fun AlbumScreen(
                                 color = MaterialTheme.colorScheme.error
                             )
                             Button(onClick = { viewModel.refresh(albumId) }) {
-                                Text("Retry")
+                                Text(stringResource(R.string.retry))
                             }
                         }
                     }
@@ -127,7 +129,7 @@ fun AlbumScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = "No tracks found",
+                                        text = stringResource(R.string.album_no_tracks),
                                         style = MaterialTheme.typography.bodyLarge
                                     )
                                 }

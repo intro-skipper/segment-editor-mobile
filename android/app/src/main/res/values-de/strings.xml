@@ -4,13 +4,175 @@
 
     <string name="install_storage">Nicht genügend Speicherplatz!</string>
     <string name="install_conflict">Paketkonflikt!</string>
-    <string name="install_aborted">16 Die Installation wurde abgebrochen!</string>
-    <string name="install_blocked">16 Installation blockiert!</string>
+    <string name="install_aborted">Die Installation wurde abgebrochen!</string>
+    <string name="install_blocked">Installation blockiert!</string>
     <string name="install_rejected">Installation abgelehnt!</string>
     <string name="install_broken">Installation fehlerhaft!</string>
 
     <string name="update_heading">Update verfügbar!</string>
     <string name="update_message">Eine neue Version des Segment Editor steht zur Installation bereit.</string>
     <string name="button_install">Installieren</string>
-    <string name="button_dismiss">Zurückweisen</string>
+    <string name="button_dismiss">Ablehnen</string>
+
+    <!-- Common -->
+    <string name="back">Zurück</string>
+    <string name="retry">Erneut versuchen</string>
+    <string name="cancel">Abbrechen</string>
+    <string name="continue_button">Fortfahren</string>
+    <string name="done">Fertig</string>
+    <string name="apply">Anwenden</string>
+    <string name="delete">Löschen</string>
+    <string name="save">Speichern</string>
+    <string name="create">Erstellen</string>
+    <string name="error_prefix">Fehler: %1$s</string>
+
+    <!-- Settings Screen -->
+    <string name="settings">Einstellungen</string>
+    <string name="settings_section_appearance">Erscheinungsbild</string>
+    <string name="settings_theme">Design</string>
+    <string name="settings_theme_subtitle">App-Design wählen</string>
+    <string name="settings_theme_light">☀️ Hell</string>
+    <string name="settings_theme_dark">🌙 Dunkel</string>
+    <string name="settings_theme_system">📱 Systemstandard</string>
+    
+    <string name="settings_section_playback">Wiedergabe</string>
+    <string name="settings_autoplay_next">Nächste Episode automatisch abspielen</string>
+    <string name="settings_autoplay_next_subtitle">Automatisch die nächste Episode abspielen</string>
+    <string name="settings_skip_intro">Intro automatisch überspringen</string>
+    <string name="settings_skip_intro_subtitle">Intros automatisch überspringen, wenn erkannt</string>
+    <string name="settings_skip_credits">Abspann automatisch überspringen</string>
+    <string name="settings_skip_credits_subtitle">Abspann automatisch überspringen, wenn erkannt</string>
+    
+    <string name="settings_section_export">Export</string>
+    <string name="settings_export_format">Standard-Exportformat</string>
+    <string name="settings_export_format_subtitle">Format für den Export von Segmenten</string>
+    <string name="settings_export_json">JSON</string>
+    <string name="settings_export_csv">CSV</string>
+    <string name="settings_export_xml">XML</string>
+    <string name="settings_pretty_print">JSON formatieren</string>
+    <string name="settings_pretty_print_subtitle">JSON mit Einrückung formatieren</string>
+    
+    <string name="settings_section_browsing">Durchsuchen</string>
+    <string name="settings_items_per_page">Elemente pro Seite</string>
+    <string name="settings_items_per_page_subtitle">Anzahl der Elemente pro Seite</string>
+    <string name="settings_show_all">Alle anzeigen</string>
+    
+    <string name="settings_section_connection">Verbindung</string>
+    <string name="settings_change_server">Server wechseln</string>
+    <string name="settings_change_server_subtitle">Mit einem anderen Jellyfin-Server verbinden</string>
+    <string name="settings_change_server_dialog_message">Die Verbindung zum aktuellen Server wird getrennt und Sie kehren zum Verbindungsassistenten zurück. Sind Sie sicher?</string>
+    
+    <string name="settings_section_about">Über</string>
+    <string name="settings_about">Über Segment Editor</string>
+    <string name="settings_about_subtitle">Versionsinformationen und Credits</string>
+    <string name="settings_github">GitHub-Repository</string>
+    <string name="settings_github_subtitle">Quellcode anzeigen und beitragen</string>
+
+    <!-- Authentication Screen -->
+    <string name="authentication">Authentifizierung</string>
+    <string name="auth_sign_in">Bei Ihrem Jellyfin-Server anmelden</string>
+    <string name="auth_api_key">API-Schlüssel</string>
+    <string name="auth_username_password">Benutzername/Passwort</string>
+    <string name="auth_username">Benutzername</string>
+    <string name="auth_password">Passwort</string>
+    <string name="auth_api_key_placeholder">Geben Sie Ihren API-Schlüssel ein</string>
+    <string name="auth_username_placeholder">Geben Sie Ihren Benutzernamen ein</string>
+    <string name="auth_password_placeholder">Geben Sie Ihr Passwort ein</string>
+    <string name="auth_password_hide">Passwort verbergen</string>
+    <string name="auth_password_show">Passwort anzeigen</string>
+    <string name="auth_sign_in_button">Anmelden</string>
+
+    <!-- Server Entry Screen -->
+    <string name="server_url">Server-URL</string>
+    <string name="server_url_placeholder">https://jellyfin.beispiel.com</string>
+    <string name="server_connect">Verbinden</string>
+
+    <!-- Connection Wizard Screen -->
+    <string name="connection_wizard_title">Mit Jellyfin verbinden</string>
+    <string name="connection_wizard_welcome">Willkommen bei Segment Editor</string>
+    <string name="connection_wizard_message">Verbinden Sie sich mit Ihrem Jellyfin-Server, um zu beginnen</string>
+    <string name="connection_wizard_enter_url">Server-URL eingeben</string>
+    <string name="connection_wizard_discover">Server suchen</string>
+
+    <!-- Server Discovery Screen -->
+    <string name="server_discovery_title">Server suchen</string>
+    <string name="server_discovery_no_servers">Keine Server gefunden</string>
+    <string name="server_discovery_help_text">Stellen Sie sicher, dass Ihr Jellyfin-Server läuft und in Ihrem Netzwerk erreichbar ist</string>
+    <string name="server_discovery_try_again">Erneut versuchen</string>
+    <string name="server_discovery_manual">URL manuell eingeben</string>
+
+    <!-- Home Screen -->
+    <string name="home_tv_shows">TV-Sendungen</string>
+    <string name="home_settings">Einstellungen</string>
+    <string name="home_no_media">Keine Medienelemente gefunden</string>
+
+    <!-- Player Screen -->
+    <string name="player_title">Player</string>
+    <string name="player_create_segment">Segment erstellen</string>
+    <string name="player_audio">Audio</string>
+    <string name="player_subtitles">Untertitel</string>
+    <string name="player_audio_tracks">Audiospuren</string>
+    <string name="player_subtitle_tracks">Untertitelspuren</string>
+    <string name="player_error_load">Video kann nicht geladen werden</string>
+    <string name="player_toggle_fullscreen">Vollbild umschalten</string>
+    <string name="player_playback_speed">%1$.1fx</string>
+
+    <!-- Library Screen -->
+    <string name="library_select">Bibliothek auswählen</string>
+    <string name="library_no_libraries">Keine Bibliotheken gefunden</string>
+
+    <!-- Series Screen -->
+    <string name="series_title">Serie</string>
+    <string name="series_unknown">Unbekannte Serie</string>
+
+    <!-- Album Screen -->
+    <string name="album_title">Album</string>
+    <string name="album_no_tracks">Keine Titel gefunden</string>
+
+    <!-- Artist Screen -->
+    <string name="artist_title">Künstler</string>
+    <string name="artist_unknown">Unbekannter Künstler</string>
+    <string name="artist_albums">Alben</string>
+    <string name="artist_tracks">Titel</string>
+    <string name="artist_no_albums">Keine Alben gefunden</string>
+
+    <!-- Connection Success Screen -->
+    <string name="connection_success_title">Erfolgreich verbunden</string>
+
+    <!-- About Dialog -->
+    <string name="about_title">Segment Editor</string>
+    <string name="about_credits">Credits</string>
+    <string name="about_view_github">Auf GitHub anzeigen</string>
+    <string name="about_licenses">Open-Source-Lizenzen</string>
+
+    <!-- Collection Filter Sheet -->
+    <string name="filter_collections">Sammlungen filtern</string>
+    <string name="filter_no_collections">Keine Sammlungen verfügbar</string>
+    <string name="filter_clear_all">Alle löschen</string>
+
+    <!-- Search Bar -->
+    <string name="search_placeholder">Medien durchsuchen…</string>
+
+    <!-- Time Input Field -->
+    <string name="time_format_hint">MM:SS oder HH:MM:SS</string>
+    <string name="time_format_error">Ungültiges Format. Verwenden Sie MM:SS oder HH:MM:SS</string>
+
+    <!-- Segment Editor Dialog -->
+    <string name="segment_delete_title">Segment löschen?</string>
+    <string name="segment_delete_message">Möchten Sie dieses %1$s-Segment wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.</string>
+    <string name="segment_created">Segment erfolgreich erstellt</string>
+    <string name="segment_updated">Segment erfolgreich aktualisiert</string>
+    <string name="segment_create_title">Segment erstellen</string>
+    <string name="segment_edit_title">Segment bearbeiten</string>
+
+    <!-- Playback Speed Dialog -->
+    <string name="playback_speed_title">Wiedergabegeschwindigkeit</string>
+
+    <!-- Segment Validation Errors -->
+    <string name="validation_error_start_negative">Startzeit kann nicht negativ sein</string>
+    <string name="validation_error_end_negative">Endzeit kann nicht negativ sein</string>
+    <string name="validation_error_start_after_end">Startzeit muss vor der Endzeit liegen</string>
+    <string name="validation_error_end_exceeds_duration">Endzeit überschreitet die Videodauer</string>
+    <string name="validation_error_start_exceeds_duration">Startzeit überschreitet die Videodauer</string>
+    <string name="validation_error_overlaps">Überschneidet sich mit vorhandenen Segment(en): %1$s</string>
 </resources>

@@ -6,7 +6,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.component.CollectionChip
 import org.introskipper.segmenteditor.ui.component.JellyfinCollection
 
@@ -32,14 +34,14 @@ fun CollectionFilterSheet(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Filter Collections",
+                    text = stringResource(R.string.filter_collections),
                     style = MaterialTheme.typography.headlineSmall
                 )
                 TextButton(onClick = {
                     onClearFilter()
                     onDismiss()
                 }) {
-                    Text("Clear All")
+                    Text(stringResource(R.string.filter_clear_all))
                 }
             }
 
@@ -47,7 +49,7 @@ fun CollectionFilterSheet(
 
             if (collections.isEmpty()) {
                 Text(
-                    text = "No collections available",
+                    text = stringResource(R.string.filter_no_collections),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -73,7 +75,7 @@ fun CollectionFilterSheet(
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Apply")
+                Text(stringResource(R.string.apply))
             }
         }
     }

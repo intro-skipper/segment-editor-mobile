@@ -19,6 +19,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
@@ -46,6 +47,7 @@ fun SegmentSlider(
 ) {
     val clipboardManager = LocalClipboardManager.current
     val density = LocalDensity.current
+    val context = LocalContext.current
     
     var localStartSeconds by remember(segment) { mutableStateOf(segment.getStartSeconds()) }
     var localEndSeconds by remember(segment) { mutableStateOf(segment.getEndSeconds()) }
@@ -58,7 +60,7 @@ fun SegmentSlider(
     
     // Validate segment boundaries
     val validation = remember(localStartSeconds, localEndSeconds, runtimeSeconds) {
-        SegmentValidator.validate(localStartSeconds, localEndSeconds, runtimeSeconds)
+        SegmentValidator.validate(localStartSeconds, localEndSeconds, runtimeSeconds, context)
     }
     
     // Update local state when segment prop changes

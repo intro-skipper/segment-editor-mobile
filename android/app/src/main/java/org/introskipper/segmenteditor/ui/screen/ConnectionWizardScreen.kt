@@ -8,10 +8,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.component.PrimaryButton
 import org.introskipper.segmenteditor.ui.navigation.Screen
 import org.introskipper.segmenteditor.ui.viewmodel.ConnectionViewModel
@@ -25,7 +27,7 @@ fun ConnectionWizardScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Connect to Jellyfin") }
+                title = { Text(stringResource(R.string.connection_wizard_title)) }
             )
         }
     ) { padding ->
@@ -47,7 +49,7 @@ fun ConnectionWizardScreen(
             Spacer(modifier = Modifier.height(32.dp))
             
             Text(
-                text = "Welcome to Segment Editor",
+                text = stringResource(R.string.connection_wizard_welcome),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
@@ -56,7 +58,7 @@ fun ConnectionWizardScreen(
             Spacer(modifier = Modifier.height(16.dp))
             
             Text(
-                text = "Connect to your Jellyfin server to get started",
+                text = stringResource(R.string.connection_wizard_message),
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -65,7 +67,7 @@ fun ConnectionWizardScreen(
             Spacer(modifier = Modifier.height(48.dp))
             
             PrimaryButton(
-                text = "Enter Server URL",
+                text = stringResource(R.string.connection_wizard_enter_url),
                 onClick = { navController.navigate(Screen.ServerEntry.route) }
             )
             
@@ -84,7 +86,7 @@ fun ConnectionWizardScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Discover Servers",
+                    text = stringResource(R.string.connection_wizard_discover),
                     style = MaterialTheme.typography.titleMedium
                 )
             }
