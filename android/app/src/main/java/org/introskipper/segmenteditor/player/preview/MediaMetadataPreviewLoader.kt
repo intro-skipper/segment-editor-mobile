@@ -23,6 +23,8 @@ class MediaMetadataPreviewLoader(
         private const val DEFAULT_INTERVAL_MS = 10000L // 10 seconds
         private const val FRAME_WIDTH = 320 // Width of preview frames
         private const val FRAME_HEIGHT = 180 // Height of preview frames (16:9 aspect ratio)
+        private const val MAX_CACHE_SIZE = 20 // Maximum number of cached preview frames
+        private const val CACHE_CLEANUP_COUNT = 5 // Number of oldest entries to remove when cache is full
     }
     
     init {
@@ -54,9 +56,10 @@ class MediaMetadataPreviewLoader(
     override suspend fun loadPreview(positionMs: Long): Bitmap? = withContext(Dispatchers.IO) {
         try {
             // Check cache first
-            previewCache[positionMs]?.let { 
+            val cached = previewCache[positionMs]
+            if (cached != null) {
                 Log.d(TAG, "Returning cached preview for position $positionMs")
-                return@withContext it 
+                return@withContext cached
             }
             
             val ret = retriever ?: run {
@@ -70,23 +73,21 @@ class MediaMetadataPreviewLoader(
             
             // Extract frame at the given position
             // Note: getFrameAtTime uses microseconds
-            // Try OPTION_CLOSEST first for more accurate preview, fallback to OPTION_CLOSEST_SYNC
-            var frame = ret.getFrameAtTime(
+            // Try OPTION_CLOSEST_SYNC first (faster, uses keyframes) then fallback to OPTION_CLOSEST for accuracy
+            val frame = ret.getFrameAtTime(
                 clampedPosition * 1000, // Convert ms to microseconds
-                MediaMetadataRetriever.OPTION_CLOSEST
-            )
-            
-            // If OPTION_CLOSEST fails, try OPTION_CLOSEST_SYNC as fallback
-            if (frame == null) {
-                Log.d(TAG, "OPTION_CLOSEST failed, trying OPTION_CLOSEST_SYNC")
-                frame = ret.getFrameAtTime(
+                MediaMetadataRetriever.OPTION_CLOSEST_SYNC
+            ) ?: run {
+                // If OPTION_CLOSEST_SYNC fails, try OPTION_CLOSEST as fallback (slower but more accurate)
+                Log.d(TAG, "OPTION_CLOSEST_SYNC failed, trying OPTION_CLOSEST")
+                ret.getFrameAtTime(
                     clampedPosition * 1000,
-                    MediaMetadataRetriever.OPTION_CLOSEST_SYNC
+                    MediaMetadataRetriever.OPTION_CLOSEST
                 )
             }
             
             if (frame == null) {
-                Log.w(TAG, "Failed to extract frame at position $positionMs - getFrameAtTime returned null")
+                Log.w(TAG, "Failed to extract frame - getFrameAtTime returned null")
                 return@withContext null
             }
             
@@ -116,13 +117,12 @@ class MediaMetadataPreviewLoader(
             Log.d(TAG, "Cached preview for position $positionMs (cache size: ${previewCache.size})")
             
             // Limit cache size to avoid memory issues
-            if (previewCache.size > 20) {
+            if (previewCache.size > MAX_CACHE_SIZE) {
                 // Remove oldest entries
-                val keysToRemove = previewCache.keys.take(5)
-                keysToRemove.forEach { key ->
+                previewCache.keys.take(CACHE_CLEANUP_COUNT).forEach { key ->
                     previewCache.remove(key)?.recycle()
                 }
-                Log.d(TAG, "Cleaned up cache, removed ${keysToRemove.size} entries")
+                Log.d(TAG, "Cleaned up cache")
             }
             
             scaledFrame

@@ -29,8 +29,13 @@ class LibraryViewModel @Inject constructor(
     
     /**
      * Gets the backdrop image URL for a library
+     * @param itemId The ID of the library item (must not be blank)
+     * @param maxWidth Optional maximum width for the image (default: 800px)
+     * @return The URL string for the backdrop image
+     * @throws IllegalArgumentException if itemId is blank (empty or whitespace)
      */
     fun getBackdropUrl(itemId: String, maxWidth: Int = 800): String {
+        require(itemId.isNotBlank()) { "itemId must not be blank" }
         return jellyfinApiService.getBackdropUrl(
             itemId = itemId,
             backdropIndex = 0,

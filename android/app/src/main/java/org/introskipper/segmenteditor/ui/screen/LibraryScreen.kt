@@ -14,12 +14,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import org.introskipper.segmenteditor.R
+import org.introskipper.segmenteditor.ui.viewmodel.Library
 import org.introskipper.segmenteditor.ui.viewmodel.LibraryUiState
 import org.introskipper.segmenteditor.ui.viewmodel.LibraryViewModel
 
@@ -83,7 +85,8 @@ fun LibraryScreen(
                         state.libraries.forEach { library ->
                             LibraryCard(
                                 library = library,
-                                onClick = { onLibraryClick(library.id) }
+                                onClick = { onLibraryClick(library.id) },
+                                getBackdropUrl = { itemId -> viewModel.getBackdropUrl(itemId) }
                             )
                         }
                     }
@@ -115,20 +118,22 @@ fun LibraryScreen(
 
 @Composable
 private fun LibraryCard(
-    library: org.introskipper.segmenteditor.ui.viewmodel.Library,
+    library: Library,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    viewModel: LibraryViewModel = hiltViewModel()
+    getBackdropUrl: (String) -> String,
+    modifier: Modifier = Modifier
 ) {
-    val backdropUrl = library.backdropImageTag?.let { 
-        viewModel.getBackdropUrl(library.id)
+    val backdropUrl = if (library.backdropImageTag != null) {
+        getBackdropUrl(library.id)
+    } else {
+        null
     }
     
     Card(
         modifier = modifier
             .fillMaxWidth()
             .height(120.dp)
-            .clickable(onClick = onClick),
+            .clickable(onClick = onClick, role = Role.Button),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
