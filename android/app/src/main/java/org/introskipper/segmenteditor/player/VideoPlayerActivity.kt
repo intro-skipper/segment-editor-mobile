@@ -20,6 +20,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import org.introskipper.segmenteditor.ui.theme.ReactInMobileTheme
+import java.util.Locale
 
 class VideoPlayerActivity : ComponentActivity() {
     private var player: ExoPlayer? = null
@@ -220,9 +221,9 @@ private fun formatTime(milliseconds: Long): String {
     val seconds = totalSeconds % 60
     
     return if (hours > 0) {
-        String.format("%02d:%02d:%02d", hours, minutes, seconds)
+        String.format(Locale.ROOT, "%02d:%02d:%02d", hours, minutes, seconds)
     } else {
-        String.format("%02d:%02d", minutes, seconds)
+        String.format(Locale.ROOT, "%02d:%02d", minutes, seconds)
     }
 }
 
