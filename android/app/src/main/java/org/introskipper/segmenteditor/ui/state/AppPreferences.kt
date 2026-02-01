@@ -18,8 +18,6 @@ data class AppPreferences(
     
     // UI settings
     val theme: AppTheme = AppTheme.SYSTEM,
-    val language: String = "en",
-    val useSystemLanguage: Boolean = true,
     
     // Segment editor settings
     val defaultSegmentDuration: Double = 90.0, // seconds

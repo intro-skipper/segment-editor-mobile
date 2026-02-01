@@ -119,22 +119,6 @@ class SecurePreferences(context: Context) {
         }
     }
     
-    fun setLanguage(language: String) {
-        sharedPreferences.edit { putString(KEY_LANGUAGE, language) }
-    }
-    
-    fun getLanguage(): String {
-        return sharedPreferences.getString(KEY_LANGUAGE, "en") ?: "en"
-    }
-    
-    fun setUseSystemLanguage(enabled: Boolean) {
-        sharedPreferences.edit { putBoolean(KEY_USE_SYSTEM_LANGUAGE, enabled) }
-    }
-    
-    fun getUseSystemLanguage(): Boolean {
-        return sharedPreferences.getBoolean(KEY_USE_SYSTEM_LANGUAGE, true)
-    }
-    
     // ========== Segment Editor Settings ==========
     
     fun setDefaultSegmentDuration(seconds: Double) {
