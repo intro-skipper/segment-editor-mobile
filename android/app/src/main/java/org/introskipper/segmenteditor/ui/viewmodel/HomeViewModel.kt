@@ -94,6 +94,13 @@ class HomeViewModel @Inject constructor(
             loadMediaItems()
         }
     }
+    
+    fun goToPage(page: Int) {
+        if (page in 1..totalPages && page != currentPage) {
+            currentPage = page
+            loadMediaItems()
+        }
+    }
 
     fun refresh() {
         currentPage = 1

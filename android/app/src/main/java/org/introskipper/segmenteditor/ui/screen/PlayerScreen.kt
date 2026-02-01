@@ -331,19 +331,7 @@ private fun PlayerContent(
                     )
                 }
                 
-                // Create segment button
-                item {
-                    Button(
-                        onClick = onCreateSegment,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Create Segment")
-                    }
-                }
-                
-                // Segments list
+                // Segments list - now appears before create button
                 if (uiState.segments.isNotEmpty()) {
                     item {
                         Text(
@@ -378,6 +366,18 @@ private fun PlayerContent(
                             },
                             modifier = Modifier.padding(vertical = 4.dp)
                         )
+                    }
+                }
+                
+                // Create segment button - now appears after segments
+                item {
+                    Button(
+                        onClick = onCreateSegment,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Create Segment")
                     }
                 }
             }
