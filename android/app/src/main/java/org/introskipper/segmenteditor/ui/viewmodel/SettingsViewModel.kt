@@ -19,8 +19,7 @@ data class SettingsUiState(
     val skipCreditsAutomatically: Boolean = false,
     val exportFormat: ExportFormat = ExportFormat.JSON,
     val prettyPrintJson: Boolean = true,
-    val itemsPerPage: Int = 20,
-    val previewSource: org.introskipper.segmenteditor.ui.state.PreviewSource = org.introskipper.segmenteditor.ui.state.PreviewSource.TRICKPLAY
+    val itemsPerPage: Int = 20
 )
 
 @HiltViewModel
@@ -44,8 +43,7 @@ class SettingsViewModel @Inject constructor(
                 skipCreditsAutomatically = securePreferences.getSkipCreditsAutomatically(),
                 exportFormat = securePreferences.getExportFormat(),
                 prettyPrintJson = securePreferences.getPrettyPrintJson(),
-                itemsPerPage = securePreferences.getItemsPerPage(),
-                previewSource = securePreferences.getPreviewSource()
+                itemsPerPage = securePreferences.getItemsPerPage()
             )
         }
     }
@@ -87,10 +85,5 @@ class SettingsViewModel @Inject constructor(
 
     fun clearAuthenticationAndRestart() {
         securePreferences.clearAuthentication()
-    }
-
-    fun setPreviewSource(source: org.introskipper.segmenteditor.ui.state.PreviewSource) {
-        securePreferences.setPreviewSource(source)
-        _uiState.value = _uiState.value.copy(previewSource = source)
     }
 }

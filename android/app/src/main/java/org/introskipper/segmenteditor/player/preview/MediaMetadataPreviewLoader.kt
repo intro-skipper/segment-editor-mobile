@@ -1,20 +1,21 @@
 package org.introskipper.segmenteditor.player.preview
 
 import android.graphics.Bitmap
-import android.media.MediaMetadataRetriever
 import android.util.Log
+import io.github.anilbeesetti.nextlib.mediainfo.MediaInfo
+import io.github.anilbeesetti.nextlib.mediainfo.MediaInfoBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Loads preview images using MediaMetadataRetriever to extract frames from local video
- * Note: This works best with local file URIs. For network streams, consider using TrickplayPreviewLoader instead.
+ * Loads preview images using nextlib-mediainfo to extract frames from video
+ * This replaces MediaMetadataRetriever with a more robust FFmpeg-based solution
  */
 class MediaMetadataPreviewLoader(
     private val videoUri: String
 ) : PreviewLoader {
     
-    private var retriever: MediaMetadataRetriever? = null
+    private var mediaInfo: MediaInfo? = null
     private val previewCache = mutableMapOf<Long, Bitmap>()
     private var durationMs: Long = 0
     
@@ -28,35 +29,30 @@ class MediaMetadataPreviewLoader(
     }
     
     init {
-        var ret: MediaMetadataRetriever? = null
         try {
-            ret = MediaMetadataRetriever()
+            // Create MediaInfo using nextlib-mediainfo
+            val builder = MediaInfoBuilder()
+            mediaInfo = builder.from(videoUri).build()
             
-            // For network URLs, we need to use setDataSource with headers
-            if (videoUri.startsWith("http://") || videoUri.startsWith("https://")) {
-                // Use empty headers map for network streams
-                // Note: This may not work for all network streams (e.g., HLS with authentication)
-                ret.setDataSource(videoUri, mapOf())
-            } else {
-                // Local file path
-                ret.setDataSource(videoUri)
+            if (mediaInfo == null) {
+                throw IllegalStateException("Failed to create MediaInfo for $videoUri")
             }
             
-            // Get video duration - validate that retriever is properly initialized
-            val durationStr = ret.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-            durationMs = durationStr?.toLongOrNull() ?: 0L
+            // Get video duration
+            durationMs = mediaInfo?.duration ?: 0L
             
-            // Only set retriever if initialization was successful
-            retriever = ret
+            // Check if frame loading is supported
+            if (mediaInfo?.supportsFrameLoading != true) {
+                Log.w(TAG, "Frame loading not supported for this video format")
+            }
             
-            Log.d(TAG, "Initialized MediaMetadataRetriever for video: $videoUri, duration: ${durationMs}ms")
+            Log.d(TAG, "Initialized MediaInfo for video: $videoUri, duration: ${durationMs}ms, supports frame loading: ${mediaInfo?.supportsFrameLoading}")
         } catch (e: Exception) {
-            Log.e(TAG, "Error initializing MediaMetadataRetriever for $videoUri", e)
-            // Clean up the local retriever if it was created
-            ret?.release()
-            retriever = null
+            Log.e(TAG, "Error initializing MediaInfo for $videoUri", e)
+            mediaInfo?.release()
+            mediaInfo = null
             // Re-throw the exception so the caller knows initialization failed
-            throw IllegalStateException("Failed to initialize MediaMetadataRetriever for $videoUri", e)
+            throw IllegalStateException("Failed to initialize MediaInfo for $videoUri", e)
         }
     }
     
@@ -69,9 +65,15 @@ class MediaMetadataPreviewLoader(
                 return@withContext cached
             }
             
-            // Retriever should always be non-null if init succeeded
-            val ret = retriever ?: run {
-                Log.e(TAG, "MediaMetadataRetriever is null - this should not happen if init succeeded")
+            // MediaInfo should always be non-null if init succeeded
+            val info = mediaInfo ?: run {
+                Log.e(TAG, "MediaInfo is null - this should not happen if init succeeded")
+                return@withContext null
+            }
+            
+            // Check if frame loading is supported
+            if (!info.supportsFrameLoading) {
+                Log.w(TAG, "Frame loading not supported for this video")
                 return@withContext null
             }
             
@@ -79,23 +81,11 @@ class MediaMetadataPreviewLoader(
             val clampedPosition = positionMs.coerceIn(0, durationMs)
             Log.d(TAG, "Extracting frame at position $clampedPosition (original: $positionMs, duration: $durationMs)")
             
-            // Extract frame at the given position
-            // Note: getFrameAtTime uses microseconds
-            // Try OPTION_CLOSEST_SYNC first (faster, uses keyframes) then fallback to OPTION_CLOSEST for accuracy
-            val frame = ret.getFrameAtTime(
-                clampedPosition * 1000, // Convert ms to microseconds
-                MediaMetadataRetriever.OPTION_CLOSEST_SYNC
-            ) ?: run {
-                // If OPTION_CLOSEST_SYNC fails, try OPTION_CLOSEST as fallback (slower but more accurate)
-                Log.d(TAG, "OPTION_CLOSEST_SYNC failed, trying OPTION_CLOSEST")
-                ret.getFrameAtTime(
-                    clampedPosition * 1000,
-                    MediaMetadataRetriever.OPTION_CLOSEST
-                )
-            }
+            // Extract frame at the given position using nextlib-mediainfo
+            val frame = info.getFrameAt(clampedPosition)
             
             if (frame == null) {
-                Log.w(TAG, "Failed to extract frame - getFrameAtTime returned null")
+                Log.w(TAG, "Failed to extract frame - getFrameAt returned null")
                 return@withContext null
             }
             
@@ -150,13 +140,13 @@ class MediaMetadataPreviewLoader(
             previewCache.values.forEach { it.recycle() }
             previewCache.clear()
             
-            // Release retriever
-            retriever?.release()
-            retriever = null
+            // Release mediaInfo
+            mediaInfo?.release()
+            mediaInfo = null
             
-            Log.d(TAG, "Released MediaMetadataRetriever resources")
+            Log.d(TAG, "Released MediaInfo resources")
         } catch (e: Exception) {
-            Log.e(TAG, "Error releasing MediaMetadataRetriever", e)
+            Log.e(TAG, "Error releasing MediaInfo", e)
         }
     }
 }

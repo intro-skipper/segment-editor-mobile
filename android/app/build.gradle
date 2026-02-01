@@ -5,7 +5,7 @@ plugins {
     id 'org.jetbrains.kotlin.android'
     id 'org.jetbrains.kotlin.plugin.compose'
     id 'com.google.dagger.hilt.android'
-    id 'kotlin-kapt'
+    id 'com.google.devtools.ksp'
 }
 
 android {
@@ -138,7 +138,7 @@ dependencies {
     
     // Hilt for dependency injection
     implementation "com.google.dagger:hilt-android:$dagger_version"
-    kapt "com.google.dagger:hilt-compiler:$dagger_version"
+    ksp "com.google.dagger:hilt-compiler:$dagger_version"
     implementation 'androidx.hilt:hilt-navigation-compose:1.1.0'
     
     testImplementation 'junit:junit:4.13.2'

@@ -21,7 +21,6 @@ import org.introskipper.segmenteditor.player.preview.TrickplayPreviewLoader
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.state.PlayerEvent
 import org.introskipper.segmenteditor.ui.state.PlayerUiState
-import org.introskipper.segmenteditor.ui.state.PreviewSource
 import org.introskipper.segmenteditor.ui.state.TrackInfo
 import javax.inject.Inject
 
@@ -253,32 +252,30 @@ class PlayerViewModel @Inject constructor(
     }
     
     /**
-     * Creates a preview loader based on the current settings
+     * Creates a preview loader with automatic fallback logic.
+     * Always tries TRICKPLAY first, then falls back to MEDIA_METADATA if unavailable.
      */
     fun createPreviewLoader(itemId: String, streamUrl: String): PreviewLoader? {
-        val previewSource = securePreferences.getPreviewSource()
+        val serverUrl = securePreferences.getServerUrl()
+        val apiKey = securePreferences.getApiKey()
         
-        return when (previewSource) {
-            PreviewSource.TRICKPLAY -> {
-                val serverUrl = securePreferences.getServerUrl()
-                val apiKey = securePreferences.getApiKey()
-                
-                if (serverUrl != null && apiKey != null) {
-                    TrickplayPreviewLoader(serverUrl, apiKey, itemId, httpClient)
-                } else {
-                    Log.w(TAG, "Cannot create TrickplayPreviewLoader: missing server URL or API key")
-                    null
-                }
+        // First, try TRICKPLAY if server credentials are available
+        if (serverUrl != null && apiKey != null) {
+            try {
+                return TrickplayPreviewLoader(serverUrl, apiKey, itemId, httpClient)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to create TrickplayPreviewLoader, falling back to MediaMetadataPreviewLoader", e)
             }
-            PreviewSource.MEDIA_METADATA -> {
-                try {
-                    MediaMetadataPreviewLoader(streamUrl)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to create MediaMetadataPreviewLoader", e)
-                    null
-                }
-            }
-            PreviewSource.DISABLED -> null
+        } else {
+            Log.d(TAG, "Server URL or API key not available, skipping TRICKPLAY and using MediaMetadataPreviewLoader")
+        }
+        
+        // Fallback to MEDIA_METADATA
+        return try {
+            MediaMetadataPreviewLoader(streamUrl)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to create MediaMetadataPreviewLoader as fallback", e)
+            null
         }
     }
     
