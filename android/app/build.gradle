@@ -130,6 +130,10 @@ dependencies {
     // Image loading
     implementation 'io.coil-kt:coil-compose:2.7.0'
     
+    // nextlib for FFmpeg-based media processing
+    implementation 'io.github.anilbeesetti:nextlib-media3ext:1.9.1-0.10.1'
+    implementation 'io.github.anilbeesetti:nextlib-mediainfo:1.9.1-0.10.1'
+    
     // Swipe refresh
     implementation 'com.google.accompanist:accompanist-swiperefresh:0.36.0'
     
