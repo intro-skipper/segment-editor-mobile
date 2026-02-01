@@ -2,7 +2,7 @@
 
 ## Overview
 
-This implementation adds support for video preview scrubbing in the segment editor mobile app. Users can now see thumbnail previews when scrubbing through videos in the player.
+This implementation adds support for video preview scrubbing in the segment editor mobile app. Users can now see thumbnail previews when dragging the video player's seek bar.
 
 ## Features
 
@@ -40,30 +40,37 @@ interface PreviewLoader {
 #### 2. TrickplayPreviewLoader
 - Implements Jellyfin's trickplay API
 - **API Endpoints Used:**
-  - `GET /Videos/{itemId}/Trickplay` - Get trickplay metadata
+  - `GET /Items/{itemId}` - Get item details with trickplay metadata embedded in `Trickplay` field
   - `GET /Videos/{itemId}/Trickplay/{width}/{index}.jpg` - Get tile sheet images
 
 - **How it works:**
-  1. Fetches trickplay info with resolution options and tile configuration
-  2. Calculates which tile sheet contains the thumbnail for a given position
-  3. Downloads the tile sheet (a grid of thumbnails)
-  4. Extracts the specific thumbnail from the grid
+  1. Fetches item details from `/Items/{itemId}` endpoint
+  2. Parses nested `Trickplay[mediaSourceId][width]` structure to get TrickplayInfoDto
+  3. Calculates which tile sheet contains the thumbnail for a given position
+  4. Downloads the tile sheet (a grid of thumbnails)
+  5. Extracts the specific thumbnail from the grid
   5. Caches results for performance
 
-- **Trickplay API Response Format:**
+- **Trickplay API Response Format (from /Items/{itemId}):**
 ```json
 {
-  "320": {
-    "Width": 320,
-    "Height": 180,
-    "TileWidth": 10,
-    "TileHeight": 10,
-    "ThumbnailCount": 500,
-    "Interval": 10000,
-    "Bandwidth": 12345
+  "Trickplay": {
+    "{mediaSourceId}": {
+      "320": {
+        "Width": 320,
+        "Height": 180,
+        "TileWidth": 10,
+        "TileHeight": 10,
+        "ThumbnailCount": 500,
+        "Interval": 10000,
+        "Bandwidth": 12345
+      }
+    }
   }
 }
 ```
+
+Note: The Interval is in milliseconds (e.g., 10000 = 10 seconds between thumbnails).
 
 #### 3. MediaMetadataPreviewLoader
 - Uses Android's MediaMetadataRetriever
@@ -71,6 +78,23 @@ interface PreviewLoader {
 - Scales frames to 320x180 for preview display
 - Caches generated previews
 - **Note:** Works best with local file URIs; network streams may have limitations
+
+#### 4. ScrubPreviewOverlay (NEW)
+- Composable that displays preview thumbnail and timestamp
+- Shows as a rounded card overlay above the video player
+- Features:
+  - 160x90 preview image display
+  - Formatted timestamp (HH:MM:SS or MM:SS)
+  - Loading indicator while fetching preview
+  - Graceful fallback when preview unavailable
+- Only visible during active scrubbing
+
+#### 5. VideoPlayerWithPreview (NEW)
+- Enhanced VideoPlayer component with scrub preview support
+- Hooks into ExoPlayer's TimeBar.OnScrubListener
+- Tracks scrub position during timeline drag
+- Shows ScrubPreviewOverlay at top center when scrubbing
+- Fallback logging if TimeBar not found
 
 ### Settings Integration
 
@@ -82,27 +106,30 @@ interface PreviewLoader {
 ### Player Integration
 
 - PlayerViewModel creates appropriate PreviewLoader based on settings
-- PreviewLoader passed to VideoPlayer component
-- VideoPlayer accepts optional PreviewLoader parameter
-- Infrastructure ready for custom UI integration
+- PreviewLoader passed to VideoPlayerWithPreview component
+- PlayerScreen uses VideoPlayerWithPreview instead of basic VideoPlayer
+- Automatic preview display on seek bar scrubbing
 
 ## Implementation Status
 
 ### Completed ✅
 - [x] PreviewLoader interface and implementations
-- [x] Trickplay API integration with Jellyfin
+- [x] Trickplay API integration with Jellyfin (using correct /Items endpoint)
+- [x] Fixed interval calculation bug (was incorrectly multiplying by 1000)
 - [x] MediaMetadataRetriever-based local preview generation
 - [x] Settings screen integration
 - [x] Preference storage
-- [x] Player integration (infrastructure)
+- [x] ScrubPreviewOverlay UI component
+- [x] VideoPlayerWithPreview with TimeBar scrub listener
+- [x] Player screen integration
 - [x] String resources (English)
 - [x] Code review and security checks
+- [x] All code compiles successfully
 
 ### Pending ⏳
-- [ ] Custom UI for displaying previews during scrubbing
-- [ ] PreviewSeekBar library integration (when available in environment)
-- [ ] Testing on actual devices
-- [ ] Localization for other languages
+- [ ] Testing on actual devices with real Jellyfin server
+- [ ] Localization for other languages (German, Spanish)
+- [ ] Performance testing with large video files
 
 ## Usage
 
@@ -115,8 +142,25 @@ interface PreviewLoader {
    - Jellyfin Trickplay (recommended if server has trickplay enabled)
    - Local Generation (for local files or if trickplay unavailable)
    - Disabled (to save resources)
+5. Play a video and drag the seek bar to see preview thumbnails
 
 ### For Developers
+
+#### Using VideoPlayerWithPreview:
+
+```kotlin
+val previewLoader = viewModel.createPreviewLoader(itemId, streamUrl)
+VideoPlayerWithPreview(
+    streamUrl = streamUrl,
+    previewLoader = previewLoader,
+    onPlayerReady = { exoPlayer -> 
+        // Handle player ready
+    },
+    onPlaybackStateChanged = { isPlaying, currentPos, bufferedPos ->
+        // Handle playback state changes
+    }
+)
+```
 
 #### Creating a custom preview loader:
 
@@ -127,7 +171,7 @@ class CustomPreviewLoader : PreviewLoader {
     }
     
     override fun getPreviewInterval(): Long {
-        return 10000L // 10 seconds
+        return 10000L // 10 seconds between previews
     }
     
     override fun release() {
@@ -136,51 +180,41 @@ class CustomPreviewLoader : PreviewLoader {
 }
 ```
 
-#### Using the preview loader:
+## How It Works
 
-```kotlin
-val previewLoader = viewModel.createPreviewLoader(itemId, streamUrl)
-VideoPlayer(
-    streamUrl = streamUrl,
-    previewLoader = previewLoader,
-    // ... other parameters
-)
-```
+### Scrubbing Flow
 
-## Future Enhancements
-
-### Custom Preview UI
-
-To complete the visual integration, you could:
-
-1. **Use PreviewSeekBar library** (when available):
-```gradle
-implementation 'com.github.rubensousa:previewseekbar-media3:1.2.0-beta01'
-```
-
-2. **Create custom preview overlay**:
-   - Listen to seek bar scrub events
-   - Call `previewLoader.loadPreview(position)` on scrub
-   - Display bitmap in overlay above seek bar
-   - Hide overlay when scrubbing stops
-
-3. **Add preview scrubbing to VideoPlayerActivity**:
-   - Currently only implemented in PlayerScreen (Compose)
-   - Could be added to VideoPlayerActivity for consistency
+1. User starts dragging the video seek bar
+2. TimeBar.OnScrubListener detects `onScrubStart`
+3. As user drags, `onScrubMove` updates scrub position
+4. ScrubPreviewOverlay appears showing:
+   - Loading state while fetching preview
+   - Preview thumbnail at scrub position
+   - Formatted timestamp
+5. PreviewLoader asynchronously loads the frame:
+   - TrickplayPreviewLoader: Fetches from server's tile sheets
+   - MediaMetadataPreviewLoader: Extracts from video file
+6. When user releases, `onScrubStop` hides the overlay
 
 ### Performance Optimizations
 
-- Implement preview preloading for smoother scrubbing
-- Add disk cache for trickplay tile sheets
-- Optimize tile sheet parsing and bitmap extraction
-- Add configurable cache sizes
+- Preview bitmaps are cached (20 entries max)
+- Only loads preview when scrub position changes
+- Async loading prevents UI blocking
+- Old cache entries automatically evicted
+- Graceful degradation when previews fail to load
+
+## Future Enhancements
 
 ### Additional Features
 
-- Preview quality settings (resolution selection)
+- Preview quality settings (resolution selection from available widths)
 - Preview interval customization
 - Thumbnail generation progress indicator
-- Fallback mechanism (try trickplay, fallback to local if unavailable)
+- Automatic fallback mechanism (try trickplay, fallback to local if unavailable)
+- Preview preloading for even smoother scrubbing experience
+- Disk cache for trickplay tile sheets to reduce network requests
+- Configurable cache sizes based on device memory
 
 ## Technical Notes
 
@@ -189,7 +223,7 @@ implementation 'com.github.rubensousa:previewseekbar-media3:1.2.0-beta01'
 The interval returned by Jellyfin is in milliseconds. To calculate which thumbnail to show:
 
 ```kotlin
-val thumbnailIndex = (positionMs / interval).toInt()
+val thumbnailIndex = (positionMs / interval).toInt()  // No multiplication needed!
 val tilesPerImage = tileWidth * tileHeight
 val imageIndex = thumbnailIndex / tilesPerImage
 val tileIndexInImage = thumbnailIndex % tilesPerImage
