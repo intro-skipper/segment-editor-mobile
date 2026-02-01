@@ -7,11 +7,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.viewmodel.LibraryUiState
 import org.introskipper.segmenteditor.ui.viewmodel.LibraryViewModel
 
@@ -27,12 +29,12 @@ fun LibraryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Select Library") },
+                title = { Text(stringResource(R.string.library_select)) },
                 actions = {
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = "Settings"
+                            contentDescription = stringResource(R.string.home_settings)
                         )
                     }
                 }
@@ -59,7 +61,7 @@ fun LibraryScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No libraries found",
+                            text = stringResource(R.string.library_no_libraries),
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
@@ -96,7 +98,7 @@ fun LibraryScreen(
                                 color = MaterialTheme.colorScheme.error
                             )
                             Button(onClick = { viewModel.refresh() }) {
-                                Text("Retry")
+                                Text(stringResource(R.string.retry))
                             }
                         }
                     }

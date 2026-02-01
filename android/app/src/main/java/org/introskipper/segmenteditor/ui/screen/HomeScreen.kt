@@ -9,12 +9,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.JellyfinMediaItem
 import org.introskipper.segmenteditor.ui.component.*
 import org.introskipper.segmenteditor.ui.viewmodel.HomeUiState
@@ -66,12 +68,12 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("TV Shows") },
+                title = { Text(stringResource(R.string.home_tv_shows)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.back)
                         )
                     }
                 },
@@ -79,7 +81,7 @@ fun HomeScreen(
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = "Settings"
+                            contentDescription = stringResource(R.string.home_settings)
                         )
                     }
                 }
@@ -119,7 +121,7 @@ fun HomeScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No media items found",
+                                text = stringResource(R.string.home_no_media),
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         }
@@ -176,7 +178,7 @@ fun HomeScreen(
                                     color = MaterialTheme.colorScheme.error
                                 )
                                 Button(onClick = { viewModel.refresh() }) {
-                                    Text("Retry")
+                                    Text(stringResource(R.string.retry))
                                 }
                             }
                         }

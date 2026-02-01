@@ -22,9 +22,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.introskipper.segmenteditor.BuildConfig
+import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.webkit.ChromeIntegration
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,13 +56,13 @@ fun AboutDialog(
                     IconButton(onClick = onDismiss) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Close"
+                            contentDescription = stringResource(R.string.cancel)
                         )
                     }
                 }
                 
                 Text(
-                    text = "Segment Editor",
+                    text = stringResource(R.string.about_title),
                     style = MaterialTheme.typography.headlineMedium,
                     textAlign = TextAlign.Center
                 )
@@ -85,7 +87,7 @@ fun AboutDialog(
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 Text(
-                    text = "Credits",
+                    text = stringResource(R.string.about_credits),
                     style = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center
                 )
@@ -110,7 +112,7 @@ fun AboutDialog(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("View on GitHub")
+                    Text(stringResource(R.string.about_view_github))
                 }
                 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -124,7 +126,7 @@ fun AboutDialog(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Open Source Licenses")
+                    Text(stringResource(R.string.about_licenses))
                 }
             }
         }
