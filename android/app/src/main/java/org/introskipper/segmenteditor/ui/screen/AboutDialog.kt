@@ -1,11 +1,23 @@
 package org.introskipper.segmenteditor.ui.screen
 
-import android.content.Intent
-import android.net.Uri
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -13,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.introskipper.segmenteditor.BuildConfig
+import org.introskipper.segmenteditor.webkit.ChromeIntegration
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,10 +103,10 @@ fun AboutDialog(
                 
                 Button(
                     onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                            data = Uri.parse("https://github.com/intro-skipper/segment-editor-mobile")
-                        }
-                        context.startActivity(intent)
+                        ChromeIntegration.openBrowserTab(
+                            context,
+                            "https://github.com/intro-skipper/segment-editor-mobile"
+                        )
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -104,10 +117,10 @@ fun AboutDialog(
                 
                 OutlinedButton(
                     onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                            data = Uri.parse("https://github.com/intro-skipper/segment-editor-mobile/blob/main/LICENSE")
-                        }
-                        context.startActivity(intent)
+                        ChromeIntegration.openBrowserTab(
+                            context,
+                            "https://github.com/intro-skipper/segment-editor-mobile/blob/main/LICENSE"
+                        )
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {

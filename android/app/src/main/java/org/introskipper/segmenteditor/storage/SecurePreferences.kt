@@ -3,6 +3,7 @@ package org.introskipper.segmenteditor.storage
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import org.introskipper.segmenteditor.ui.state.AppTheme
@@ -30,7 +31,7 @@ class SecurePreferences(context: Context) {
     // ========== Connection Settings ==========
     
     fun saveServerUrl(url: String) {
-        sharedPreferences.edit().putString(KEY_SERVER_URL, url).apply()
+        sharedPreferences.edit { putString(KEY_SERVER_URL, url) }
     }
     
     fun getServerUrl(): String? {
@@ -38,7 +39,7 @@ class SecurePreferences(context: Context) {
     }
     
     fun saveApiKey(apiKey: String) {
-        sharedPreferences.edit().putString(KEY_API_KEY, apiKey).apply()
+        sharedPreferences.edit { putString(KEY_API_KEY, apiKey) }
     }
     
     fun getApiKey(): String? {
@@ -46,7 +47,7 @@ class SecurePreferences(context: Context) {
     }
     
     fun saveUserId(userId: String) {
-        sharedPreferences.edit().putString(KEY_USER_ID, userId).apply()
+        sharedPreferences.edit { putString(KEY_USER_ID, userId) }
     }
     
     fun getUserId(): String? {
@@ -54,7 +55,7 @@ class SecurePreferences(context: Context) {
     }
     
     fun saveUsername(username: String) {
-        sharedPreferences.edit().putString(KEY_USERNAME, username).apply()
+        sharedPreferences.edit { putString(KEY_USERNAME, username) }
     }
     
     fun getUsername(): String? {
@@ -62,7 +63,7 @@ class SecurePreferences(context: Context) {
     }
     
     fun saveDeviceId(deviceId: String) {
-        sharedPreferences.edit().putString(KEY_DEVICE_ID, deviceId).apply()
+        sharedPreferences.edit { putString(KEY_DEVICE_ID, deviceId) }
     }
     
     fun getDeviceId(): String? {
@@ -72,7 +73,7 @@ class SecurePreferences(context: Context) {
     // ========== Playback Settings ==========
     
     fun setAutoPlayNextEpisode(enabled: Boolean) {
-        sharedPreferences.edit().putBoolean(KEY_AUTO_PLAY_NEXT, enabled).apply()
+        sharedPreferences.edit { putBoolean(KEY_AUTO_PLAY_NEXT, enabled) }
     }
     
     fun getAutoPlayNextEpisode(): Boolean {
@@ -80,7 +81,7 @@ class SecurePreferences(context: Context) {
     }
     
     fun setSkipIntroAutomatically(enabled: Boolean) {
-        sharedPreferences.edit().putBoolean(KEY_SKIP_INTRO_AUTO, enabled).apply()
+        sharedPreferences.edit { putBoolean(KEY_SKIP_INTRO_AUTO, enabled) }
     }
     
     fun getSkipIntroAutomatically(): Boolean {
@@ -88,7 +89,7 @@ class SecurePreferences(context: Context) {
     }
     
     fun setSkipCreditsAutomatically(enabled: Boolean) {
-        sharedPreferences.edit().putBoolean(KEY_SKIP_CREDITS_AUTO, enabled).apply()
+        sharedPreferences.edit { putBoolean(KEY_SKIP_CREDITS_AUTO, enabled) }
     }
     
     fun getSkipCreditsAutomatically(): Boolean {
@@ -96,7 +97,7 @@ class SecurePreferences(context: Context) {
     }
     
     fun setShowSkipButtons(enabled: Boolean) {
-        sharedPreferences.edit().putBoolean(KEY_SHOW_SKIP_BUTTONS, enabled).apply()
+        sharedPreferences.edit { putBoolean(KEY_SHOW_SKIP_BUTTONS, enabled) }
     }
     
     fun getShowSkipButtons(): Boolean {
@@ -106,7 +107,7 @@ class SecurePreferences(context: Context) {
     // ========== UI Settings ==========
     
     fun setTheme(theme: AppTheme) {
-        sharedPreferences.edit().putString(KEY_THEME, theme.name).apply()
+        sharedPreferences.edit { putString(KEY_THEME, theme.name) }
     }
     
     fun getTheme(): AppTheme {
@@ -119,7 +120,7 @@ class SecurePreferences(context: Context) {
     }
     
     fun setLanguage(language: String) {
-        sharedPreferences.edit().putString(KEY_LANGUAGE, language).apply()
+        sharedPreferences.edit { putString(KEY_LANGUAGE, language) }
     }
     
     fun getLanguage(): String {
@@ -127,7 +128,7 @@ class SecurePreferences(context: Context) {
     }
     
     fun setUseSystemLanguage(enabled: Boolean) {
-        sharedPreferences.edit().putBoolean(KEY_USE_SYSTEM_LANGUAGE, enabled).apply()
+        sharedPreferences.edit { putBoolean(KEY_USE_SYSTEM_LANGUAGE, enabled) }
     }
     
     fun getUseSystemLanguage(): Boolean {
@@ -137,7 +138,7 @@ class SecurePreferences(context: Context) {
     // ========== Segment Editor Settings ==========
     
     fun setDefaultSegmentDuration(seconds: Double) {
-        sharedPreferences.edit().putFloat(KEY_DEFAULT_SEGMENT_DURATION, seconds.toFloat()).apply()
+        sharedPreferences.edit { putFloat(KEY_DEFAULT_SEGMENT_DURATION, seconds.toFloat()) }
     }
     
     fun getDefaultSegmentDuration(): Double {
@@ -145,7 +146,7 @@ class SecurePreferences(context: Context) {
     }
     
     fun setShowTimestampsInTicks(enabled: Boolean) {
-        sharedPreferences.edit().putBoolean(KEY_SHOW_TICKS, enabled).apply()
+        sharedPreferences.edit { putBoolean(KEY_SHOW_TICKS, enabled) }
     }
     
     fun getShowTimestampsInTicks(): Boolean {
@@ -153,7 +154,7 @@ class SecurePreferences(context: Context) {
     }
     
     fun setConfirmBeforeDelete(enabled: Boolean) {
-        sharedPreferences.edit().putBoolean(KEY_CONFIRM_DELETE, enabled).apply()
+        sharedPreferences.edit { putBoolean(KEY_CONFIRM_DELETE, enabled) }
     }
     
     fun getConfirmBeforeDelete(): Boolean {
@@ -163,7 +164,7 @@ class SecurePreferences(context: Context) {
     // ========== Export Settings ==========
     
     fun setExportFormat(format: ExportFormat) {
-        sharedPreferences.edit().putString(KEY_EXPORT_FORMAT, format.name).apply()
+        sharedPreferences.edit { putString(KEY_EXPORT_FORMAT, format.name) }
     }
     
     fun getExportFormat(): ExportFormat {
@@ -176,7 +177,7 @@ class SecurePreferences(context: Context) {
     }
     
     fun setIncludeMetadata(enabled: Boolean) {
-        sharedPreferences.edit().putBoolean(KEY_INCLUDE_METADATA, enabled).apply()
+        sharedPreferences.edit { putBoolean(KEY_INCLUDE_METADATA, enabled) }
     }
     
     fun getIncludeMetadata(): Boolean {
@@ -184,7 +185,7 @@ class SecurePreferences(context: Context) {
     }
     
     fun setPrettyPrintJson(enabled: Boolean) {
-        sharedPreferences.edit().putBoolean(KEY_PRETTY_PRINT_JSON, enabled).apply()
+        sharedPreferences.edit { putBoolean(KEY_PRETTY_PRINT_JSON, enabled) }
     }
     
     fun getPrettyPrintJson(): Boolean {
@@ -194,7 +195,7 @@ class SecurePreferences(context: Context) {
     // ========== Media Library Settings ==========
     
     fun setShowContinueWatching(enabled: Boolean) {
-        sharedPreferences.edit().putBoolean(KEY_SHOW_CONTINUE_WATCHING, enabled).apply()
+        sharedPreferences.edit { putBoolean(KEY_SHOW_CONTINUE_WATCHING, enabled) }
     }
     
     fun getShowContinueWatching(): Boolean {
@@ -202,7 +203,7 @@ class SecurePreferences(context: Context) {
     }
     
     fun setShowNextUp(enabled: Boolean) {
-        sharedPreferences.edit().putBoolean(KEY_SHOW_NEXT_UP, enabled).apply()
+        sharedPreferences.edit { putBoolean(KEY_SHOW_NEXT_UP, enabled) }
     }
     
     fun getShowNextUp(): Boolean {
@@ -210,7 +211,7 @@ class SecurePreferences(context: Context) {
     }
     
     fun setItemsPerPage(count: Int) {
-        sharedPreferences.edit().putInt(KEY_ITEMS_PER_PAGE, count).apply()
+        sharedPreferences.edit { putInt(KEY_ITEMS_PER_PAGE, count) }
     }
     
     fun getItemsPerPage(): Int {
@@ -220,7 +221,7 @@ class SecurePreferences(context: Context) {
     // ========== Video Player Settings ==========
     
     fun setPreferredVideoQuality(quality: VideoQuality) {
-        sharedPreferences.edit().putString(KEY_VIDEO_QUALITY, quality.name).apply()
+        sharedPreferences.edit { putString(KEY_VIDEO_QUALITY, quality.name) }
     }
     
     fun getPreferredVideoQuality(): VideoQuality {
@@ -233,7 +234,7 @@ class SecurePreferences(context: Context) {
     }
     
     fun setPreferDirectPlay(enabled: Boolean) {
-        sharedPreferences.edit().putBoolean(KEY_PREFER_DIRECT_PLAY, enabled).apply()
+        sharedPreferences.edit { putBoolean(KEY_PREFER_DIRECT_PLAY, enabled) }
     }
     
     fun getPreferDirectPlay(): Boolean {
@@ -241,7 +242,7 @@ class SecurePreferences(context: Context) {
     }
     
     fun setPreferredAudioLanguage(language: String) {
-        sharedPreferences.edit().putString(KEY_PREFERRED_AUDIO_LANG, language).apply()
+        sharedPreferences.edit { putString(KEY_PREFERRED_AUDIO_LANG, language) }
     }
     
     fun getPreferredAudioLanguage(): String {
@@ -249,7 +250,7 @@ class SecurePreferences(context: Context) {
     }
     
     fun setPreferredSubtitleLanguage(language: String) {
-        sharedPreferences.edit().putString(KEY_PREFERRED_SUBTITLE_LANG, language).apply()
+        sharedPreferences.edit { putString(KEY_PREFERRED_SUBTITLE_LANG, language) }
     }
     
     fun getPreferredSubtitleLanguage(): String {
@@ -259,7 +260,7 @@ class SecurePreferences(context: Context) {
     // ========== Tracking Preferences ==========
     
     fun setTrackSegmentEdits(enabled: Boolean) {
-        sharedPreferences.edit().putBoolean(KEY_TRACK_EDITS, enabled).apply()
+        sharedPreferences.edit { putBoolean(KEY_TRACK_EDITS, enabled) }
     }
     
     fun getTrackSegmentEdits(): Boolean {
@@ -267,7 +268,7 @@ class SecurePreferences(context: Context) {
     }
     
     fun setSendCrashReports(enabled: Boolean) {
-        sharedPreferences.edit().putBoolean(KEY_SEND_CRASH_REPORTS, enabled).apply()
+        sharedPreferences.edit { putBoolean(KEY_SEND_CRASH_REPORTS, enabled) }
     }
     
     fun getSendCrashReports(): Boolean {
@@ -275,7 +276,7 @@ class SecurePreferences(context: Context) {
     }
     
     fun setSendAnalytics(enabled: Boolean) {
-        sharedPreferences.edit().putBoolean(KEY_SEND_ANALYTICS, enabled).apply()
+        sharedPreferences.edit { putBoolean(KEY_SEND_ANALYTICS, enabled) }
     }
     
     fun getSendAnalytics(): Boolean {
@@ -293,15 +294,15 @@ class SecurePreferences(context: Context) {
     }
     
     fun clear() {
-        sharedPreferences.edit().clear().apply()
+        sharedPreferences.edit { clear() }
     }
     
     fun clearAuthentication() {
-        sharedPreferences.edit()
-            .remove(KEY_API_KEY)
-            .remove(KEY_USER_ID)
-            .remove(KEY_USERNAME)
-            .apply()
+        sharedPreferences.edit {
+            remove(KEY_API_KEY)
+                .remove(KEY_USER_ID)
+                .remove(KEY_USERNAME)
+        }
     }
     
     companion object {

@@ -36,10 +36,10 @@ class SegmentRepository(private val apiService: JellyfinApiService) {
      * Creates a new segment
      * @param itemId The media item ID
      * @param segment The segment to create
-     * @param providerId The provider ID (default: "intro-skipper")
+     * @param providerId The provider ID (default: "Intro Skipper")
      * @return Response containing the created segment
      */
-    suspend fun createSegment(itemId: String, segment: SegmentCreateRequest, providerId: String = "intro-skipper"): Response<Segment> {
+    suspend fun createSegment(itemId: String, segment: SegmentCreateRequest, providerId: String = "Intro Skipper"): Response<Segment> {
         return apiService.createSegment(itemId, segment, providerId)
     }
     
@@ -73,7 +73,7 @@ class SegmentRepository(private val apiService: JellyfinApiService) {
     /**
      * Creates a segment and returns a Result
      */
-    suspend fun createSegmentResult(itemId: String, segment: SegmentCreateRequest, providerId: String = "intro-skipper"): Result<Segment> {
+    suspend fun createSegmentResult(itemId: String, segment: SegmentCreateRequest, providerId: String = "Intro Skipper"): Result<Segment> {
         return try {
             val response = createSegment(itemId, segment, providerId)
             if (response.isSuccessful && response.body() != null) {
