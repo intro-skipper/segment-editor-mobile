@@ -37,6 +37,8 @@ fun VideoPlayerWithPreview(
     modifier: Modifier = Modifier,
     useController: Boolean = true,
     previewLoader: PreviewLoader? = null,
+    initialAudioTrackIndex: Int? = null,
+    initialSubtitleTrackIndex: Int? = null,
     onPlayerReady: (ExoPlayer) -> Unit = {},
     onPlaybackStateChanged: (isPlaying: Boolean, currentPosition: Long, bufferedPosition: Long) -> Unit = { _, _, _ -> }
 ) {
@@ -80,6 +82,15 @@ fun VideoPlayerWithPreview(
         }
         
         exoPlayer.addListener(listener)
+        
+        // Apply initial track selections
+        if (initialAudioTrackIndex != null) {
+            exoPlayer.selectAudioTrack(initialAudioTrackIndex)
+        }
+        if (initialSubtitleTrackIndex != null) {
+            exoPlayer.selectSubtitleTrack(initialSubtitleTrackIndex)
+        }
+        
         onPlayerReady(exoPlayer)
         
         onDispose {

@@ -59,19 +59,22 @@ fun ScrubPreviewOverlay(
     val scope = rememberCoroutineScope()
 
     // Load preview image when position changes
-    LaunchedEffect(positionMs, previewLoader) {
+    // Spawn a new independent job for each position that runs to completion
+    // without canceling previous jobs
+    LaunchedEffect(positionMs) {
         isLoading = true
         Log.d("ScrubPreviewOverlay", "Loading preview for position: $positionMs")
-        try {
-            scope.launch {
+        // Launch in the remembered scope so the job persists even if LaunchedEffect restarts
+        scope.launch {
+            try {
                 previewBitmap = previewLoader.loadPreview(positionMs)
+            } catch (e: Exception) {
+                // Silently fail - preview is optional
+                Log.e("ScrubPreviewOverlay", "Failed to load preview", e)
+                previewBitmap = null
+            } finally {
+                isLoading = false
             }
-        } catch (e: Exception) {
-            // Silently fail - preview is optional
-            Log.e("ScrubPreviewOverlay", "Failed to load preview", e)
-            previewBitmap = null
-        } finally {
-            isLoading = false
         }
     }
 
