@@ -58,10 +58,10 @@ fun VideoPlayerWithPreview(
             }
     }
     
-    // Track whether initial selections have been applied
-    var tracksApplied by remember { mutableStateOf(false) }
-    
-    DisposableEffect(exoPlayer, previewLoader) {
+    DisposableEffect(exoPlayer, previewLoader, initialAudioTrackIndex, initialSubtitleTrackIndex) {
+        // Track whether initial selections have been applied for this effect instance
+        var tracksApplied = false
+        
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 onPlaybackStateChanged(

@@ -57,12 +57,13 @@ fun ScrubPreviewOverlay(
 
     var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isLoading by remember { mutableStateOf(false) }
-    var currentJob by remember { mutableStateOf<Job?>(null) }
 
     // Load preview image when position changes
     // Use snapshotFlow to observe position changes and launch independent jobs
     // Cancel previous job to avoid race conditions with stale images
     LaunchedEffect(previewLoader) {
+        var currentJob: Job? = null
+        
         snapshotFlow { positionMs }
             .collect { position ->
                 // Cancel the previous job if it's still running
