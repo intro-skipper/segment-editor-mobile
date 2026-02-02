@@ -194,7 +194,7 @@ fun SeriesScreen(
                                         onClick = { selectedSeasonIndex = index },
                                         text = { 
                                             Text(
-                                                text = "Season $seasonNumber",
+                                                text = state.seasonNames[seasonNumber] ?: "Season $seasonNumber",
                                                 style = MaterialTheme.typography.titleMedium
                                             ) 
                                         }
@@ -237,7 +237,7 @@ fun SeriesScreen(
                                         color = MaterialTheme.colorScheme.secondaryContainer
                                     ) {
                                         Text(
-                                            text = "Season ${selectedSeasonNumber ?: 1}",
+                                            text = state.seasonNames[selectedSeasonNumber] ?: "Season ${selectedSeasonNumber ?: 1}",
                                             style = MaterialTheme.typography.titleMedium,
                                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                                             modifier = Modifier.padding(12.dp)

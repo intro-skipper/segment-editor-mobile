@@ -78,9 +78,15 @@ class SeriesViewModel @Inject constructor(
                     }
                     .toSortedMap()
 
+                // Create season name mapping from the first episode of each season
+                val seasonNames = episodesBySeason.mapValues { (seasonNumber, episodeList) ->
+                    episodeList.firstOrNull()?.episode?.seasonName ?: "Season $seasonNumber"
+                }
+
                 _uiState.value = SeriesUiState.Success(
                     series = series,
-                    episodesBySeason = episodesBySeason
+                    episodesBySeason = episodesBySeason,
+                    seasonNames = seasonNames
                 )
 
                 // Load segment counts asynchronously
