@@ -62,7 +62,7 @@ fun VideoPlayerWithPreview(
             }
     }
     
-    DisposableEffect(exoPlayer, previewLoader, initialAudioTrackIndex, initialSubtitleTrackIndex) {
+    DisposableEffect(exoPlayer, previewLoader) {
         // Track whether initial selections have been applied for this effect instance
         val initialTracksApplied = java.util.concurrent.atomic.AtomicBoolean(false)
         
