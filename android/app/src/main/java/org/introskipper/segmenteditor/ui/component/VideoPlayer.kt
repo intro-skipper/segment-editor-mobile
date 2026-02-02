@@ -137,17 +137,16 @@ fun ExoPlayer.selectAudioTrack(trackIndex: Int?) {
             .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
             .build()
     } else {
-        // Select specific audio track by iterating through all audio groups
+        // Select specific audio track by accumulating indices across all groups
         val currentTracks = this.currentTracks
         val audioGroups = currentTracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
         
-        // Try to find the track in any of the audio groups
+        var accumulatedIndex = 0
         var foundTrack = false
+        
         for (group in audioGroups) {
             for (trackIndexInGroup in 0 until group.length) {
-                // For now, use the track index within the group
-                // This assumes trackIndex refers to position within audio tracks
-                if (trackIndexInGroup == trackIndex && trackIndex < group.length) {
+                if (accumulatedIndex == trackIndex) {
                     trackSelector.parameters = trackSelector.buildUponParameters()
                         .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
                         .setOverrideForType(
@@ -160,6 +159,7 @@ fun ExoPlayer.selectAudioTrack(trackIndex: Int?) {
                     foundTrack = true
                     break
                 }
+                accumulatedIndex++
             }
             if (foundTrack) break
         }
@@ -177,17 +177,16 @@ fun ExoPlayer.selectSubtitleTrack(trackIndex: Int?) {
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
             .build()
     } else {
-        // Select specific subtitle track by iterating through all subtitle groups
+        // Select specific subtitle track by accumulating indices across all groups
         val currentTracks = this.currentTracks
         val textGroups = currentTracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
         
-        // Try to find the track in any of the subtitle groups
+        var accumulatedIndex = 0
         var foundTrack = false
+        
         for (group in textGroups) {
             for (trackIndexInGroup in 0 until group.length) {
-                // For now, use the track index within the group
-                // This assumes trackIndex refers to position within subtitle tracks
-                if (trackIndexInGroup == trackIndex && trackIndex < group.length) {
+                if (accumulatedIndex == trackIndex) {
                     trackSelector.parameters = trackSelector.buildUponParameters()
                         .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
                         .setOverrideForType(
@@ -200,6 +199,7 @@ fun ExoPlayer.selectSubtitleTrack(trackIndex: Int?) {
                     foundTrack = true
                     break
                 }
+                accumulatedIndex++
             }
             if (foundTrack) break
         }

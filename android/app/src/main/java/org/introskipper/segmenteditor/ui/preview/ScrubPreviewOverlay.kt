@@ -15,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -87,10 +88,13 @@ fun ScrubPreviewOverlay(
     }
     
     // Detect position changes and send to channel
-    if (positionMs != lastRequestedPosition) {
-        lastRequestedPosition = positionMs
-        // Send to channel - this won't block and will replace previous unconsumed value
-        positionChannel.trySend(positionMs)
+    // Use SideEffect to ensure this runs only once per successful composition
+    SideEffect {
+        if (positionMs != lastRequestedPosition) {
+            lastRequestedPosition = positionMs
+            // Send to channel - this won't block and will replace previous unconsumed value
+            positionChannel.trySend(positionMs)
+        }
     }
 
     Box(
