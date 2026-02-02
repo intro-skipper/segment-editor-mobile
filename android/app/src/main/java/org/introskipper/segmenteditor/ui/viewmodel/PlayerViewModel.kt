@@ -15,8 +15,8 @@ import okhttp3.OkHttpClient
 import org.introskipper.segmenteditor.data.model.MediaStream
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
-import org.introskipper.segmenteditor.player.preview.PreviewLoader
-import org.introskipper.segmenteditor.player.preview.TrickplayPreviewLoader
+import org.introskipper.segmenteditor.ui.preview.PreviewLoader
+import org.introskipper.segmenteditor.ui.preview.TrickplayPreviewLoader
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.state.PlayerEvent
 import org.introskipper.segmenteditor.ui.state.PlayerUiState

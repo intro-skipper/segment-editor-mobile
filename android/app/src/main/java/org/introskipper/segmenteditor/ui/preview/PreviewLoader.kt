@@ -1,4 +1,4 @@
-package org.introskipper.segmenteditor.player.preview
+package org.introskipper.segmenteditor.ui.preview
 
 import android.graphics.Bitmap
 

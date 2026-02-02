@@ -1,6 +1,7 @@
-package org.introskipper.segmenteditor.ui.component
+package org.introskipper.segmenteditor.ui.preview
 
 import android.graphics.Bitmap
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -26,7 +27,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.data.model.TimeUtils
-import org.introskipper.segmenteditor.player.preview.PreviewLoader
 
 /**
  * Overlay that displays a preview thumbnail and timestamp when scrubbing the video timeline
@@ -44,15 +44,15 @@ fun ScrubPreviewOverlay(
     modifier: Modifier = Modifier
 ) {
     if (!isVisible) {
-        android.util.Log.d("ScrubPreviewOverlay", "Overlay not visible")
+        Log.d("ScrubPreviewOverlay", "Overlay not visible")
         return
     }
     if (previewLoader == null) {
-        android.util.Log.w("ScrubPreviewOverlay", "PreviewLoader is null, cannot show preview")
+        Log.w("ScrubPreviewOverlay", "PreviewLoader is null, cannot show preview")
         return
     }
 
-    android.util.Log.d("ScrubPreviewOverlay", "Showing preview overlay at position: $positionMs")
+    Log.d("ScrubPreviewOverlay", "Showing preview overlay at position: $positionMs")
 
     var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isLoading by remember { mutableStateOf(false) }
@@ -61,14 +61,14 @@ fun ScrubPreviewOverlay(
     // Load preview image when position changes
     LaunchedEffect(positionMs, previewLoader) {
         isLoading = true
-        android.util.Log.d("ScrubPreviewOverlay", "Loading preview for position: $positionMs")
+        Log.d("ScrubPreviewOverlay", "Loading preview for position: $positionMs")
         try {
             scope.launch {
                 previewBitmap = previewLoader.loadPreview(positionMs)
             }
         } catch (e: Exception) {
             // Silently fail - preview is optional
-            android.util.Log.e("ScrubPreviewOverlay", "Failed to load preview", e)
+            Log.e("ScrubPreviewOverlay", "Failed to load preview", e)
             previewBitmap = null
         } finally {
             isLoading = false

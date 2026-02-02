@@ -15,7 +15,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.PlayerView
-import org.introskipper.segmenteditor.player.preview.PreviewLoader
+import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory
+import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
@@ -32,6 +33,7 @@ fun VideoPlayer(
     val exoPlayer = remember {
         val trackSelector = DefaultTrackSelector(context)
         ExoPlayer.Builder(context)
+            .setRenderersFactory(NextRenderersFactory(context))
             .setTrackSelector(trackSelector)
             .build().apply {
                 setMediaItem(MediaItem.fromUri(streamUrl))

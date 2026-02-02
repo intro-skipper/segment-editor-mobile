@@ -1,4 +1,4 @@
-package org.introskipper.segmenteditor.player.preview
+package org.introskipper.segmenteditor.utils
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
@@ -28,7 +28,8 @@ object KotlinxGenericMapSerializer : KSerializer<Map<String, Any?>> {
     }
 
     override fun deserialize(decoder: Decoder): Map<String, Any?> {
-        val jsonDecoder = decoder as? JsonDecoder ?: throw SerializationException("Can only deserialize Json content to generic Map")
+        val jsonDecoder = decoder as? JsonDecoder
+            ?: throw SerializationException("Can only deserialize Json content to generic Map")
         val root = jsonDecoder.decodeJsonElement()
         return if (root is JsonObject) root.toMap() else throw SerializationException("Cannot deserialize Json content to generic Map")
     }
@@ -43,7 +44,8 @@ object KotlinxGenericMapSerializer : KSerializer<Map<String, Any?>> {
         else -> throw SerializationException("Cannot serialize value type $this")
     }
 
-    private fun Map<*,*>.toJsonObject(): JsonObject = JsonObject(this.entries.associate { it.key.toString() to it.value.toJsonElement() })
+    private fun Map<*,*>.toJsonObject(): JsonObject =
+        JsonObject(this.entries.associate { it.key.toString() to it.value.toJsonElement() })
 
     private fun Iterable<*>.toJsonArray(): JsonArray = JsonArray(this.map { it.toJsonElement() })
 

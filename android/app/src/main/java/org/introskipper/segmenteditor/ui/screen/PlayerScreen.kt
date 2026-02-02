@@ -65,6 +65,7 @@ import org.introskipper.segmenteditor.ui.component.segment.SegmentEditorDialog
 import org.introskipper.segmenteditor.ui.component.selectAudioTrack
 import org.introskipper.segmenteditor.ui.component.selectSubtitleTrack
 import org.introskipper.segmenteditor.ui.navigation.Screen
+import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.viewmodel.PlayerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -295,7 +296,7 @@ private fun PlayerContent(
     viewModel: PlayerViewModel,
     player: ExoPlayer?,
     streamUrl: String?,
-    previewLoader: org.introskipper.segmenteditor.player.preview.PreviewLoader?,
+    previewLoader: PreviewLoader?,
     activeSegmentIndex: Int,
     onPlayerReady: (ExoPlayer) -> Unit,
     onAudioTracksClick: () -> Unit,

@@ -1,4 +1,4 @@
-package org.introskipper.segmenteditor.player.preview
+package org.introskipper.segmenteditor.ui.preview
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -8,6 +8,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.introskipper.segmenteditor.utils.KotlinxGenericMapSerializer
 import java.io.IOException
 
 /**

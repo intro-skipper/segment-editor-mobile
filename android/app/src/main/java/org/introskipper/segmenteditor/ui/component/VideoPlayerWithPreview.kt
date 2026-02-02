@@ -23,7 +23,8 @@ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.TimeBar
 import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory
-import org.introskipper.segmenteditor.player.preview.PreviewLoader
+import org.introskipper.segmenteditor.ui.preview.PreviewLoader
+import org.introskipper.segmenteditor.ui.preview.ScrubPreviewOverlay
 
 /**
  * Enhanced VideoPlayer with scrub preview support
