@@ -25,6 +25,18 @@ class TrickplayPreviewLoader(
     companion object {
         private const val TAG = "TrickplayPreviewLoader"
         private const val DEFAULT_INTERVAL_MS = 10000L // 10 seconds
+        
+        // Regex patterns for JSON parsing - compiled once for efficiency
+        private val TRICKPLAY_PATTERN = """"Trickplay"\s*:\s*\{""".toRegex()
+        private val MEDIA_SOURCE_ID_PATTERN = """"([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})"\s*:\s*\{""".toRegex()
+        private val WIDTH_PATTERN = """"(\d+)"\s*:\s*\{""".toRegex()
+        private val WIDTH_FIELD_PATTERN = """"Width"\s*:\s*(\d+)""".toRegex()
+        private val HEIGHT_FIELD_PATTERN = """"Height"\s*:\s*(\d+)""".toRegex()
+        private val TILE_WIDTH_FIELD_PATTERN = """"TileWidth"\s*:\s*(\d+)""".toRegex()
+        private val TILE_HEIGHT_FIELD_PATTERN = """"TileHeight"\s*:\s*(\d+)""".toRegex()
+        private val THUMBNAIL_COUNT_FIELD_PATTERN = """"ThumbnailCount"\s*:\s*(\d+)""".toRegex()
+        private val INTERVAL_FIELD_PATTERN = """"Interval"\s*:\s*(\d+)""".toRegex()
+        private val BANDWIDTH_FIELD_PATTERN = """"Bandwidth"\s*:\s*(\d+)""".toRegex()
     }
     
     data class TrickplayInfo(
@@ -34,7 +46,8 @@ class TrickplayPreviewLoader(
         val tileHeight: Int,
         val thumbnailCount: Int,
         val interval: Int,
-        val bandwidth: Long
+        val bandwidth: Long,
+        val mediaSourceId: String
     )
     
     override suspend fun loadPreview(positionMs: Long): Bitmap? = withContext(Dispatchers.IO) {
@@ -53,14 +66,14 @@ class TrickplayPreviewLoader(
             }
             
             // Calculate which tile image and position within the tile
-            // Note: info.interval is already in milliseconds (per Jellyfin API spec)
+            // Note: info.interval is in milliseconds (per Jellyfin API spec)
             val thumbnailIndex = (positionMs / info.interval).toInt()
             val tilesPerImage = info.tileWidth * info.tileHeight
             val imageIndex = thumbnailIndex / tilesPerImage
             val tileIndexInImage = thumbnailIndex % tilesPerImage
             
             // Load the tile sheet image
-            val tileSheet = loadTileSheet(imageIndex, info.width)
+            val tileSheet = loadTileSheet(imageIndex, info.width, info.mediaSourceId)
             tileSheet ?: run {
                 Log.w(TAG, "Failed to load tile sheet $imageIndex")
                 return@withContext null
@@ -126,61 +139,105 @@ class TrickplayPreviewLoader(
             // We need to extract the first available trickplay info
             
             // Find the Trickplay field
-            val trickplayPattern = """"Trickplay"\s*:\s*\{""".toRegex()
-            if (!trickplayPattern.containsMatchIn(json)) {
+            if (!TRICKPLAY_PATTERN.containsMatchIn(json)) {
                 Log.w(TAG, "No Trickplay field found in item response")
                 return null
             }
             
-            // Extract the trickplay section
+            // Extract the trickplay section - find the section between "Trickplay": { and its closing }
             val trickplayStartIdx = json.indexOf("\"Trickplay\"")
-            val trickplaySection = json.substring(trickplayStartIdx)
+            if (trickplayStartIdx == -1) return null
             
-            // Find first mediaSourceId section (any UUID pattern - case insensitive for hex digits)
-            val mediaSourcePattern = """"[a-fA-F0-9-]{36}"\s*:\s*\{""".toRegex()
-            val mediaSourceMatch = mediaSourcePattern.find(trickplaySection)
+            val jsonFromTrickplay = json.substring(trickplayStartIdx)
+            
+            // Find the first media source ID (UUID format)
+            val mediaSourceMatch = MEDIA_SOURCE_ID_PATTERN.find(jsonFromTrickplay)
             
             if (mediaSourceMatch == null) {
-                // Try finding any width directly (for simpler structure)
-                val widthPattern = """"(\d+)"\s*:\s*\{""".toRegex()
-                val widthMatch = widthPattern.find(trickplaySection) ?: return null
-                val width = widthMatch.groupValues[1].toInt()
-                
-                // Extract TrickplayInfoDto fields for this width
-                return extractTrickplayInfo(trickplaySection, width)
+                Log.w(TAG, "No media source ID found in Trickplay data")
+                return null
             }
             
-            // Extract from mediaSource section
-            val mediaSourceIdx = trickplaySection.indexOf(mediaSourceMatch.value)
-            val mediaSourceSection = trickplaySection.substring(mediaSourceIdx)
+            val mediaSourceId = mediaSourceMatch.groupValues[1]
+            Log.d(TAG, "Found media source ID: $mediaSourceId")
             
-            // Find first width in this mediaSource section
-            val widthPattern = """"(\d+)"\s*:\s*\{""".toRegex()
-            val widthMatch = widthPattern.find(mediaSourceSection) ?: return null
+            // Extract the section for this media source
+            val mediaSourceIdx = jsonFromTrickplay.indexOf(mediaSourceMatch.value)
+            val mediaSourceSection = jsonFromTrickplay.substring(mediaSourceIdx)
+            
+            // Find the first width (numeric key followed by colon and opening brace)
+            val widthMatch = WIDTH_PATTERN.find(mediaSourceSection)
+            
+            if (widthMatch == null) {
+                Log.w(TAG, "No width found in media source section")
+                return null
+            }
+            
             val width = widthMatch.groupValues[1].toInt()
+            Log.d(TAG, "Found width: $width")
             
-            // Extract TrickplayInfoDto fields
-            return extractTrickplayInfo(mediaSourceSection, width)
+            // Extract TrickplayInfoDto fields for this width
+            return extractTrickplayInfo(mediaSourceSection, width, mediaSourceId)
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing trickplay info", e)
             return null
         }
     }
     
-    private fun extractTrickplayInfo(jsonSection: String, width: Int): TrickplayInfo? {
+    private fun extractTrickplayInfo(jsonSection: String, width: Int, mediaSourceId: String): TrickplayInfo? {
         try {
-            // Extract TrickplayInfoDto fields
-            val infoPattern = """"Width"\s*:\s*(\d+).*?"Height"\s*:\s*(\d+).*?"TileWidth"\s*:\s*(\d+).*?"TileHeight"\s*:\s*(\d+).*?"ThumbnailCount"\s*:\s*(\d+).*?"Interval"\s*:\s*(\d+).*?"Bandwidth"\s*:\s*(\d+)""".toRegex(RegexOption.DOT_MATCHES_ALL)
-            val match = infoPattern.find(jsonSection) ?: return null
+            // Extract TrickplayInfoDto fields - they might appear in any order
+            val widthMatch = WIDTH_FIELD_PATTERN.find(jsonSection)
+            if (widthMatch == null) {
+                Log.w(TAG, "Failed to find Width field in trickplay data")
+                return null
+            }
+            
+            val heightMatch = HEIGHT_FIELD_PATTERN.find(jsonSection)
+            if (heightMatch == null) {
+                Log.w(TAG, "Failed to find Height field in trickplay data")
+                return null
+            }
+            
+            val tileWidthMatch = TILE_WIDTH_FIELD_PATTERN.find(jsonSection)
+            if (tileWidthMatch == null) {
+                Log.w(TAG, "Failed to find TileWidth field in trickplay data")
+                return null
+            }
+            
+            val tileHeightMatch = TILE_HEIGHT_FIELD_PATTERN.find(jsonSection)
+            if (tileHeightMatch == null) {
+                Log.w(TAG, "Failed to find TileHeight field in trickplay data")
+                return null
+            }
+            
+            val thumbnailCountMatch = THUMBNAIL_COUNT_FIELD_PATTERN.find(jsonSection)
+            if (thumbnailCountMatch == null) {
+                Log.w(TAG, "Failed to find ThumbnailCount field in trickplay data")
+                return null
+            }
+            
+            val intervalMatch = INTERVAL_FIELD_PATTERN.find(jsonSection)
+            if (intervalMatch == null) {
+                Log.w(TAG, "Failed to find Interval field in trickplay data")
+                return null
+            }
+            
+            val bandwidthMatch = BANDWIDTH_FIELD_PATTERN.find(jsonSection)
+            if (bandwidthMatch == null) {
+                Log.w(TAG, "Failed to find Bandwidth field in trickplay data")
+                return null
+            }
             
             return TrickplayInfo(
-                width = match.groupValues[1].toInt(),
-                height = match.groupValues[2].toInt(),
-                tileWidth = match.groupValues[3].toInt(),
-                tileHeight = match.groupValues[4].toInt(),
-                thumbnailCount = match.groupValues[5].toInt(),
-                interval = match.groupValues[6].toInt(),
-                bandwidth = match.groupValues[7].toLong()
+                width = widthMatch.groupValues[1].toInt(),
+                height = heightMatch.groupValues[1].toInt(),
+                tileWidth = tileWidthMatch.groupValues[1].toInt(),
+                tileHeight = tileHeightMatch.groupValues[1].toInt(),
+                thumbnailCount = thumbnailCountMatch.groupValues[1].toInt(),
+                interval = intervalMatch.groupValues[1].toInt(),
+                bandwidth = bandwidthMatch.groupValues[1].toLong(),
+                mediaSourceId = mediaSourceId
             )
         } catch (e: Exception) {
             Log.e(TAG, "Error extracting trickplay info fields", e)
@@ -188,10 +245,10 @@ class TrickplayPreviewLoader(
         }
     }
     
-    private suspend fun loadTileSheet(imageIndex: Int, width: Int): Bitmap? = withContext(Dispatchers.IO) {
+    private suspend fun loadTileSheet(imageIndex: Int, width: Int, mediaSourceId: String): Bitmap? = withContext(Dispatchers.IO) {
         try {
             // Jellyfin trickplay tile image endpoint
-            val url = "$serverUrl/Videos/$itemId/Trickplay/$width/$imageIndex.jpg"
+            val url = "$serverUrl/Videos/$itemId/Trickplay/$width/$imageIndex.jpg?mediaSourceId=$mediaSourceId"
             val request = Request.Builder()
                 .url(url)
                 .header("X-Emby-Token", apiKey)

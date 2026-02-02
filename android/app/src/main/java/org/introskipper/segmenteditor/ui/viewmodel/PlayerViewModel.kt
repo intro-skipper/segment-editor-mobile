@@ -258,10 +258,10 @@ class PlayerViewModel @Inject constructor(
             try {
                 return TrickplayPreviewLoader(serverUrl, apiKey, itemId, httpClient)
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to create TrickplayPreviewLoader, falling back to MediaMetadataPreviewLoader", e)
+                Log.w(TAG, "Failed to create TrickplayPreviewLoader", e)
             }
         } else {
-            Log.d(TAG, "Server URL or API key not available, skipping TRICKPLAY and using MediaMetadataPreviewLoader")
+            Log.d(TAG, "Server URL or API key not available, cannot create preview loader")
         }
         return null
     }

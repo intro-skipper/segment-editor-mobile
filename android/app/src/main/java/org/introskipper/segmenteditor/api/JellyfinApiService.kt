@@ -347,7 +347,7 @@ class JellyfinApiService {
         val BASIC_FIELDS = listOf("PrimaryImageAspectRatio", "ImageTags")
         val DETAIL_FIELDS = listOf(
             "Overview", "PrimaryImageAspectRatio", "ImageTags", "MediaSources",
-            "MediaStreams", "Path", "Container", "RunTimeTicks"
+            "MediaStreams", "Path", "Container", "RunTimeTicks", "Trickplay"
         )
         val EPISODE_FIELDS = listOf(
             "Overview", "PrimaryImageAspectRatio", "ImageTags", "MediaSources",
