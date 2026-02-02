@@ -1,4 +1,4 @@
-# Jellyfin Segment Editor Android
+# Jellyfin Segment Editor Mobile
 
 Manage Jellyfin Media Segment positions the simple way. This tool is in early stages of development.
 
@@ -16,14 +16,12 @@ Manage Jellyfin Media Segment positions the simple way. This tool is in early st
 
 - Download for Android from [Releases](https://github.com/intro-skipper/segment-editor/releases/latest)
 
-## Related projects
-
-- Jellyfin Plugin: [.EDL Creator](https://github.com/intro-skipper/jellyfin-plugin-edl)
-- Jellyfin Plugin: [Chapter Creator](https://github.com/intro-skipper/jellyfin-plugin-ms-chapter)
-
-## Prerequisites
-
 ## Running on Android
 
 2. Open the `android` directory in Android Studio
 3. Build and run the app in an emulator or on a physical device
+
+## Related projects
+
+- Jellyfin Plugin: [.EDL Creator](https://github.com/intro-skipper/jellyfin-plugin-edl)
+- Jellyfin Plugin: [Chapter Creator](https://github.com/intro-skipper/jellyfin-plugin-ms-chapter)
