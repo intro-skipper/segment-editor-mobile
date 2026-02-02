@@ -128,20 +128,64 @@ fun VideoPlayer(
 
 @androidx.annotation.OptIn(UnstableApi::class)
 fun ExoPlayer.selectAudioTrack(trackIndex: Int?) {
-    if (trackIndex == null) return
-    
     val trackSelector = this.trackSelector as? DefaultTrackSelector ?: return
     
-    trackSelector.parameters = trackSelector.buildUponParameters()
-        .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
-        .build()
+    if (trackIndex == null) {
+        // Disable audio track selection (use default)
+        trackSelector.parameters = trackSelector.buildUponParameters()
+            .clearOverridesOfType(C.TRACK_TYPE_AUDIO)
+            .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
+            .build()
+    } else {
+        // Select specific audio track by index
+        val currentTracks = this.currentTracks
+        val audioGroups = currentTracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
+        
+        if (audioGroups.isNotEmpty()) {
+            val group = audioGroups.firstOrNull()
+            if (group != null && trackIndex < group.length) {
+                trackSelector.parameters = trackSelector.buildUponParameters()
+                    .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
+                    .setOverrideForType(
+                        androidx.media3.common.TrackSelectionOverride(
+                            group.mediaTrackGroup,
+                            trackIndex
+                        )
+                    )
+                    .build()
+            }
+        }
+    }
 }
 
 @androidx.annotation.OptIn(UnstableApi::class)
 fun ExoPlayer.selectSubtitleTrack(trackIndex: Int?) {
     val trackSelector = this.trackSelector as? DefaultTrackSelector ?: return
     
-    trackSelector.parameters = trackSelector.buildUponParameters()
-        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, trackIndex == null)
-        .build()
+    if (trackIndex == null) {
+        // Disable subtitles
+        trackSelector.parameters = trackSelector.buildUponParameters()
+            .clearOverridesOfType(C.TRACK_TYPE_TEXT)
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+            .build()
+    } else {
+        // Select specific subtitle track by index
+        val currentTracks = this.currentTracks
+        val textGroups = currentTracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
+        
+        if (textGroups.isNotEmpty()) {
+            val group = textGroups.firstOrNull()
+            if (group != null && trackIndex < group.length) {
+                trackSelector.parameters = trackSelector.buildUponParameters()
+                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                    .setOverrideForType(
+                        androidx.media3.common.TrackSelectionOverride(
+                            group.mediaTrackGroup,
+                            trackIndex
+                        )
+                    )
+                    .build()
+            }
+        }
+    }
 }

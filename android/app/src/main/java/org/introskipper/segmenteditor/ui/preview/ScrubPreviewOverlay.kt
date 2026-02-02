@@ -19,14 +19,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.data.model.TimeUtils
 
 /**
@@ -59,33 +56,21 @@ fun ScrubPreviewOverlay(
     var isLoading by remember { mutableStateOf(false) }
 
     // Load preview image when position changes
-    // Use snapshotFlow to observe position changes and launch independent jobs
-    // Cancel previous job to avoid race conditions with stale images
-    LaunchedEffect(previewLoader) {
-        var currentJob: Job? = null
+    // Use LaunchedEffect with positionMs as key to trigger on position changes
+    LaunchedEffect(positionMs, previewLoader) {
+        isLoading = true
+        Log.d("ScrubPreviewOverlay", "Loading preview for position: $positionMs")
         
-        snapshotFlow { positionMs }
-            .collect { position ->
-                // Cancel the previous job if it's still running
-                currentJob?.cancel()
-                
-                isLoading = true
-                Log.d("ScrubPreviewOverlay", "Loading preview for position: $position")
-                
-                // Launch a new job for this image load and store it
-                currentJob = launch {
-                    try {
-                        val bitmap = previewLoader.loadPreview(position)
-                        previewBitmap = bitmap
-                    } catch (e: Exception) {
-                        // Silently fail - preview is optional
-                        Log.e("ScrubPreviewOverlay", "Failed to load preview", e)
-                        previewBitmap = null
-                    } finally {
-                        isLoading = false
-                    }
-                }
-            }
+        try {
+            val bitmap = previewLoader.loadPreview(positionMs)
+            previewBitmap = bitmap
+        } catch (e: Exception) {
+            // Silently fail - preview is optional
+            Log.e("ScrubPreviewOverlay", "Failed to load preview", e)
+            previewBitmap = null
+        } finally {
+            isLoading = false
+        }
     }
 
     Box(
