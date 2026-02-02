@@ -90,12 +90,11 @@ fun VideoPlayerWithPreview(
             override fun onPlaybackStateChanged(playbackState: Int) {
                 // Apply track selections once when player is ready with tracks available
                 if (playbackState == Player.STATE_READY && initialTracksApplied.compareAndSet(false, true)) {
-                    if (initialAudioTrackIndex != null) {
-                        exoPlayer.selectAudioTrack(initialAudioTrackIndex)
-                    }
-                    if (initialSubtitleTrackIndex != null) {
-                        exoPlayer.selectSubtitleTrack(initialSubtitleTrackIndex)
-                    }
+                    // Always set audio track (null means use first available track)
+                    exoPlayer.selectAudioTrack(initialAudioTrackIndex)
+                    
+                    // Set subtitle track (null means disable subtitles)
+                    exoPlayer.selectSubtitleTrack(initialSubtitleTrackIndex)
                 }
             }
         }

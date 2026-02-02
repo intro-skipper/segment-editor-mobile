@@ -125,7 +125,7 @@ class PlayerViewModel @Inject constructor(
             .filter { it.type == "Audio" }
             .mapIndexed { idx, stream ->
                 TrackInfo(
-                    index = stream.index,
+                    index = idx,  // Use accumulated index (position in filtered list)
                     language = stream.language,
                     displayTitle = stream.displayTitle ?: buildTrackTitle("Audio", stream.language, stream.codec),
                     codec = stream.codec,
@@ -137,7 +137,7 @@ class PlayerViewModel @Inject constructor(
             .filter { it.type == "Subtitle" }
             .mapIndexed { idx, stream ->
                 TrackInfo(
-                    index = stream.index,
+                    index = idx,  // Use accumulated index (position in filtered list)
                     language = stream.language,
                     displayTitle = stream.displayTitle ?: buildTrackTitle("Subtitle", stream.language, stream.codec),
                     codec = stream.codec,
@@ -145,12 +145,16 @@ class PlayerViewModel @Inject constructor(
                 )
             }
         
+        // Find the default track index or use the first track (index 0)
+        val defaultAudioIndex = audioTracks.indexOfFirst { it.isDefault }.takeIf { it >= 0 } ?: audioTracks.firstOrNull()?.index
+        val defaultSubtitleIndex = subtitleTracks.indexOfFirst { it.isDefault }.takeIf { it >= 0 }
+        
         _uiState.update { 
             it.copy(
                 audioTracks = audioTracks,
                 subtitleTracks = subtitleTracks,
-                selectedAudioTrack = audioTracks.firstOrNull { it.isDefault }?.index,
-                selectedSubtitleTrack = subtitleTracks.firstOrNull { it.isDefault }?.index
+                selectedAudioTrack = defaultAudioIndex,
+                selectedSubtitleTrack = defaultSubtitleIndex
             )
         }
     }
