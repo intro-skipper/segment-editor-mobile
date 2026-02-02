@@ -145,7 +145,6 @@ fun ExoPlayer.selectAudioTrack(trackIndex: Int?) {
         val audioGroups = currentTracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
         
         var accumulatedIndex = 0
-        var foundTrack = false
         
         for (group in audioGroups) {
             for (trackIndexInGroup in 0 until group.length) {
@@ -159,12 +158,13 @@ fun ExoPlayer.selectAudioTrack(trackIndex: Int?) {
                             )
                         )
                         .build()
-                    foundTrack = true
-                    break
+                    
+                    // Restore playback state and return
+                    this.playWhenReady = wasPlaying
+                    return
                 }
                 accumulatedIndex++
             }
-            if (foundTrack) break
         }
     }
     
@@ -191,7 +191,6 @@ fun ExoPlayer.selectSubtitleTrack(trackIndex: Int?) {
         val textGroups = currentTracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
         
         var accumulatedIndex = 0
-        var foundTrack = false
         
         for (group in textGroups) {
             for (trackIndexInGroup in 0 until group.length) {
@@ -205,12 +204,13 @@ fun ExoPlayer.selectSubtitleTrack(trackIndex: Int?) {
                             )
                         )
                         .build()
-                    foundTrack = true
-                    break
+                    
+                    // Restore playback state and return
+                    this.playWhenReady = wasPlaying
+                    return
                 }
                 accumulatedIndex++
             }
-            if (foundTrack) break
         }
     }
     
