@@ -213,7 +213,7 @@ class TrickplayPreviewLoader(
     private suspend fun loadTileSheet(imageIndex: Int, width: Int, mediaSourceId: String): Bitmap? = withContext(Dispatchers.IO) {
         try {
             // Jellyfin trickplay tile image endpoint
-            val url = "$serverUrl/Videos/$itemId/Trickplay/$width/$imageIndex.jpg?mediaSourceId=$mediaSourceId&api_key=$apiKey"
+            val url = "$serverUrl/Videos/$itemId/Trickplay/$width/$imageIndex.jpg?mediaSourceId=$mediaSourceId"
             val request = Request.Builder()
                 .url(url)
                 .header("X-Emby-Token", apiKey)

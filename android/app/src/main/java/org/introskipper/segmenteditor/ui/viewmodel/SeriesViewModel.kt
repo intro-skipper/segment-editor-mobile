@@ -79,8 +79,9 @@ class SeriesViewModel @Inject constructor(
                     .toSortedMap()
 
                 // Create season name mapping from the first episode of each season
-                val seasonNames = episodesBySeason.mapValues { (seasonNumber, episodeList) ->
-                    episodeList.firstOrNull()?.episode?.seasonName ?: "Season $seasonNumber"
+                // Use null if season name is not available to allow UI layer to handle fallback
+                val seasonNames = episodesBySeason.mapValues { (_, episodeList) ->
+                    episodeList.firstOrNull()?.episode?.seasonName
                 }
 
                 _uiState.value = SeriesUiState.Success(

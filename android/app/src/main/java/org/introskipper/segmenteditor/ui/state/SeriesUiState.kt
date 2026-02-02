@@ -7,7 +7,7 @@ sealed class SeriesUiState {
     data class Success(
         val series: MediaItem,
         val episodesBySeason: Map<Int, List<EpisodeWithSegments>>,
-        val seasonNames: Map<Int, String> = emptyMap()
+        val seasonNames: Map<Int, String?> = emptyMap()
     ) : SeriesUiState()
     data class Error(val message: String) : SeriesUiState()
 }
