@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -23,6 +24,9 @@ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.TimeBar
 import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.preview.ScrubPreviewOverlay
 
@@ -43,7 +47,7 @@ fun VideoPlayerWithPreview(
     onPlaybackStateChanged: (isPlaying: Boolean, currentPosition: Long, bufferedPosition: Long) -> Unit = { _, _, _ -> }
 ) {
     val context = LocalContext.current
-    var scrubPosition by remember { mutableStateOf<Long?>(null) }
+    var scrubPosition by remember { mutableStateOf(0L) }
     var isScrubbing by remember { mutableStateOf(false) }
     
     val exoPlayer = remember {
@@ -171,6 +175,12 @@ fun VideoPlayerWithPreview(
             },
             modifier = Modifier.fillMaxSize()
         )
+
+        SideEffect {
+            CoroutineScope(Dispatchers.IO).launch {
+                previewLoader?.loadPreview(0)
+            }
+        }
         
         // Preview overlay (shown when scrubbing)
         if (isScrubbing) {
@@ -182,7 +192,7 @@ fun VideoPlayerWithPreview(
             ) {
                 ScrubPreviewOverlay(
                     previewLoader = previewLoader,
-                    positionMs = scrubPosition!!,
+                    positionMs = scrubPosition,
                     isVisible = true
                 )
             }
