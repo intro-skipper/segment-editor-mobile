@@ -18,13 +18,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.data.model.TimeUtils
 
@@ -56,26 +57,31 @@ fun ScrubPreviewOverlay(
 
     var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isLoading by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
 
     // Load preview image when position changes
-    // Spawn a new independent job for each position that runs to completion
-    // without canceling previous jobs
-    LaunchedEffect(positionMs) {
-        isLoading = true
-        Log.d("ScrubPreviewOverlay", "Loading preview for position: $positionMs")
-        // Launch in the remembered scope so the job persists even if LaunchedEffect restarts
-        scope.launch {
-            try {
-                previewBitmap = previewLoader.loadPreview(positionMs)
-            } catch (e: Exception) {
-                // Silently fail - preview is optional
-                Log.e("ScrubPreviewOverlay", "Failed to load preview", e)
-                previewBitmap = null
-            } finally {
-                isLoading = false
+    // Use snapshotFlow to observe position changes and launch independent jobs
+    // Each job runs in the background and can be cancelled without blocking the effect
+    LaunchedEffect(previewLoader) {
+        snapshotFlow { positionMs }
+            .collect { position ->
+                isLoading = true
+                Log.d("ScrubPreviewOverlay", "Loading preview for position: $position")
+                
+                // Launch a separate job for this image load
+                // This job runs independently and doesn't block the snapshotFlow collector
+                launch {
+                    try {
+                        val bitmap = previewLoader.loadPreview(position)
+                        previewBitmap = bitmap
+                    } catch (e: Exception) {
+                        // Silently fail - preview is optional
+                        Log.e("ScrubPreviewOverlay", "Failed to load preview", e)
+                        previewBitmap = null
+                    } finally {
+                        isLoading = false
+                    }
+                }
             }
-        }
     }
 
     Box(
