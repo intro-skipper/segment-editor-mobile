@@ -130,6 +130,9 @@ fun VideoPlayer(
 fun ExoPlayer.selectAudioTrack(trackIndex: Int?) {
     val trackSelector = this.trackSelector as? DefaultTrackSelector ?: return
     
+    // Save playback state
+    val wasPlaying = this.playWhenReady
+    
     if (trackIndex == null) {
         // Disable audio track selection (use default)
         trackSelector.parameters = trackSelector.buildUponParameters()
@@ -164,11 +167,17 @@ fun ExoPlayer.selectAudioTrack(trackIndex: Int?) {
             if (foundTrack) break
         }
     }
+    
+    // Restore playback state
+    this.playWhenReady = wasPlaying
 }
 
 @androidx.annotation.OptIn(UnstableApi::class)
 fun ExoPlayer.selectSubtitleTrack(trackIndex: Int?) {
     val trackSelector = this.trackSelector as? DefaultTrackSelector ?: return
+    
+    // Save playback state
+    val wasPlaying = this.playWhenReady
     
     if (trackIndex == null) {
         // Disable subtitles
@@ -204,4 +213,7 @@ fun ExoPlayer.selectSubtitleTrack(trackIndex: Int?) {
             if (foundTrack) break
         }
     }
+    
+    // Restore playback state
+    this.playWhenReady = wasPlaying
 }
