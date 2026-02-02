@@ -16,6 +16,7 @@ import androidx.browser.customtabs.CustomTabsSession
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import org.introskipper.segmenteditor.SegmentEditorApplication
+import org.introskipper.segmenteditor.toPx
 import org.introskipper.segmenteditor.ui.state.AppTheme
 
 object ChromeIntegration {
@@ -97,7 +98,7 @@ object ChromeIntegration {
                 val builder = CustomTabsIntent.Builder(mSession)
                     .setBackgroundInteractionEnabled(true)
                     .setInitialActivityHeightPx(
-                        720.dp.value.toInt(),
+                        720.toPx,
                         CustomTabsIntent.ACTIVITY_HEIGHT_ADJUSTABLE
                     )
                     .setToolbarCornerRadiusDp(16)

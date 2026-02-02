@@ -15,7 +15,6 @@ import okhttp3.OkHttpClient
 import org.introskipper.segmenteditor.data.model.MediaStream
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
-import org.introskipper.segmenteditor.player.preview.MediaMetadataPreviewLoader
 import org.introskipper.segmenteditor.player.preview.PreviewLoader
 import org.introskipper.segmenteditor.player.preview.TrickplayPreviewLoader
 import org.introskipper.segmenteditor.storage.SecurePreferences
@@ -250,16 +249,11 @@ class PlayerViewModel @Inject constructor(
     fun clearEvent() {
         _events.value = null
     }
-    
-    /**
-     * Creates a preview loader with automatic fallback logic.
-     * Always tries TRICKPLAY first, then falls back to MEDIA_METADATA if unavailable.
-     */
-    fun createPreviewLoader(itemId: String, streamUrl: String): PreviewLoader? {
+
+    fun createPreviewLoader(itemId: String): PreviewLoader? {
         val serverUrl = securePreferences.getServerUrl()
         val apiKey = securePreferences.getApiKey()
-        
-        // First, try TRICKPLAY if server credentials are available
+
         if (serverUrl != null && apiKey != null) {
             try {
                 return TrickplayPreviewLoader(serverUrl, apiKey, itemId, httpClient)
@@ -269,14 +263,7 @@ class PlayerViewModel @Inject constructor(
         } else {
             Log.d(TAG, "Server URL or API key not available, skipping TRICKPLAY and using MediaMetadataPreviewLoader")
         }
-        
-        // Fallback to MEDIA_METADATA
-        return try {
-            MediaMetadataPreviewLoader(streamUrl)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to create MediaMetadataPreviewLoader as fallback", e)
-            null
-        }
+        return null
     }
     
     companion object {

@@ -3,6 +3,8 @@ package org.introskipper.segmenteditor
 import android.app.Application
 import android.app.UiModeManager
 import android.content.res.Configuration
+import android.content.res.Resources
+import android.util.TypedValue
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,3 +38,7 @@ class SegmentEditorApplication : Application() {
         var preferences: SecurePreferences? = null
     }
 }
+
+val Number.toPx get() = TypedValue.applyDimension(
+    TypedValue.COMPLEX_UNIT_DIP, this.toFloat(), Resources.getSystem().displayMetrics
+).toInt()

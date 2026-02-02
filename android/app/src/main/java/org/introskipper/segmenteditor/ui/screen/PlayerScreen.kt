@@ -80,12 +80,8 @@ fun PlayerScreen(
     
     // Preview loader
     val streamUrl = viewModel.getStreamUrl(useHls = true)
-    val previewLoader = remember(streamUrl) {
-        if (streamUrl != null) {
-            viewModel.createPreviewLoader(itemId, streamUrl)
-        } else {
-            null
-        }
+    val previewLoader = remember {
+        viewModel.createPreviewLoader(itemId)
     }
     
     // Clean up preview loader on dispose
