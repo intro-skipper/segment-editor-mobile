@@ -145,8 +145,12 @@ class PlayerViewModel @Inject constructor(
                 )
             }
         
-        // Find the default track index or use the first track (index 0)
-        val defaultAudioIndex = audioTracks.indexOfFirst { it.isDefault }.takeIf { it >= 0 } ?: audioTracks.firstOrNull()?.index
+        // Find the default track index or use the first track (index 0) if tracks exist
+        val defaultAudioIndex = if (audioTracks.isEmpty()) {
+            null
+        } else {
+            audioTracks.indexOfFirst { it.isDefault }.takeIf { it >= 0 } ?: 0
+        }
         val defaultSubtitleIndex = subtitleTracks.indexOfFirst { it.isDefault }.takeIf { it >= 0 }
         
         _uiState.update { 
