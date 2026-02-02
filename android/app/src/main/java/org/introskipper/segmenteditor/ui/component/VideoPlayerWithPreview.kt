@@ -58,6 +58,9 @@ fun VideoPlayerWithPreview(
             }
     }
     
+    // Track whether initial selections have been applied
+    var tracksApplied by remember { mutableStateOf(false) }
+    
     DisposableEffect(exoPlayer, previewLoader) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -79,18 +82,22 @@ fun VideoPlayerWithPreview(
                     exoPlayer.bufferedPosition
                 )
             }
+            
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                // Apply track selections once when player is ready with tracks available
+                if (playbackState == Player.STATE_READY && !tracksApplied) {
+                    tracksApplied = true
+                    if (initialAudioTrackIndex != null) {
+                        exoPlayer.selectAudioTrack(initialAudioTrackIndex)
+                    }
+                    if (initialSubtitleTrackIndex != null) {
+                        exoPlayer.selectSubtitleTrack(initialSubtitleTrackIndex)
+                    }
+                }
+            }
         }
         
         exoPlayer.addListener(listener)
-        
-        // Apply initial track selections
-        if (initialAudioTrackIndex != null) {
-            exoPlayer.selectAudioTrack(initialAudioTrackIndex)
-        }
-        if (initialSubtitleTrackIndex != null) {
-            exoPlayer.selectSubtitleTrack(initialSubtitleTrackIndex)
-        }
-        
         onPlayerReady(exoPlayer)
         
         onDispose {

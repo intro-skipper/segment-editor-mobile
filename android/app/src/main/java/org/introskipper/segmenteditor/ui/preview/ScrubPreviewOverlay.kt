@@ -57,19 +57,22 @@ fun ScrubPreviewOverlay(
 
     var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+    var currentJob by remember { mutableStateOf<Job?>(null) }
 
     // Load preview image when position changes
     // Use snapshotFlow to observe position changes and launch independent jobs
-    // Each job runs in the background and can be cancelled without blocking the effect
+    // Cancel previous job to avoid race conditions with stale images
     LaunchedEffect(previewLoader) {
         snapshotFlow { positionMs }
             .collect { position ->
+                // Cancel the previous job if it's still running
+                currentJob?.cancel()
+                
                 isLoading = true
                 Log.d("ScrubPreviewOverlay", "Loading preview for position: $position")
                 
-                // Launch a separate job for this image load
-                // This job runs independently and doesn't block the snapshotFlow collector
-                launch {
+                // Launch a new job for this image load and store it
+                currentJob = launch {
                     try {
                         val bitmap = previewLoader.loadPreview(position)
                         previewBitmap = bitmap
