@@ -253,15 +253,16 @@ class PlayerViewModel @Inject constructor(
     fun createPreviewLoader(itemId: String): PreviewLoader? {
         val serverUrl = securePreferences.getServerUrl()
         val apiKey = securePreferences.getApiKey()
+        val userId = securePreferences.getUserId()
 
-        if (serverUrl != null && apiKey != null) {
+        if (serverUrl != null && apiKey != null && userId != null) {
             try {
-                return TrickplayPreviewLoader(serverUrl, apiKey, itemId, httpClient)
+                return TrickplayPreviewLoader(serverUrl, apiKey, userId, itemId, httpClient)
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to create TrickplayPreviewLoader", e)
             }
         } else {
-            Log.d(TAG, "Server URL or API key not available, cannot create preview loader")
+            Log.d(TAG, "Server URL, API key, or User ID not available, cannot create preview loader")
         }
         return null
     }

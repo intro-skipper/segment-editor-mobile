@@ -15,6 +15,7 @@ import java.io.IOException
 class TrickplayPreviewLoader(
     private val serverUrl: String,
     private val apiKey: String,
+    private val userId: String,
     private val itemId: String,
     private val httpClient: OkHttpClient
 ) : PreviewLoader {
@@ -112,7 +113,7 @@ class TrickplayPreviewLoader(
         try {
             // Jellyfin Items API endpoint with Trickplay field
             // The Trickplay metadata is embedded in the item's details
-            val url = "$serverUrl/Items/$itemId"
+            val url = "$serverUrl/Users/$userId/Items/$itemId"
             val request = Request.Builder()
                 .url(url)
                 .header("X-Emby-Token", apiKey)
