@@ -71,6 +71,10 @@ fun ScrubPreviewOverlay(
             } else {
                 android.util.Log.w("ScrubPreviewOverlay", "Preview loader returned null bitmap")
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // Re-throw cancellation to allow proper coroutine cancellation
+            android.util.Log.d("ScrubPreviewOverlay", "Preview loading cancelled for position: $positionMs")
+            throw e
         } catch (e: Exception) {
             // Silently fail - preview is optional
             android.util.Log.e("ScrubPreviewOverlay", "Failed to load preview", e)
