@@ -3,7 +3,4 @@
 .vscode/
 xcuserdata/
 
-node_modules
-web
-
 keystore.properties

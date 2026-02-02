@@ -17,19 +17,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  orphan:
-    if: ${{ github.repository == 'intro-skipper/segment-editor-mobile' }}
-    runs-on: ubuntu-latest
-    env:
-      CI: true
-    steps:
-
-    - name: Drop orphan tags
-      continue-on-error: true
-      uses: fabriziocacicia/delete-tags-without-release-action@v0.1.0
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   android:
     runs-on: ubuntu-latest
 
