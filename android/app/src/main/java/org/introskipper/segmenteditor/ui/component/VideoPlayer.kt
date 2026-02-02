@@ -135,6 +135,7 @@ fun ExoPlayer.selectAudioTrack(trackIndex: Int?) {
     
     // For audio tracks, if null is passed, select the first available track (index 0)
     // This ensures audio is always enabled. Unlike subtitles, we don't want to disable audio.
+    // Note: If no audio tracks exist, the fallback logic below will handle it gracefully.
     val targetIndex = trackIndex ?: 0
     
     // Select specific audio track by accumulating indices across all groups
