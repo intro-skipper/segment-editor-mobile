@@ -40,7 +40,16 @@ class PlayerViewModel @Inject constructor(
     
     fun loadMediaItem(itemId: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            // Clear old state when loading new item to prevent state pollution
+            _uiState.update { 
+                it.copy(
+                    isLoading = true, 
+                    error = null,
+                    segments = emptyList(),
+                    currentPosition = 0L,
+                    isPlaying = false
+                )
+            }
             
             val userId = securePreferences.getUserId() ?: run {
                 _uiState.update { it.copy(isLoading = false, error = "User ID not found") }

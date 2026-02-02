@@ -50,7 +50,7 @@ fun VideoPlayerWithPreview(
     var scrubPosition by remember { mutableStateOf(0L) }
     var isScrubbing by remember { mutableStateOf(false) }
     
-    val exoPlayer = remember {
+    val exoPlayer = remember(streamUrl) {
         val trackSelector = DefaultTrackSelector(context)
         ExoPlayer.Builder(context)
             .setRenderersFactory(NextRenderersFactory(context))
