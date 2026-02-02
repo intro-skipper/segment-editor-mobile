@@ -187,13 +187,47 @@ class TrickplayPreviewLoader(
     private fun extractTrickplayInfo(jsonSection: String, width: Int, mediaSourceId: String): TrickplayInfo? {
         try {
             // Extract TrickplayInfoDto fields - they might appear in any order
-            val widthMatch = WIDTH_FIELD_PATTERN.find(jsonSection) ?: return null
-            val heightMatch = HEIGHT_FIELD_PATTERN.find(jsonSection) ?: return null
-            val tileWidthMatch = TILE_WIDTH_FIELD_PATTERN.find(jsonSection) ?: return null
-            val tileHeightMatch = TILE_HEIGHT_FIELD_PATTERN.find(jsonSection) ?: return null
-            val thumbnailCountMatch = THUMBNAIL_COUNT_FIELD_PATTERN.find(jsonSection) ?: return null
-            val intervalMatch = INTERVAL_FIELD_PATTERN.find(jsonSection) ?: return null
-            val bandwidthMatch = BANDWIDTH_FIELD_PATTERN.find(jsonSection) ?: return null
+            val widthMatch = WIDTH_FIELD_PATTERN.find(jsonSection)
+            if (widthMatch == null) {
+                Log.w(TAG, "Failed to find Width field in trickplay data")
+                return null
+            }
+            
+            val heightMatch = HEIGHT_FIELD_PATTERN.find(jsonSection)
+            if (heightMatch == null) {
+                Log.w(TAG, "Failed to find Height field in trickplay data")
+                return null
+            }
+            
+            val tileWidthMatch = TILE_WIDTH_FIELD_PATTERN.find(jsonSection)
+            if (tileWidthMatch == null) {
+                Log.w(TAG, "Failed to find TileWidth field in trickplay data")
+                return null
+            }
+            
+            val tileHeightMatch = TILE_HEIGHT_FIELD_PATTERN.find(jsonSection)
+            if (tileHeightMatch == null) {
+                Log.w(TAG, "Failed to find TileHeight field in trickplay data")
+                return null
+            }
+            
+            val thumbnailCountMatch = THUMBNAIL_COUNT_FIELD_PATTERN.find(jsonSection)
+            if (thumbnailCountMatch == null) {
+                Log.w(TAG, "Failed to find ThumbnailCount field in trickplay data")
+                return null
+            }
+            
+            val intervalMatch = INTERVAL_FIELD_PATTERN.find(jsonSection)
+            if (intervalMatch == null) {
+                Log.w(TAG, "Failed to find Interval field in trickplay data")
+                return null
+            }
+            
+            val bandwidthMatch = BANDWIDTH_FIELD_PATTERN.find(jsonSection)
+            if (bandwidthMatch == null) {
+                Log.w(TAG, "Failed to find Bandwidth field in trickplay data")
+                return null
+            }
             
             return TrickplayInfo(
                 width = widthMatch.groupValues[1].toInt(),
