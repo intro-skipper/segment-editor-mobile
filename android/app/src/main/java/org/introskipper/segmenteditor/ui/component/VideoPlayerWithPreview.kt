@@ -236,6 +236,7 @@ fun ExoPlayer.selectAudioTrack(trackIndex: Int?) {
         for (trackIndexInGroup in 0 until group.length) {
             if (accumulatedIndex == targetIndex) {
                 trackSelector.parameters = trackSelector.buildUponParameters()
+                    .clearOverridesOfType(C.TRACK_TYPE_AUDIO)
                     .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
                     .setOverrideForType(
                         androidx.media3.common.TrackSelectionOverride(
@@ -287,6 +288,7 @@ fun ExoPlayer.selectSubtitleTrack(trackIndex: Int?) {
             for (trackIndexInGroup in 0 until group.length) {
                 if (accumulatedIndex == trackIndex) {
                     trackSelector.parameters = trackSelector.buildUponParameters()
+                        .clearOverridesOfType(C.TRACK_TYPE_TEXT)
                         .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
                         .setOverrideForType(
                             androidx.media3.common.TrackSelectionOverride(
