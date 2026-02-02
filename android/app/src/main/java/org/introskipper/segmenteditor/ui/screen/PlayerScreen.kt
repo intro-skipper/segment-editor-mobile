@@ -101,8 +101,11 @@ fun PlayerScreen(
     var editingSegment by remember { mutableStateOf<Segment?>(null) }
     var activeSegmentIndex by remember { mutableStateOf(0) }
     
-    // Load media item on first composition
+    // Load media item on first composition and reset dialog state
     LaunchedEffect(itemId) {
+        // Reset dialog state when navigating to a new item
+        showSegmentEditor = false
+        editingSegment = null
         viewModel.loadMediaItem(itemId)
     }
     
