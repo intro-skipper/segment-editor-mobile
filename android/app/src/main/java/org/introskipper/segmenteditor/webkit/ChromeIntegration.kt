@@ -13,7 +13,6 @@ import androidx.browser.customtabs.CustomTabsIntent
 import androidx.browser.customtabs.CustomTabsService
 import androidx.browser.customtabs.CustomTabsServiceConnection
 import androidx.browser.customtabs.CustomTabsSession
-import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import org.introskipper.segmenteditor.SegmentEditorApplication
 import org.introskipper.segmenteditor.toPx

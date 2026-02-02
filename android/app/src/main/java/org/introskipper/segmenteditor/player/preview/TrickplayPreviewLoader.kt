@@ -8,8 +8,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import org.introskipper.segmenteditor.ui.state.ExportFormat
-import org.json.JSONObject
 import java.io.IOException
 
 /**

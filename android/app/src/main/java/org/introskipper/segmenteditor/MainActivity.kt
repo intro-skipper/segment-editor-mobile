@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,28 +27,28 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     var updateManager: UpdateManager? = null
-    
+
     @Inject
     lateinit var securePreferences: SecurePreferences
-    
+
     @Inject
     lateinit var apiService: JellyfinApiService
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         updateManager = UpdateManager(this)
-        
+
         // Determine start destination based on whether user is already logged in
         val startDestination = if (securePreferences.isLoggedIn()) {
             Screen.Main.route
         } else {
             Screen.ConnectionWizard.route
         }
-        
+
         setContent {
             var currentTheme by remember { mutableStateOf(securePreferences.getTheme()) }
             val openDialogCustom = remember { mutableStateOf(false) }
-            
+
             ReactInMobileTheme(appTheme = currentTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -62,11 +63,13 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            updateManager?.setUpdateListener(object : UpdateManager.UpdateListener {
-                override fun onUpdateFound() {
-                    openDialogCustom.value = true
-                }
-            })
+            SideEffect {
+                updateManager?.setUpdateListener(object : UpdateManager.UpdateListener {
+                    override fun onUpdateFound() {
+                        openDialogCustom.value = true
+                    }
+                })
+            }
 
             if (openDialogCustom.value) {
                 CustomDialog(openDialogCustom = openDialogCustom)

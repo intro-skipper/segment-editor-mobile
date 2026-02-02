@@ -124,19 +124,22 @@ fun VideoPlayerWithPreview(
                                 timeBarView.addListener(object : TimeBar.OnScrubListener {
                                     override fun onScrubStart(timeBar: TimeBar, position: Long) {
                                         android.util.Log.d("VideoPlayerWithPreview", "Scrub started at position: $position")
+                                        exoPlayer.playWhenReady = false
                                         isScrubbing = true
                                         scrubPosition = position
                                     }
                                     
                                     override fun onScrubMove(timeBar: TimeBar, position: Long) {
                                         android.util.Log.d("VideoPlayerWithPreview", "Scrub moved to position: $position")
+                                        exoPlayer.playWhenReady = false
                                         scrubPosition = position
                                     }
                                     
                                     override fun onScrubStop(timeBar: TimeBar, position: Long, canceled: Boolean) {
                                         android.util.Log.d("VideoPlayerWithPreview", "Scrub stopped at position: $position")
                                         isScrubbing = false
-                                        scrubPosition = null
+                                        scrubPosition = position
+                                        exoPlayer.playWhenReady = true
                                     }
                                 })
                             } else {
@@ -152,7 +155,7 @@ fun VideoPlayerWithPreview(
         )
         
         // Preview overlay (shown when scrubbing)
-        if (isScrubbing && scrubPosition != null) {
+        if (isScrubbing) {
             Box(
                 modifier = Modifier
                     .align(androidx.compose.ui.Alignment.TopCenter)

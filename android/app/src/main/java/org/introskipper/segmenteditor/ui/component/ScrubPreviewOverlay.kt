@@ -17,20 +17,20 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.data.model.TimeUtils
 import org.introskipper.segmenteditor.player.preview.PreviewLoader
 
 /**
  * Overlay that displays a preview thumbnail and timestamp when scrubbing the video timeline
- * 
+ *
  * @param previewLoader The loader to fetch preview images
  * @param positionMs Current scrub position in milliseconds
  * @param isVisible Whether the overlay should be visible
@@ -51,25 +51,20 @@ fun ScrubPreviewOverlay(
         android.util.Log.w("ScrubPreviewOverlay", "PreviewLoader is null, cannot show preview")
         return
     }
-    
+
     android.util.Log.d("ScrubPreviewOverlay", "Showing preview overlay at position: $positionMs")
-    
+
     var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isLoading by remember { mutableStateOf(false) }
-    
+    val scope = rememberCoroutineScope()
+
     // Load preview image when position changes
     LaunchedEffect(positionMs, previewLoader) {
         isLoading = true
         android.util.Log.d("ScrubPreviewOverlay", "Loading preview for position: $positionMs")
         try {
-            val bitmap = withContext(Dispatchers.IO) {
-                previewLoader.loadPreview(positionMs)
-            }
-            previewBitmap = bitmap
-            if (bitmap != null) {
-                android.util.Log.d("ScrubPreviewOverlay", "Preview loaded successfully: ${bitmap.width}x${bitmap.height}")
-            } else {
-                android.util.Log.w("ScrubPreviewOverlay", "Preview loader returned null bitmap")
+            scope.launch {
+                previewBitmap = previewLoader.loadPreview(positionMs)
             }
         } catch (e: Exception) {
             // Silently fail - preview is optional
@@ -79,7 +74,7 @@ fun ScrubPreviewOverlay(
             isLoading = false
         }
     }
-    
+
     Box(
         modifier = modifier
             .shadow(8.dp, RoundedCornerShape(8.dp))
@@ -124,7 +119,7 @@ fun ScrubPreviewOverlay(
                     }
                 }
             }
-            
+
             // Timestamp
             Text(
                 text = TimeUtils.formatMilliseconds(positionMs),
