@@ -15,9 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -26,8 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.data.model.TimeUtils
 
 /**
@@ -62,48 +58,20 @@ fun ScrubPreviewOverlay(
     // Round position to interval for better cache hits
     val interval = remember(previewLoader) { previewLoader.getPreviewInterval() }
     val roundedPositionMs = (positionMs / interval) * interval
-    
-    // Track the last requested position to detect changes without using it as a LaunchedEffect key
-    var lastRequestedPosition by remember { mutableLongStateOf(-1L) }
-    
-    // Channel to send position requests without cancelling the loader coroutine
-    val positionChannel = remember { Channel<Long>(Channel.CONFLATED) }
 
-    // Load preview images - this effect never restarts, only when previewLoader changes
-    LaunchedEffect(previewLoader) {
-        // Process position requests from the channel
-        for (position in positionChannel) {
-            // Launch each load as an independent job
-            launch {
-                isLoading = true
-                Log.d("ScrubPreviewOverlay", "Loading preview for position: $position")
-                try {
-                    val bitmap = previewLoader.loadPreview(position)
-                    // Only update if this is still the current position
-                    if (position == lastRequestedPosition) {
-                        previewBitmap = bitmap
-                    }
-                } catch (e: Exception) {
-                    // Silently fail - preview is optional
-                    Log.e("ScrubPreviewOverlay", "Failed to load preview", e)
-                    if (position == lastRequestedPosition) {
-                        previewBitmap = null
-                    }
-                } finally {
-                    isLoading = false
-                }
-            }
-        }
-    }
-    
-    // Detect position changes and send to channel
-    // Use SideEffect to ensure this runs only once per successful composition
-    SideEffect {
-        if (roundedPositionMs != lastRequestedPosition) {
-            lastRequestedPosition = roundedPositionMs
-            // Send to channel - this won't block and will replace previous unconsumed value
-            positionChannel.trySend(roundedPositionMs)
-            Log.d("ScrubPreviewOverlay", "Position changed to: $roundedPositionMs")
+    // Load preview images - restarts when position or previewLoader changes
+    LaunchedEffect(previewLoader, roundedPositionMs) {
+        isLoading = true
+        Log.d("ScrubPreviewOverlay", "Loading preview for position: $roundedPositionMs")
+        try {
+            val bitmap = previewLoader.loadPreview(roundedPositionMs)
+            previewBitmap = bitmap
+        } catch (e: Exception) {
+            // Silently fail - preview is optional
+            Log.e("ScrubPreviewOverlay", "Failed to load preview", e)
+            previewBitmap = null
+        } finally {
+            isLoading = false
         }
     }
 
