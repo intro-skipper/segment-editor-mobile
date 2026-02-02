@@ -184,6 +184,9 @@ fun VideoPlayerWithPreview(
                     viewTreeObserver.addOnGlobalLayoutListener(layoutListener)
                 }
             },
+            update = { playerView ->
+
+            },
             modifier = Modifier.fillMaxSize()
         )
 
@@ -216,7 +219,6 @@ fun VideoPlayerWithPreview(
 
 @androidx.annotation.OptIn(UnstableApi::class)
 fun ExoPlayer.selectAudioTrack(trackIndex: Int?) {
-    val trackSelector = this.trackSelector as? DefaultTrackSelector ?: return
 
     // Save playback state
     val wasPlaying = this.playWhenReady
@@ -235,7 +237,7 @@ fun ExoPlayer.selectAudioTrack(trackIndex: Int?) {
     for (group in audioGroups) {
         for (trackIndexInGroup in 0 until group.length) {
             if (accumulatedIndex == targetIndex) {
-                trackSelector.parameters = trackSelector.buildUponParameters()
+                trackSelectionParameters = trackSelectionParameters.buildUpon()
                     .clearOverridesOfType(C.TRACK_TYPE_AUDIO)
                     .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
                     .setOverrideForType(
@@ -255,7 +257,7 @@ fun ExoPlayer.selectAudioTrack(trackIndex: Int?) {
     }
 
     // If we didn't find the track, clear overrides and let ExoPlayer choose
-    trackSelector.parameters = trackSelector.buildUponParameters()
+    trackSelectionParameters = trackSelectionParameters.buildUpon()
         .clearOverridesOfType(C.TRACK_TYPE_AUDIO)
         .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
         .build()
@@ -273,7 +275,7 @@ fun ExoPlayer.selectSubtitleTrack(trackIndex: Int?) {
 
     if (trackIndex == null) {
         // Disable subtitles
-        trackSelector.parameters = trackSelector.buildUponParameters()
+        trackSelectionParameters = trackSelectionParameters.buildUpon()
             .clearOverridesOfType(C.TRACK_TYPE_TEXT)
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
             .build()
@@ -287,7 +289,7 @@ fun ExoPlayer.selectSubtitleTrack(trackIndex: Int?) {
         for (group in textGroups) {
             for (trackIndexInGroup in 0 until group.length) {
                 if (accumulatedIndex == trackIndex) {
-                    trackSelector.parameters = trackSelector.buildUponParameters()
+                    trackSelectionParameters = trackSelectionParameters.buildUpon()
                         .clearOverridesOfType(C.TRACK_TYPE_TEXT)
                         .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
                         .setOverrideForType(
