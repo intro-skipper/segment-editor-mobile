@@ -59,6 +59,10 @@ fun ScrubPreviewOverlay(
     var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isLoading by remember { mutableStateOf(false) }
     
+    // Round position to interval for better cache hits
+    val interval = remember(previewLoader) { previewLoader.getPreviewInterval() }
+    val roundedPositionMs = (positionMs / interval) * interval
+    
     // Track the last requested position to detect changes without using it as a LaunchedEffect key
     var lastRequestedPosition by remember { mutableLongStateOf(-1L) }
     
@@ -75,11 +79,16 @@ fun ScrubPreviewOverlay(
                 Log.d("ScrubPreviewOverlay", "Loading preview for position: $position")
                 try {
                     val bitmap = previewLoader.loadPreview(position)
-                    previewBitmap = bitmap
+                    // Only update if this is still the current position
+                    if (position == lastRequestedPosition) {
+                        previewBitmap = bitmap
+                    }
                 } catch (e: Exception) {
                     // Silently fail - preview is optional
                     Log.e("ScrubPreviewOverlay", "Failed to load preview", e)
-                    previewBitmap = null
+                    if (position == lastRequestedPosition) {
+                        previewBitmap = null
+                    }
                 } finally {
                     isLoading = false
                 }
@@ -90,10 +99,11 @@ fun ScrubPreviewOverlay(
     // Detect position changes and send to channel
     // Use SideEffect to ensure this runs only once per successful composition
     SideEffect {
-        if (positionMs != lastRequestedPosition) {
-            lastRequestedPosition = positionMs
+        if (roundedPositionMs != lastRequestedPosition) {
+            lastRequestedPosition = roundedPositionMs
             // Send to channel - this won't block and will replace previous unconsumed value
-            positionChannel.trySend(positionMs)
+            positionChannel.trySend(roundedPositionMs)
+            Log.d("ScrubPreviewOverlay", "Position changed to: $roundedPositionMs")
         }
     }
 

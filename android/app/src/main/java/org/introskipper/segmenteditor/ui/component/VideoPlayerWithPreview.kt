@@ -149,6 +149,11 @@ fun VideoPlayerWithPreview(
                                         exoPlayer.playWhenReady = false
                                         isScrubbing = true
                                         scrubPosition = position
+                                        
+                                        // Preload adjacent previews for smoother scrubbing
+                                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                                            previewLoader?.preloadPreviews(position, count = 3)
+                                        }
                                     }
                                     
                                     override fun onScrubMove(timeBar: TimeBar, position: Long) {
@@ -178,7 +183,9 @@ fun VideoPlayerWithPreview(
 
         SideEffect {
             CoroutineScope(Dispatchers.IO).launch {
+                // Load initial preview and preload adjacent ones
                 previewLoader?.loadPreview(0)
+                previewLoader?.preloadPreviews(0, count = 3)
             }
         }
         

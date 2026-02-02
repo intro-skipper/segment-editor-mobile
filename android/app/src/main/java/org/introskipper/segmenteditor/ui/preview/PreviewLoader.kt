@@ -14,6 +14,15 @@ interface PreviewLoader {
     suspend fun loadPreview(positionMs: Long): Bitmap?
     
     /**
+     * Preloads preview images around the given position for smoother scrubbing
+     * @param positionMs Center position in milliseconds
+     * @param count Number of previews to preload in each direction
+     */
+    suspend fun preloadPreviews(positionMs: Long, count: Int = 5) {
+        // Default implementation - subclasses can override for optimization
+    }
+    
+    /**
      * Gets the interval between preview images in milliseconds
      */
     fun getPreviewInterval(): Long
