@@ -37,6 +37,8 @@ fun VideoPlayerWithPreview(
     modifier: Modifier = Modifier,
     useController: Boolean = true,
     previewLoader: PreviewLoader? = null,
+    initialAudioTrackIndex: Int? = null,
+    initialSubtitleTrackIndex: Int? = null,
     onPlayerReady: (ExoPlayer) -> Unit = {},
     onPlaybackStateChanged: (isPlaying: Boolean, currentPosition: Long, bufferedPosition: Long) -> Unit = { _, _, _ -> }
 ) {
@@ -56,7 +58,10 @@ fun VideoPlayerWithPreview(
             }
     }
     
-    DisposableEffect(exoPlayer, previewLoader) {
+    DisposableEffect(exoPlayer, previewLoader, initialAudioTrackIndex, initialSubtitleTrackIndex) {
+        // Track whether initial selections have been applied for this effect instance
+        val initialTracksApplied = java.util.concurrent.atomic.AtomicBoolean(false)
+        
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 onPlaybackStateChanged(
@@ -76,6 +81,18 @@ fun VideoPlayerWithPreview(
                     exoPlayer.currentPosition,
                     exoPlayer.bufferedPosition
                 )
+            }
+            
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                // Apply track selections once when player is ready with tracks available
+                if (playbackState == Player.STATE_READY && initialTracksApplied.compareAndSet(false, true)) {
+                    if (initialAudioTrackIndex != null) {
+                        exoPlayer.selectAudioTrack(initialAudioTrackIndex)
+                    }
+                    if (initialSubtitleTrackIndex != null) {
+                        exoPlayer.selectSubtitleTrack(initialSubtitleTrackIndex)
+                    }
+                }
             }
         }
         

@@ -128,20 +128,92 @@ fun VideoPlayer(
 
 @androidx.annotation.OptIn(UnstableApi::class)
 fun ExoPlayer.selectAudioTrack(trackIndex: Int?) {
-    if (trackIndex == null) return
-    
     val trackSelector = this.trackSelector as? DefaultTrackSelector ?: return
     
-    trackSelector.parameters = trackSelector.buildUponParameters()
-        .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
-        .build()
+    // Save playback state
+    val wasPlaying = this.playWhenReady
+    
+    if (trackIndex == null) {
+        // Disable audio track selection (use default)
+        trackSelector.parameters = trackSelector.buildUponParameters()
+            .clearOverridesOfType(C.TRACK_TYPE_AUDIO)
+            .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
+            .build()
+    } else {
+        // Select specific audio track by accumulating indices across all groups
+        val currentTracks = this.currentTracks
+        val audioGroups = currentTracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
+        
+        var accumulatedIndex = 0
+        
+        for (group in audioGroups) {
+            for (trackIndexInGroup in 0 until group.length) {
+                if (accumulatedIndex == trackIndex) {
+                    trackSelector.parameters = trackSelector.buildUponParameters()
+                        .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
+                        .setOverrideForType(
+                            androidx.media3.common.TrackSelectionOverride(
+                                group.mediaTrackGroup,
+                                trackIndexInGroup
+                            )
+                        )
+                        .build()
+                    
+                    // Restore playback state and return
+                    this.playWhenReady = wasPlaying
+                    return
+                }
+                accumulatedIndex++
+            }
+        }
+    }
+    
+    // Restore playback state
+    this.playWhenReady = wasPlaying
 }
 
 @androidx.annotation.OptIn(UnstableApi::class)
 fun ExoPlayer.selectSubtitleTrack(trackIndex: Int?) {
     val trackSelector = this.trackSelector as? DefaultTrackSelector ?: return
     
-    trackSelector.parameters = trackSelector.buildUponParameters()
-        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, trackIndex == null)
-        .build()
+    // Save playback state
+    val wasPlaying = this.playWhenReady
+    
+    if (trackIndex == null) {
+        // Disable subtitles
+        trackSelector.parameters = trackSelector.buildUponParameters()
+            .clearOverridesOfType(C.TRACK_TYPE_TEXT)
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+            .build()
+    } else {
+        // Select specific subtitle track by accumulating indices across all groups
+        val currentTracks = this.currentTracks
+        val textGroups = currentTracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
+        
+        var accumulatedIndex = 0
+        
+        for (group in textGroups) {
+            for (trackIndexInGroup in 0 until group.length) {
+                if (accumulatedIndex == trackIndex) {
+                    trackSelector.parameters = trackSelector.buildUponParameters()
+                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                        .setOverrideForType(
+                            androidx.media3.common.TrackSelectionOverride(
+                                group.mediaTrackGroup,
+                                trackIndexInGroup
+                            )
+                        )
+                        .build()
+                    
+                    // Restore playback state and return
+                    this.playWhenReady = wasPlaying
+                    return
+                }
+                accumulatedIndex++
+            }
+        }
+    }
+    
+    // Restore playback state
+    this.playWhenReady = wasPlaying
 }

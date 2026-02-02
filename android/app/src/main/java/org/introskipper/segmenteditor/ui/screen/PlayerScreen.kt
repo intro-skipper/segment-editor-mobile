@@ -321,6 +321,8 @@ private fun PlayerContent(
                     streamUrl = streamUrl,
                     useController = true,
                     previewLoader = previewLoader,
+                    initialAudioTrackIndex = uiState.selectedAudioTrack,
+                    initialSubtitleTrackIndex = uiState.selectedSubtitleTrack,
                     onPlayerReady = onPlayerReady,
                     onPlaybackStateChanged = { isPlaying, currentPos, bufferedPos ->
                         viewModel.updatePlaybackState(isPlaying, currentPos, bufferedPos)
