@@ -17,6 +17,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import androidx.media3.common.C
+import androidx.media3.common.C.TRACK_TYPE_AUDIO
+import androidx.media3.common.C.TRACK_TYPE_TEXT
+import androidx.media3.common.C.TRACK_TYPE_VIDEO
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -30,6 +33,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.preview.ScrubPreviewOverlay
+import java.util.Locale
 
 /**
  * Enhanced VideoPlayer with scrub preview support
@@ -42,8 +46,6 @@ fun VideoPlayerWithPreview(
     modifier: Modifier = Modifier,
     useController: Boolean = true,
     previewLoader: PreviewLoader? = null,
-    initialAudioTrackIndex: Int? = null,
-    initialSubtitleTrackIndex: Int? = null,
     onPlayerReady: (ExoPlayer) -> Unit = {},
     onPlaybackStateChanged: (isPlaying: Boolean, currentPosition: Long, bufferedPosition: Long) -> Unit = { _, _, _ -> }
 ) {
@@ -52,7 +54,22 @@ fun VideoPlayerWithPreview(
     var isScrubbing by remember { mutableStateOf(false) }
     
     val exoPlayer = remember(streamUrl) {
-        val trackSelector = DefaultTrackSelector(context)
+        val trackSelector = DefaultTrackSelector(context).apply {
+            setParameters(buildUponParameters()
+                .setAllowVideoMixedMimeTypeAdaptiveness(true)
+                .setAllowVideoNonSeamlessAdaptiveness(true)
+                .setSelectUndeterminedTextLanguage(true)
+                .setAllowAudioMixedMimeTypeAdaptiveness(true)
+                .setAllowMultipleAdaptiveSelections(true)
+                .setPreferredTextLanguage(Locale.getDefault().language)
+                .setPreferredTextRoleFlags(C.ROLE_FLAG_SUBTITLE)
+                .setRendererDisabled(TRACK_TYPE_VIDEO, false)
+                .setRendererDisabled(TRACK_TYPE_AUDIO, false)
+                .setRendererDisabled(TRACK_TYPE_TEXT, false)
+                .setMaxVideoSize(1, 1)
+                .setPreferredAudioLanguage(Locale.getDefault().language)
+                .setExceedRendererCapabilitiesIfNecessary(true))
+        }
         ExoPlayer.Builder(context)
             .setRenderersFactory(NextRenderersFactory(context))
             .setTrackSelector(trackSelector)
@@ -86,17 +103,6 @@ fun VideoPlayerWithPreview(
                     exoPlayer.currentPosition,
                     exoPlayer.bufferedPosition
                 )
-            }
-            
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                // Apply track selections once when player is ready with tracks available
-                if (playbackState == Player.STATE_READY && initialTracksApplied.compareAndSet(false, true)) {
-                    // Always set audio track (null means use first available track)
-                    exoPlayer.selectAudioTrack(initialAudioTrackIndex)
-                    
-                    // Set subtitle track (null means disable subtitles)
-                    exoPlayer.selectSubtitleTrack(initialSubtitleTrackIndex)
-                }
             }
         }
         
