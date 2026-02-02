@@ -92,20 +92,17 @@ fun PlayerScreen(
         }
     }
     
-    // Track selection state
-    var showAudioTracks by remember { mutableStateOf(false) }
-    var showSubtitleTracks by remember { mutableStateOf(false) }
+    // Track selection state - keyed by itemId to reset when navigating
+    var showAudioTracks by remember(itemId) { mutableStateOf(false) }
+    var showSubtitleTracks by remember(itemId) { mutableStateOf(false) }
     
-    // Segment editor state
-    var showSegmentEditor by remember { mutableStateOf(false) }
-    var editingSegment by remember { mutableStateOf<Segment?>(null) }
-    var activeSegmentIndex by remember { mutableStateOf(0) }
+    // Segment editor state - keyed by itemId to reset when navigating
+    var showSegmentEditor by remember(itemId) { mutableStateOf(false) }
+    var editingSegment by remember(itemId) { mutableStateOf<Segment?>(null) }
+    var activeSegmentIndex by remember(itemId) { mutableStateOf(0) }
     
-    // Load media item on first composition and reset dialog state
+    // Load media item when itemId changes
     LaunchedEffect(itemId) {
-        // Reset dialog state when navigating to a new item
-        showSegmentEditor = false
-        editingSegment = null
         viewModel.loadMediaItem(itemId)
     }
     
