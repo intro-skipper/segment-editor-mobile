@@ -25,6 +25,18 @@ class TrickplayPreviewLoader(
     companion object {
         private const val TAG = "TrickplayPreviewLoader"
         private const val DEFAULT_INTERVAL_MS = 10000L // 10 seconds
+        
+        // Regex patterns for JSON parsing - compiled once for efficiency
+        private val TRICKPLAY_PATTERN = """"Trickplay"\s*:\s*\{""".toRegex()
+        private val MEDIA_SOURCE_ID_PATTERN = """"([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})"\s*:\s*\{""".toRegex()
+        private val WIDTH_PATTERN = """"(\d+)"\s*:\s*\{""".toRegex()
+        private val WIDTH_FIELD_PATTERN = """"Width"\s*:\s*(\d+)""".toRegex()
+        private val HEIGHT_FIELD_PATTERN = """"Height"\s*:\s*(\d+)""".toRegex()
+        private val TILE_WIDTH_FIELD_PATTERN = """"TileWidth"\s*:\s*(\d+)""".toRegex()
+        private val TILE_HEIGHT_FIELD_PATTERN = """"TileHeight"\s*:\s*(\d+)""".toRegex()
+        private val THUMBNAIL_COUNT_FIELD_PATTERN = """"ThumbnailCount"\s*:\s*(\d+)""".toRegex()
+        private val INTERVAL_FIELD_PATTERN = """"Interval"\s*:\s*(\d+)""".toRegex()
+        private val BANDWIDTH_FIELD_PATTERN = """"Bandwidth"\s*:\s*(\d+)""".toRegex()
     }
     
     data class TrickplayInfo(
@@ -127,8 +139,7 @@ class TrickplayPreviewLoader(
             // We need to extract the first available trickplay info
             
             // Find the Trickplay field
-            val trickplayPattern = """"Trickplay"\s*:\s*\{""".toRegex()
-            if (!trickplayPattern.containsMatchIn(json)) {
+            if (!TRICKPLAY_PATTERN.containsMatchIn(json)) {
                 Log.w(TAG, "No Trickplay field found in item response")
                 return null
             }
@@ -139,9 +150,8 @@ class TrickplayPreviewLoader(
             
             val jsonFromTrickplay = json.substring(trickplayStartIdx)
             
-            // Find the first media source ID (UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-            val mediaSourceIdPattern = """"([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})"\s*:\s*\{""".toRegex()
-            val mediaSourceMatch = mediaSourceIdPattern.find(jsonFromTrickplay)
+            // Find the first media source ID (UUID format)
+            val mediaSourceMatch = MEDIA_SOURCE_ID_PATTERN.find(jsonFromTrickplay)
             
             if (mediaSourceMatch == null) {
                 Log.w(TAG, "No media source ID found in Trickplay data")
@@ -156,8 +166,7 @@ class TrickplayPreviewLoader(
             val mediaSourceSection = jsonFromTrickplay.substring(mediaSourceIdx)
             
             // Find the first width (numeric key followed by colon and opening brace)
-            val widthPattern = """"(\d+)"\s*:\s*\{""".toRegex()
-            val widthMatch = widthPattern.find(mediaSourceSection)
+            val widthMatch = WIDTH_PATTERN.find(mediaSourceSection)
             
             if (widthMatch == null) {
                 Log.w(TAG, "No width found in media source section")
@@ -178,21 +187,13 @@ class TrickplayPreviewLoader(
     private fun extractTrickplayInfo(jsonSection: String, width: Int, mediaSourceId: String): TrickplayInfo? {
         try {
             // Extract TrickplayInfoDto fields - they might appear in any order
-            val widthPattern = """"Width"\s*:\s*(\d+)""".toRegex()
-            val heightPattern = """"Height"\s*:\s*(\d+)""".toRegex()
-            val tileWidthPattern = """"TileWidth"\s*:\s*(\d+)""".toRegex()
-            val tileHeightPattern = """"TileHeight"\s*:\s*(\d+)""".toRegex()
-            val thumbnailCountPattern = """"ThumbnailCount"\s*:\s*(\d+)""".toRegex()
-            val intervalPattern = """"Interval"\s*:\s*(\d+)""".toRegex()
-            val bandwidthPattern = """"Bandwidth"\s*:\s*(\d+)""".toRegex()
-            
-            val widthMatch = widthPattern.find(jsonSection) ?: return null
-            val heightMatch = heightPattern.find(jsonSection) ?: return null
-            val tileWidthMatch = tileWidthPattern.find(jsonSection) ?: return null
-            val tileHeightMatch = tileHeightPattern.find(jsonSection) ?: return null
-            val thumbnailCountMatch = thumbnailCountPattern.find(jsonSection) ?: return null
-            val intervalMatch = intervalPattern.find(jsonSection) ?: return null
-            val bandwidthMatch = bandwidthPattern.find(jsonSection) ?: return null
+            val widthMatch = WIDTH_FIELD_PATTERN.find(jsonSection) ?: return null
+            val heightMatch = HEIGHT_FIELD_PATTERN.find(jsonSection) ?: return null
+            val tileWidthMatch = TILE_WIDTH_FIELD_PATTERN.find(jsonSection) ?: return null
+            val tileHeightMatch = TILE_HEIGHT_FIELD_PATTERN.find(jsonSection) ?: return null
+            val thumbnailCountMatch = THUMBNAIL_COUNT_FIELD_PATTERN.find(jsonSection) ?: return null
+            val intervalMatch = INTERVAL_FIELD_PATTERN.find(jsonSection) ?: return null
+            val bandwidthMatch = BANDWIDTH_FIELD_PATTERN.find(jsonSection) ?: return null
             
             return TrickplayInfo(
                 width = widthMatch.groupValues[1].toInt(),
