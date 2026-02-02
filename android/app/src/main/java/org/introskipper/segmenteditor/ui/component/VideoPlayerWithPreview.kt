@@ -60,7 +60,7 @@ fun VideoPlayerWithPreview(
     
     DisposableEffect(exoPlayer, previewLoader, initialAudioTrackIndex, initialSubtitleTrackIndex) {
         // Track whether initial selections have been applied for this effect instance
-        var initialTracksApplied = false
+        val initialTracksApplied = java.util.concurrent.atomic.AtomicBoolean(false)
         
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -85,8 +85,7 @@ fun VideoPlayerWithPreview(
             
             override fun onPlaybackStateChanged(playbackState: Int) {
                 // Apply track selections once when player is ready with tracks available
-                if (playbackState == Player.STATE_READY && !initialTracksApplied) {
-                    initialTracksApplied = true
+                if (playbackState == Player.STATE_READY && initialTracksApplied.compareAndSet(false, true)) {
                     if (initialAudioTrackIndex != null) {
                         exoPlayer.selectAudioTrack(initialAudioTrackIndex)
                     }

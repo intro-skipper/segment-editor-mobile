@@ -137,23 +137,31 @@ fun ExoPlayer.selectAudioTrack(trackIndex: Int?) {
             .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
             .build()
     } else {
-        // Select specific audio track by index
+        // Select specific audio track by iterating through all audio groups
         val currentTracks = this.currentTracks
         val audioGroups = currentTracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
         
-        if (audioGroups.isNotEmpty()) {
-            val group = audioGroups.firstOrNull()
-            if (group != null && trackIndex < group.length) {
-                trackSelector.parameters = trackSelector.buildUponParameters()
-                    .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
-                    .setOverrideForType(
-                        androidx.media3.common.TrackSelectionOverride(
-                            group.mediaTrackGroup,
-                            trackIndex
+        // Try to find the track in any of the audio groups
+        var foundTrack = false
+        for (group in audioGroups) {
+            for (trackIndexInGroup in 0 until group.length) {
+                // For now, use the track index within the group
+                // This assumes trackIndex refers to position within audio tracks
+                if (trackIndexInGroup == trackIndex && trackIndex < group.length) {
+                    trackSelector.parameters = trackSelector.buildUponParameters()
+                        .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
+                        .setOverrideForType(
+                            androidx.media3.common.TrackSelectionOverride(
+                                group.mediaTrackGroup,
+                                trackIndexInGroup
+                            )
                         )
-                    )
-                    .build()
+                        .build()
+                    foundTrack = true
+                    break
+                }
             }
+            if (foundTrack) break
         }
     }
 }
@@ -169,23 +177,31 @@ fun ExoPlayer.selectSubtitleTrack(trackIndex: Int?) {
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
             .build()
     } else {
-        // Select specific subtitle track by index
+        // Select specific subtitle track by iterating through all subtitle groups
         val currentTracks = this.currentTracks
         val textGroups = currentTracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
         
-        if (textGroups.isNotEmpty()) {
-            val group = textGroups.firstOrNull()
-            if (group != null && trackIndex < group.length) {
-                trackSelector.parameters = trackSelector.buildUponParameters()
-                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-                    .setOverrideForType(
-                        androidx.media3.common.TrackSelectionOverride(
-                            group.mediaTrackGroup,
-                            trackIndex
+        // Try to find the track in any of the subtitle groups
+        var foundTrack = false
+        for (group in textGroups) {
+            for (trackIndexInGroup in 0 until group.length) {
+                // For now, use the track index within the group
+                // This assumes trackIndex refers to position within subtitle tracks
+                if (trackIndexInGroup == trackIndex && trackIndex < group.length) {
+                    trackSelector.parameters = trackSelector.buildUponParameters()
+                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                        .setOverrideForType(
+                            androidx.media3.common.TrackSelectionOverride(
+                                group.mediaTrackGroup,
+                                trackIndexInGroup
+                            )
                         )
-                    )
-                    .build()
+                        .build()
+                    foundTrack = true
+                    break
+                }
             }
+            if (foundTrack) break
         }
     }
 }

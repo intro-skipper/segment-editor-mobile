@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -24,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.data.model.TimeUtils
 
 /**
@@ -54,23 +57,40 @@ fun ScrubPreviewOverlay(
 
     var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+    
+    // Track the last requested position to detect changes without using it as a LaunchedEffect key
+    var lastRequestedPosition by remember { mutableLongStateOf(-1L) }
+    
+    // Channel to send position requests without cancelling the loader coroutine
+    val positionChannel = remember { Channel<Long>(Channel.CONFLATED) }
 
-    // Load preview image when position changes
-    // Use LaunchedEffect with positionMs as key to trigger on position changes
-    LaunchedEffect(positionMs, previewLoader) {
-        isLoading = true
-        Log.d("ScrubPreviewOverlay", "Loading preview for position: $positionMs")
-        
-        try {
-            val bitmap = previewLoader.loadPreview(positionMs)
-            previewBitmap = bitmap
-        } catch (e: Exception) {
-            // Silently fail - preview is optional
-            Log.e("ScrubPreviewOverlay", "Failed to load preview", e)
-            previewBitmap = null
-        } finally {
-            isLoading = false
+    // Load preview images - this effect never restarts, only when previewLoader changes
+    LaunchedEffect(previewLoader) {
+        // Process position requests from the channel
+        for (position in positionChannel) {
+            // Launch each load as an independent job
+            launch {
+                isLoading = true
+                Log.d("ScrubPreviewOverlay", "Loading preview for position: $position")
+                try {
+                    val bitmap = previewLoader.loadPreview(position)
+                    previewBitmap = bitmap
+                } catch (e: Exception) {
+                    // Silently fail - preview is optional
+                    Log.e("ScrubPreviewOverlay", "Failed to load preview", e)
+                    previewBitmap = null
+                } finally {
+                    isLoading = false
+                }
+            }
         }
+    }
+    
+    // Detect position changes and send to channel
+    if (positionMs != lastRequestedPosition) {
+        lastRequestedPosition = positionMs
+        // Send to channel - this won't block and will replace previous unconsumed value
+        positionChannel.trySend(positionMs)
     }
 
     Box(
