@@ -133,40 +133,43 @@ fun ExoPlayer.selectAudioTrack(trackIndex: Int?) {
     // Save playback state
     val wasPlaying = this.playWhenReady
     
-    if (trackIndex == null) {
-        // Disable audio track selection (use default)
-        trackSelector.parameters = trackSelector.buildUponParameters()
-            .clearOverridesOfType(C.TRACK_TYPE_AUDIO)
-            .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
-            .build()
-    } else {
-        // Select specific audio track by accumulating indices across all groups
-        val currentTracks = this.currentTracks
-        val audioGroups = currentTracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
-        
-        var accumulatedIndex = 0
-        
-        for (group in audioGroups) {
-            for (trackIndexInGroup in 0 until group.length) {
-                if (accumulatedIndex == trackIndex) {
-                    trackSelector.parameters = trackSelector.buildUponParameters()
-                        .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
-                        .setOverrideForType(
-                            androidx.media3.common.TrackSelectionOverride(
-                                group.mediaTrackGroup,
-                                trackIndexInGroup
-                            )
+    // For audio tracks, if null is passed, select the first available track (index 0)
+    // This ensures audio is always enabled. Unlike subtitles, we don't want to disable audio.
+    // Note: If no audio tracks exist, the fallback logic below will handle it gracefully.
+    val targetIndex = trackIndex ?: 0
+    
+    // Select specific audio track by accumulating indices across all groups
+    val currentTracks = this.currentTracks
+    val audioGroups = currentTracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
+    
+    var accumulatedIndex = 0
+    
+    for (group in audioGroups) {
+        for (trackIndexInGroup in 0 until group.length) {
+            if (accumulatedIndex == targetIndex) {
+                trackSelector.parameters = trackSelector.buildUponParameters()
+                    .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
+                    .setOverrideForType(
+                        androidx.media3.common.TrackSelectionOverride(
+                            group.mediaTrackGroup,
+                            trackIndexInGroup
                         )
-                        .build()
-                    
-                    // Restore playback state and return
-                    this.playWhenReady = wasPlaying
-                    return
-                }
-                accumulatedIndex++
+                    )
+                    .build()
+                
+                // Restore playback state and return
+                this.playWhenReady = wasPlaying
+                return
             }
+            accumulatedIndex++
         }
     }
+    
+    // If we didn't find the track, clear overrides and let ExoPlayer choose
+    trackSelector.parameters = trackSelector.buildUponParameters()
+        .clearOverridesOfType(C.TRACK_TYPE_AUDIO)
+        .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
+        .build()
     
     // Restore playback state
     this.playWhenReady = wasPlaying
