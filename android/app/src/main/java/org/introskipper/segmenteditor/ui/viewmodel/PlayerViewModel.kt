@@ -358,22 +358,33 @@ class PlayerViewModel @Inject constructor(
     fun updateSegment(oldSegment: Segment, newSegment: Segment) {
         viewModelScope.launch {
             try {
+                // Validate segments match
+                if (oldSegment.itemId != newSegment.itemId || oldSegment.type != newSegment.type) {
+                    Log.e(TAG, "Segment validation failed: itemId or type mismatch")
+                    _events.value = PlayerEvent.Error("Invalid segment update: type or item mismatch")
+                    return@launch
+                }
+                
                 Log.d(TAG, "Updating segment: ${oldSegment.type}")
                 
                 // Delete the old segment
                 val segmentId = oldSegment.id
-                if (segmentId != null) {
-                    val deleteResult = segmentRepository.deleteSegmentResult(
-                        segmentId = segmentId,
-                        itemId = oldSegment.itemId,
-                        segmentType = oldSegment.type
-                    )
-                    
-                    if (deleteResult.isFailure) {
-                        Log.e(TAG, "Failed to delete old segment", deleteResult.exceptionOrNull())
-                        _events.value = PlayerEvent.Error("Failed to update segment")
-                        return@launch
-                    }
+                if (segmentId == null) {
+                    Log.w(TAG, "Cannot update segment: missing ID")
+                    _events.value = PlayerEvent.Error("Cannot update segment: missing ID")
+                    return@launch
+                }
+                
+                val deleteResult = segmentRepository.deleteSegmentResult(
+                    segmentId = segmentId,
+                    itemId = oldSegment.itemId,
+                    segmentType = oldSegment.type
+                )
+                
+                if (deleteResult.isFailure) {
+                    Log.e(TAG, "Failed to delete old segment", deleteResult.exceptionOrNull())
+                    _events.value = PlayerEvent.Error("Failed to update segment")
+                    return@launch
                 }
                 
                 // Create the new segment

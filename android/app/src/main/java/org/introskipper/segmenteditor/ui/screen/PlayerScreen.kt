@@ -116,24 +116,26 @@ fun PlayerScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val events by viewModel.events.collectAsState()
     
-    // Handle events (errors, success messages)
+    // Handle events (errors, success messages) - only react to non-null events once
     LaunchedEffect(events) {
-        when (val event = events) {
-            is PlayerEvent.Error -> {
-                snackbarHostState.showSnackbar(
-                    message = event.message,
-                    duration = SnackbarDuration.Long
-                )
-                viewModel.clearEvent()
+        val event = events
+        if (event != null) {
+            when (event) {
+                is PlayerEvent.Error -> {
+                    snackbarHostState.showSnackbar(
+                        message = event.message,
+                        duration = SnackbarDuration.Long
+                    )
+                }
+                is PlayerEvent.SegmentUpdated -> {
+                    snackbarHostState.showSnackbar(
+                        message = "Segment updated successfully",
+                        duration = SnackbarDuration.Short
+                    )
+                }
+                else -> {}
             }
-            is PlayerEvent.SegmentUpdated -> {
-                snackbarHostState.showSnackbar(
-                    message = "Segment updated successfully",
-                    duration = SnackbarDuration.Short
-                )
-                viewModel.clearEvent()
-            }
-            else -> {}
+            viewModel.clearEvent()
         }
     }
     
