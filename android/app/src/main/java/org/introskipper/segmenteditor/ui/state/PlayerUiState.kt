@@ -52,6 +52,5 @@ enum class TrackSource {
 sealed class PlayerEvent {
     data class Error(val message: String) : PlayerEvent()
     data class SegmentLoaded(val segments: List<Segment>) : PlayerEvent()
-    object SegmentUpdated : PlayerEvent()
     object PlaybackEnded : PlayerEvent()
 }
