@@ -50,6 +50,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.TimeUtils
+import org.introskipper.segmenteditor.ui.component.segment.TimeInputField
 import org.introskipper.segmenteditor.ui.validation.SegmentValidator
 import kotlin.math.max
 import kotlin.math.min
@@ -234,6 +235,9 @@ fun SegmentSlider(
                 TimeInputRow(
                     label = "Start:",
                     timeSeconds = localStartSeconds,
+                    onTimeChanged = { newTime ->
+                        localStartSeconds = newTime.coerceIn(0.0, localEndSeconds - minGap)
+                    },
                     onSeek = { onSeekTo(localStartSeconds) },
                     modifier = Modifier.weight(1f)
                 )
@@ -242,6 +246,9 @@ fun SegmentSlider(
                 TimeInputRow(
                     label = "End:",
                     timeSeconds = localEndSeconds,
+                    onTimeChanged = { newTime ->
+                        localEndSeconds = newTime.coerceIn(localStartSeconds + minGap, runtimeSeconds)
+                    },
                     onSeek = { onSeekTo(localEndSeconds) },
                     modifier = Modifier.weight(1f)
                 )
@@ -371,37 +378,42 @@ private fun SliderTrack(
 private fun TimeInputRow(
     label: String,
     timeSeconds: Double,
+    onTimeChanged: (Double) -> Unit,
     onSeek: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    Column(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        IconButton(
-            onClick = onSeek,
-            modifier = Modifier.size(32.dp)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.PlayArrow,
-                contentDescription = "Seek to $label",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(16.dp)
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            
+            IconButton(
+                onClick = onSeek,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = "Seek to $label",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
         }
         
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        
-        Text(
-            text = TimeUtils.formatDurationFromSeconds(timeSeconds),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f)
+        TimeInputField(
+            label = "",
+            timeInSeconds = timeSeconds,
+            onTimeChanged = onTimeChanged,
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }

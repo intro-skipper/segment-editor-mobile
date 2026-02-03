@@ -201,33 +201,30 @@ fun SegmentEditorDialog(
                             onEndTimeChanged = { viewModel.setEndTime(it) },
                             currentPosition = currentPosition
                         )
-                    }
-                }
-                
-                // Time inputs
-                Card {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            text = "Time Range",
-                            style = MaterialTheme.typography.titleMedium
-                        )
                         
-                        TimeInputField(
-                            label = "Start Time",
-                            timeInSeconds = state.startTime,
-                            onTimeChanged = { viewModel.setStartTime(it) },
-                            isError = state.validationError != null
-                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                         
-                        TimeInputField(
-                            label = "End Time",
-                            timeInSeconds = state.endTime,
-                            onTimeChanged = { viewModel.setEndTime(it) },
-                            isError = state.validationError != null
-                        )
+                        // Editable time inputs below timeline
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            TimeInputField(
+                                label = "Start Time",
+                                timeInSeconds = state.startTime,
+                                onTimeChanged = { viewModel.setStartTime(it) },
+                                isError = state.validationError != null,
+                                modifier = Modifier.weight(1f)
+                            )
+                            
+                            TimeInputField(
+                                label = "End Time",
+                                timeInSeconds = state.endTime,
+                                onTimeChanged = { viewModel.setEndTime(it) },
+                                isError = state.validationError != null,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
                 
