@@ -91,7 +91,7 @@ class JellyfinApiService {
         return api!!.getSegments(itemId, getApiKey())
     }
     
-    suspend fun createSegment(itemId: String, segment: SegmentCreateRequest, providerId: String = "intros kipper"): Response<Segment> {
+    suspend fun createSegment(itemId: String, segment: SegmentCreateRequest, providerId: String = "IntroSkipper"): Response<Segment> {
         ensureInitialized()
         return api!!.createSegment(itemId, providerId, segment, getApiKey())
     }

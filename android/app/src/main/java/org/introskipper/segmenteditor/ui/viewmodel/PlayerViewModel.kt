@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import org.introskipper.segmenteditor.data.model.MediaStream
+import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
@@ -346,6 +347,42 @@ class PlayerViewModel @Inject constructor(
     fun clearCapturedTimes() {
         _uiState.update { 
             it.copy(capturedStartTime = null, capturedEndTime = null)
+        }
+    }
+    
+    /**
+     * Deletes a segment
+     */
+    fun deleteSegment(segment: Segment) {
+        viewModelScope.launch {
+            try {
+                val segmentId = segment.id
+                if (segmentId == null) {
+                    Log.w(TAG, "Cannot delete segment: missing ID")
+                    return@launch
+                }
+                
+                Log.d(TAG, "Deleting segment: ${segment.type}")
+                
+                val result = segmentRepository.deleteSegmentResult(
+                    segmentId = segmentId,
+                    itemId = segment.itemId,
+                    segmentType = segment.type
+                )
+                
+                result.fold(
+                    onSuccess = {
+                        Log.d(TAG, "Segment deleted successfully")
+                        // Refresh segments to get the latest state
+                        refreshSegments()
+                    },
+                    onFailure = { error ->
+                        Log.e(TAG, "Failed to delete segment", error)
+                    }
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception deleting segment", e)
+            }
         }
     }
     
