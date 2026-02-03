@@ -185,10 +185,23 @@ fun VideoPlayerWithPreview(
     }
     
     Box(modifier = modifier.fillMaxSize()) {
+        // Keep reference to PlayerView to explicitly update when player changes
+        var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
+        
+        // Explicitly update PlayerView.player when exoPlayer changes
+        // This ensures the new player is set even if AndroidView update block doesn't trigger
+        LaunchedEffect(exoPlayer) {
+            playerViewRef?.let { view ->
+                android.util.Log.d("VideoPlayerWithPreview", "LaunchedEffect: Explicitly setting new player to PlayerView")
+                view.player = exoPlayer
+            }
+        }
+        
         // Video player
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
+                    playerViewRef = this
                     this.useController = useController
                     layoutParams = ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
