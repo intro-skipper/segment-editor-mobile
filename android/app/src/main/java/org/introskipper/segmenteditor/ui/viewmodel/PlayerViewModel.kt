@@ -193,12 +193,58 @@ class PlayerViewModel @Inject constructor(
     }
     
     fun updateTracksFromPlayer(tracks: androidx.media3.common.Tracks) {
-        // This method is kept for debugging purposes only
-        // Track selection is now handled by regenerating the stream URL with correct indices
+        // Extract actual available tracks from ExoPlayer player
+        // This is useful for debugging and to see what tracks are actually available in the stream
         val exoAudioCount = tracks.groups.count { it.type == C.TRACK_TYPE_AUDIO }
         val exoSubtitleCount = tracks.groups.count { it.type == C.TRACK_TYPE_TEXT }
         
-        Log.d(TAG, "ExoPlayer loaded with $exoAudioCount audio track groups, $exoSubtitleCount subtitle track groups")
+        Log.d(TAG, "ExoPlayer tracks available: $exoAudioCount audio groups, $exoSubtitleCount subtitle groups")
+        
+        // Extract audio tracks from ExoPlayer
+        val exoAudioTracks = mutableListOf<TrackInfo>()
+        tracks.groups.forEachIndexed { groupIndex, group ->
+            if (group.type == C.TRACK_TYPE_AUDIO) {
+                for (trackIndex in 0 until group.length) {
+                    val format = group.getTrackFormat(trackIndex)
+                    val language = format.language
+                    val label = format.label ?: "Audio ${exoAudioTracks.size + 1}"
+                    exoAudioTracks.add(TrackInfo(
+                        index = trackIndex,
+                        language = language,
+                        displayTitle = label,
+                        codec = format.sampleMimeType,
+                        isDefault = false
+                    ))
+                    Log.d(TAG, "ExoPlayer audio track: index=$trackIndex, language=$language, label=$label")
+                }
+            }
+        }
+        
+        // Extract subtitle tracks from ExoPlayer
+        val exoSubtitleTracks = mutableListOf<TrackInfo>()
+        tracks.groups.forEachIndexed { groupIndex, group ->
+            if (group.type == C.TRACK_TYPE_TEXT) {
+                for (trackIndex in 0 until group.length) {
+                    val format = group.getTrackFormat(trackIndex)
+                    val language = format.language
+                    val label = format.label ?: "Subtitle ${exoSubtitleTracks.size + 1}"
+                    exoSubtitleTracks.add(TrackInfo(
+                        index = trackIndex,
+                        language = language,
+                        displayTitle = label,
+                        codec = format.sampleMimeType,
+                        isDefault = false
+                    ))
+                    Log.d(TAG, "ExoPlayer subtitle track: index=$trackIndex, language=$language, label=$label")
+                }
+            }
+        }
+        
+        // If ExoPlayer has tracks available and our Jellyfin-extracted tracks are empty or different,
+        // we could optionally update the UI state here
+        // For now, just log the comparison
+        Log.d(TAG, "Jellyfin tracks: ${_uiState.value.audioTracks.size} audio, ${_uiState.value.subtitleTracks.size} subtitles")
+        Log.d(TAG, "ExoPlayer tracks: ${exoAudioTracks.size} audio, ${exoSubtitleTracks.size} subtitles")
     }
     
     fun getStreamUrl(useHls: Boolean = true, audioStreamIndex: Int? = null, subtitleStreamIndex: Int? = null): String? {
@@ -229,6 +275,8 @@ class PlayerViewModel @Inject constructor(
                 // Add subtitle stream index if specified
                 if (subtitleStreamIndex != null) {
                     append("&SubtitleStreamIndex=$subtitleStreamIndex")
+                    // For HLS, subtitles need to be encoded into the stream
+                    append("&SubtitleMethod=Encode")
                 }
             }
         } else {
