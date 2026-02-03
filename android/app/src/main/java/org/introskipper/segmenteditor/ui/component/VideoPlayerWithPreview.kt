@@ -29,10 +29,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.TimeBar
-import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.preview.ScrubPreviewOverlay
@@ -73,20 +71,15 @@ fun VideoPlayerWithPreview(
         android.util.Log.d("VideoPlayerWithPreview", "Creating new player with URL: $streamUrl, restoring position: $positionToRestore")
         
         ExoPlayer.Builder(context)
-            .setRenderersFactory(NextRenderersFactory(context))
             .setTrackSelector(DefaultTrackSelector(context).apply {
                 setParameters(buildUponParameters()
                     .setAllowVideoMixedMimeTypeAdaptiveness(true)
                     .setAllowVideoNonSeamlessAdaptiveness(true)
-                    .setSelectUndeterminedTextLanguage(true)
                     .setAllowAudioMixedMimeTypeAdaptiveness(true)
                     .setAllowMultipleAdaptiveSelections(true)
-                    .setPreferredTextLanguage(Locale.getDefault().language)
-                    .setPreferredTextRoleFlags(C.ROLE_FLAG_SUBTITLE)
                     .setRendererDisabled(TRACK_TYPE_VIDEO, false)
                     .setRendererDisabled(TRACK_TYPE_AUDIO, false)
                     .setRendererDisabled(TRACK_TYPE_TEXT, false)
-                    .setMaxVideoSize(1, 1)
                     .setPreferredAudioLanguage(Locale.getDefault().language)
                     .setExceedRendererCapabilitiesIfNecessary(true))
             })

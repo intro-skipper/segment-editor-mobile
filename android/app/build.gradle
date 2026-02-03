@@ -118,7 +118,6 @@ dependencies {
     implementation "androidx.media3:media3-exoplayer-hls:$media3_version"
     implementation "androidx.media3:media3-ui:$media3_version"
     implementation "androidx.media3:media3-common:$media3_version"
-    implementation("io.github.anilbeesetti:nextlib-media3ext:1.9.1-0.11.0")
     
     // Security for encrypted preferences
     implementation 'androidx.security:security-crypto:1.1.0'
