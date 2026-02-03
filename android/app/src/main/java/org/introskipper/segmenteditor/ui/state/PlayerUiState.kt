@@ -39,8 +39,15 @@ data class TrackInfo(
     val language: String?,
     val displayTitle: String,
     val codec: String?,
-    val isDefault: Boolean = false
+    val isDefault: Boolean = false,
+    val source: TrackSource = TrackSource.JELLYFIN
 )
+
+enum class TrackSource {
+    JELLYFIN,     // Track from Jellyfin MediaStreams metadata
+    EXOPLAYER,    // Track discovered by ExoPlayer in the stream
+    MERGED        // Track present in both sources
+}
 
 sealed class PlayerEvent {
     data class Error(val message: String) : PlayerEvent()
