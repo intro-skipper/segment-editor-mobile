@@ -23,6 +23,8 @@ import androidx.media3.common.C.TRACK_TYPE_TEXT
 import androidx.media3.common.C.TRACK_TYPE_VIDEO
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionOverride
+import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -50,28 +52,23 @@ fun VideoPlayerWithPreview(
     modifier: Modifier = Modifier,
     useController: Boolean = true,
     previewLoader: PreviewLoader? = null,
+    selectedAudioTrackIndex: Int? = null,
+    selectedSubtitleTrackIndex: Int? = null,
     onPlayerReady: (ExoPlayer) -> Unit = {},
-    onPlaybackStateChanged: (isPlaying: Boolean, currentPosition: Long, bufferedPosition: Long) -> Unit = { _, _, _ -> }
+    onPlaybackStateChanged: (isPlaying: Boolean, currentPosition: Long, bufferedPosition: Long) -> Unit = { _, _, _ -> },
+    onTracksChanged: (Tracks) -> Unit = {}
 ) {
     val context = LocalContext.current
     var scrubPosition by remember { mutableStateOf(0L) }
     var isScrubbing by remember { mutableStateOf(false) }
     
-    // Track the playback position across stream URL changes
-    var lastKnownPosition by remember { mutableStateOf(0L) }
-    var lastKnownPlayWhenReady by remember { mutableStateOf(true) }
-    
-    // Create a new ExoPlayer when streamUrl changes (e.g., when user selects different audio/subtitle track)
-    // The old player will be released by DisposableEffect cleanup
-    val exoPlayer = remember(streamUrl) {
-        // Get the current position from any existing player before creating new one
-        val positionToRestore = lastKnownPosition
-        val playWhenReadyToRestore = lastKnownPlayWhenReady
-        
-        android.util.Log.d("VideoPlayerWithPreview", "Creating new player with URL: $streamUrl, restoring position: $positionToRestore")
+    // Create ExoPlayer instance once - don't recreate on track changes
+    val trackSelector = remember { DefaultTrackSelector(context) }
+    val exoPlayer = remember {
+        android.util.Log.d("VideoPlayerWithPreview", "Creating ExoPlayer instance")
         
         ExoPlayer.Builder(context)
-            .setTrackSelector(DefaultTrackSelector(context).apply {
+            .setTrackSelector(trackSelector.apply {
                 setParameters(buildUponParameters()
                     .setAllowVideoMixedMimeTypeAdaptiveness(true)
                     .setAllowVideoNonSeamlessAdaptiveness(true)
@@ -82,65 +79,142 @@ fun VideoPlayerWithPreview(
                     .setRendererDisabled(TRACK_TYPE_TEXT, false)
                     .setExceedRendererCapabilitiesIfNecessary(true))
             })
-            .build().apply {
-                setMediaItem(MediaItem.fromUri(streamUrl))
-                
-                // Seek to saved position before preparing if we're reloading
-                // MIN_POSITION_TO_RESTORE_MS threshold avoids restoring during initial load
-                if (positionToRestore > MIN_POSITION_TO_RESTORE_MS) {
-                    seekTo(positionToRestore)
-                }
-                
-                prepare()
-                playWhenReady = playWhenReadyToRestore
-            }
+            .build()
     }
     
-    // Update lastKnown values using player listener callbacks
-    // We need to track position continuously so it's available when streamUrl changes
-    DisposableEffect(exoPlayer) {
-        val listener = object : Player.Listener {
-            override fun onPositionDiscontinuity(
-                oldPosition: Player.PositionInfo,
-                newPosition: Player.PositionInfo,
-                reason: Int
-            ) {
-                lastKnownPosition = newPosition.positionMs
-            }
-            
-            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-                lastKnownPlayWhenReady = playWhenReady
-            }
-            
-            override fun onEvents(player: Player, events: Player.Events) {
-                // Update position on relevant player events to ensure we always have current position
-                // This is needed because onPositionDiscontinuity only fires on seeks (not during normal playback)
-                // and onPlayWhenReadyChanged only fires on play/pause changes
-                // By updating on these events, we capture position during continuous playback
-                if (events.containsAny(
-                    Player.EVENT_POSITION_DISCONTINUITY,
-                    Player.EVENT_TIMELINE_CHANGED,
-                    Player.EVENT_IS_PLAYING_CHANGED,
-                    Player.EVENT_PLAYBACK_STATE_CHANGED
-                )) {
-                    lastKnownPosition = player.currentPosition
-                    lastKnownPlayWhenReady = player.playWhenReady
-                }
-            }
-        }
+    // Update media item when streamUrl changes (without recreating player)
+    LaunchedEffect(streamUrl) {
+        android.util.Log.d("VideoPlayerWithPreview", "Stream URL changed: $streamUrl")
+        val currentPosition = exoPlayer.currentPosition
+        val wasPlaying = exoPlayer.playWhenReady
         
-        exoPlayer.addListener(listener)
+        exoPlayer.setMediaItem(MediaItem.fromUri(streamUrl))
+        exoPlayer.prepare()
         
-        onDispose {
-            // Save position one last time before player is disposed
-            lastKnownPosition = exoPlayer.currentPosition
-            lastKnownPlayWhenReady = exoPlayer.playWhenReady
-            exoPlayer.removeListener(listener)
+        // Restore position and play state if this is a track switch (position > threshold)
+        if (currentPosition > MIN_POSITION_TO_RESTORE_MS) {
+            exoPlayer.seekTo(currentPosition)
         }
+        exoPlayer.playWhenReady = wasPlaying
     }
     
+    // Update media item when streamUrl changes (without recreating player)
+    LaunchedEffect(streamUrl) {
+        android.util.Log.d("VideoPlayerWithPreview", "Stream URL changed: $streamUrl")
+        val currentPosition = exoPlayer.currentPosition
+        val wasPlaying = exoPlayer.playWhenReady
+        
+        exoPlayer.setMediaItem(MediaItem.fromUri(streamUrl))
+        exoPlayer.prepare()
+        
+        // Restore position and play state if this is a track switch (position > threshold)
+        if (currentPosition > MIN_POSITION_TO_RESTORE_MS) {
+            exoPlayer.seekTo(currentPosition)
+        }
+        exoPlayer.playWhenReady = wasPlaying
+    }
+    
+    // Apply subtitle track selection using ExoPlayer's TrackSelectionParameters
+    // Audio track selection is handled via AudioStreamIndex URL parameter
+    LaunchedEffect(selectedSubtitleTrackIndex) {
+        // Wait for tracks to be available
+        if (exoPlayer.currentTracks.groups.isEmpty()) {
+            android.util.Log.d("VideoPlayerWithPreview", "Tracks not yet available for subtitle selection")
+            return@LaunchedEffect
+        }
+        
+        android.util.Log.d("VideoPlayerWithPreview", "Applying subtitle track selection: $selectedSubtitleTrackIndex")
+        
+        val parametersBuilder = trackSelector.parameters.buildUpon()
+        
+        if (selectedSubtitleTrackIndex != null) {
+            // Enable subtitle track
+            parametersBuilder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+            
+            // Find and select the subtitle track
+            var subtitleTrackFound = false
+            exoPlayer.currentTracks.groups.forEachIndexed { groupIndex, group ->
+                if (group.type == C.TRACK_TYPE_TEXT && !subtitleTrackFound) {
+                    // For HLS, subtitles are usually in separate groups
+                    // Select the first available subtitle track
+                    for (trackIndex in 0 until group.length) {
+                        val override = TrackSelectionOverride(group.mediaTrackGroup, listOf(trackIndex))
+                        parametersBuilder.setOverrideForType(override)
+                        android.util.Log.d("VideoPlayerWithPreview", "Set subtitle override for group $groupIndex, track $trackIndex")
+                        subtitleTrackFound = true
+                        break
+                    }
+                }
+            }
+            if (!subtitleTrackFound) {
+                android.util.Log.w("VideoPlayerWithPreview", "No subtitle track found to select")
+            }
+        } else {
+            // Disable subtitles
+            parametersBuilder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+            android.util.Log.d("VideoPlayerWithPreview", "Disabled subtitles")
+        }
+        
+        trackSelector.setParameters(parametersBuilder)
+    }
+    
+    // Player event listeners for playback state and track changes
     DisposableEffect(exoPlayer, previewLoader) {
-        val listener = object : Player.Listener {
+        val tracksListener = object : Player.Listener {
+            override fun onTracksChanged(tracks: Tracks) {
+                android.util.Log.d("VideoPlayerWithPreview", "onTracksChanged: ${tracks.groups.size} track groups")
+                
+                // Extract available audio tracks from ExoPlayer
+                val availableAudioTracks = mutableListOf<Pair<Int, String>>()
+                tracks.groups.forEachIndexed { groupIndex, group ->
+                    if (group.type == C.TRACK_TYPE_AUDIO) {
+                        android.util.Log.d("VideoPlayerWithPreview", "  Audio Group $groupIndex: ${group.length} tracks")
+                        for (trackIndex in 0 until group.length) {
+                            val format = group.getTrackFormat(trackIndex)
+                            val language = format.language ?: "Unknown"
+                            val label = format.label ?: "Audio ${trackIndex + 1}"
+                            val info = "$label ($language)"
+                            availableAudioTracks.add(Pair(trackIndex, info))
+                            android.util.Log.d("VideoPlayerWithPreview", "    Track $trackIndex: $info, codec=${format.sampleMimeType}")
+                        }
+                    }
+                }
+                
+                // Extract available subtitle tracks from ExoPlayer
+                val availableSubtitleTracks = mutableListOf<Pair<Int, String>>()
+                tracks.groups.forEachIndexed { groupIndex, group ->
+                    if (group.type == C.TRACK_TYPE_TEXT) {
+                        android.util.Log.d("VideoPlayerWithPreview", "  Subtitle Group $groupIndex: ${group.length} tracks")
+                        for (trackIndex in 0 until group.length) {
+                            val format = group.getTrackFormat(trackIndex)
+                            val language = format.language ?: "Unknown"
+                            val label = format.label ?: "Subtitle ${trackIndex + 1}"
+                            val info = "$label ($language)"
+                            availableSubtitleTracks.add(Pair(trackIndex, info))
+                            android.util.Log.d("VideoPlayerWithPreview", "    Track $trackIndex: $info, codec=${format.sampleMimeType}")
+                        }
+                    }
+                }
+                
+                // Log video tracks for completeness
+                tracks.groups.forEachIndexed { groupIndex, group ->
+                    if (group.type == C.TRACK_TYPE_VIDEO) {
+                        android.util.Log.d("VideoPlayerWithPreview", "  Video Group $groupIndex: ${group.length} tracks")
+                        for (trackIndex in 0 until group.length) {
+                            val format = group.getTrackFormat(trackIndex)
+                            android.util.Log.d("VideoPlayerWithPreview", "    Track $trackIndex: ${format.width}x${format.height}, codec=${format.sampleMimeType}")
+                        }
+                    }
+                }
+                
+                android.util.Log.d("VideoPlayerWithPreview", "Available tracks - Audio: ${availableAudioTracks.size}, Subtitles: ${availableSubtitleTracks.size}")
+                
+                // Notify callback with tracks
+                onTracksChanged(tracks)
+            }
+        }
+        
+        val playbackListener = object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 onPlaybackStateChanged(
                     isPlaying,
@@ -160,42 +234,26 @@ fun VideoPlayerWithPreview(
                     exoPlayer.bufferedPosition
                 )
             }
-
-            override fun onTracksChanged(tracks: Tracks) {
-                // Track selection is now handled by regenerating the stream URL
-                // No need to process track changes here
-            }
         }
         
-        exoPlayer.addListener(listener)
+        exoPlayer.addListener(tracksListener)
+        exoPlayer.addListener(playbackListener)
         onPlayerReady(exoPlayer)
         
         onDispose {
-            exoPlayer.removeListener(listener)
+            exoPlayer.removeListener(tracksListener)
+            exoPlayer.removeListener(playbackListener)
             exoPlayer.release()
             // Note: previewLoader is released by PlayerScreen, not here
         }
     }
     
     Box(modifier = modifier.fillMaxSize()) {
-        // Keep reference to PlayerView to explicitly update when player changes
-        // Use simple var instead of mutableStateOf since this doesn't need to trigger recomposition
-        var playerViewRef: PlayerView? = null
-        
-        // Explicitly update PlayerView.player when exoPlayer changes
-        // This ensures the new player is set even if AndroidView update block doesn't trigger
-        LaunchedEffect(exoPlayer) {
-            playerViewRef?.let { view ->
-                android.util.Log.d("VideoPlayerWithPreview", "LaunchedEffect: Explicitly setting new player to PlayerView")
-                view.player = exoPlayer
-            }
-        }
-        
         // Video player
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
-                    playerViewRef = this
+                    this.player = exoPlayer
                     this.useController = useController
                     layoutParams = ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
@@ -275,11 +333,6 @@ fun VideoPlayerWithPreview(
                     }
                     viewTreeObserver.addOnGlobalLayoutListener(layoutListener)
                 }
-            },
-            update = { playerView ->
-                // Update the player when exoPlayer changes (e.g., when stream URL changes for track selection)
-                android.util.Log.d("VideoPlayerWithPreview", "AndroidView update block called, setting player")
-                playerView.player = exoPlayer
             },
             modifier = Modifier.fillMaxSize()
         )

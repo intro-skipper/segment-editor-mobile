@@ -77,12 +77,13 @@ fun PlayerScreen(
     val context = LocalContext.current
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     
-    // Stream URL that updates when tracks change
-    val streamUrl = remember(uiState.selectedAudioTrack, uiState.selectedSubtitleTrack) {
+    // Stream URL that updates when audio track changes (for HLS transcoding)
+    // Subtitle track selection is handled client-side via TrackSelectionParameters
+    val streamUrl = remember(uiState.selectedAudioTrack, uiState.mediaItem) {
         viewModel.getStreamUrl(
             useHls = true,
             audioStreamIndex = uiState.selectedAudioTrack,
-            subtitleStreamIndex = uiState.selectedSubtitleTrack
+            subtitleStreamIndex = null  // Don't include subtitle in URL, handle client-side
         )
     }
     
@@ -321,9 +322,14 @@ private fun PlayerContent(
                     streamUrl = streamUrl,
                     useController = true,
                     previewLoader = previewLoader,
+                    selectedAudioTrackIndex = uiState.selectedAudioTrack,
+                    selectedSubtitleTrackIndex = uiState.selectedSubtitleTrack,
                     onPlayerReady = onPlayerReady,
                     onPlaybackStateChanged = { isPlaying, currentPos, bufferedPos ->
                         viewModel.updatePlaybackState(isPlaying, currentPos, bufferedPos)
+                    },
+                    onTracksChanged = { tracks ->
+                        viewModel.updateTracksFromPlayer(tracks)
                     }
                 )
             } else {
