@@ -210,14 +210,15 @@ class PlayerViewModel @Inject constructor(
                     val format = group.getTrackFormat(trackIndex)
                     val language = format.language
                     val label = format.label ?: "Audio ${exoAudioTracks.size + 1}"
-                    exoAudioTracks.add(TrackInfo(
+                    val info = TrackInfo(
                         index = trackIndex,
                         language = language,
                         displayTitle = label,
                         codec = format.sampleMimeType,
                         isDefault = false,
                         source = org.introskipper.segmenteditor.ui.state.TrackSource.EXOPLAYER
-                    ))
+                    )
+                    if (!exoAudioTracks.contains(info)) exoAudioTracks.add(info)
                     Log.d(TAG, "ExoPlayer audio track: index=$trackIndex, language=$language, label=$label")
                 }
             }
@@ -231,14 +232,15 @@ class PlayerViewModel @Inject constructor(
                     val format = group.getTrackFormat(trackIndex)
                     val language = format.language
                     val label = format.label ?: "Subtitle ${exoSubtitleTracks.size + 1}"
-                    exoSubtitleTracks.add(TrackInfo(
+                    val info = TrackInfo(
                         index = trackIndex,
                         language = language,
                         displayTitle = label,
                         codec = format.sampleMimeType,
                         isDefault = false,
                         source = org.introskipper.segmenteditor.ui.state.TrackSource.EXOPLAYER
-                    ))
+                    )
+                    if (!exoSubtitleTracks.contains(info)) exoSubtitleTracks.add(info)
                     Log.d(TAG, "ExoPlayer subtitle track: index=$trackIndex, language=$language, label=$label")
                 }
             }
