@@ -12,6 +12,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -188,6 +189,7 @@ fun VideoPlayerWithPreview(
         // Video player using Media3 Compose ContentFrame
         ContentFrame(
             player = exoPlayer,
+            contentScale = ContentScale.Fit,
             modifier = Modifier.fillMaxSize()
         )
         

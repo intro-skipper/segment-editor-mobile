@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -127,7 +128,37 @@ fun MediaControls(
             }
         }
         
-        // Controls overlay
+        // Play/Pause button centered in the player
+        AnimatedVisibility(
+            visible = showControls,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.Center)
+        ) {
+            IconButton(
+                onClick = {
+                    player?.let {
+                        if (it.isPlaying) {
+                            it.pause()
+                        } else {
+                            it.play()
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .size(80.dp)
+                    .background(Color.Black.copy(alpha = 0.5f), shape = androidx.compose.foundation.shape.CircleShape)
+            ) {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    tint = Color.White,
+                    modifier = Modifier.size(48.dp)
+                )
+            }
+        }
+        
+        // Time bar and time labels at the bottom
         AnimatedVisibility(
             visible = showControls,
             enter = fadeIn(),
@@ -138,8 +169,8 @@ fun MediaControls(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color.Black.copy(alpha = 0.6f))
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 // Seek bar
                 if (duration > 0) {
@@ -201,31 +232,6 @@ fun MediaControls(
                             text = formatTime(duration),
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.White
-                        )
-                    }
-                }
-                
-                // Play/Pause button
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    IconButton(
-                        onClick = {
-                            player?.let {
-                                if (it.isPlaying) {
-                                    it.pause()
-                                } else {
-                                    it.play()
-                                }
-                            }
-                        }
-                    ) {
-                        Icon(
-                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (isPlaying) "Pause" else "Play",
-                            tint = Color.White,
-                            modifier = Modifier.size(48.dp)
                         )
                     }
                 }
