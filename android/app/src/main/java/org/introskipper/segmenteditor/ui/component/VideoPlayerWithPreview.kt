@@ -23,8 +23,6 @@ import androidx.media3.common.C.TRACK_TYPE_TEXT
 import androidx.media3.common.C.TRACK_TYPE_VIDEO
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
-import androidx.media3.common.TrackSelectionOverride
-import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -36,7 +34,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.preview.ScrubPreviewOverlay
-import java.util.Locale
 
 // Minimum position to restore when reloading stream (avoids restoring during initial load)
 private const val MIN_POSITION_TO_RESTORE_MS = 1000L
@@ -52,8 +49,6 @@ fun VideoPlayerWithPreview(
     modifier: Modifier = Modifier,
     useController: Boolean = true,
     previewLoader: PreviewLoader? = null,
-    selectedAudioTrackIndex: Int? = null,
-    selectedSubtitleTrackIndex: Int? = null,
     onPlayerReady: (ExoPlayer) -> Unit = {},
     onPlaybackStateChanged: (isPlaying: Boolean, currentPosition: Long, bufferedPosition: Long) -> Unit = { _, _, _ -> },
     onTracksChanged: (Tracks) -> Unit = {}
@@ -99,50 +94,6 @@ fun VideoPlayerWithPreview(
             // On initial load, start playback automatically
             exoPlayer.playWhenReady = true
         }
-    }
-    
-    // Apply subtitle track selection using ExoPlayer's TrackSelectionParameters
-    // Audio track selection is handled via AudioStreamIndex URL parameter
-    LaunchedEffect(selectedSubtitleTrackIndex) {
-        // Wait for tracks to be available
-        if (exoPlayer.currentTracks.groups.isEmpty()) {
-            android.util.Log.d("VideoPlayerWithPreview", "Tracks not yet available for subtitle selection")
-            return@LaunchedEffect
-        }
-        
-        android.util.Log.d("VideoPlayerWithPreview", "Applying subtitle track selection: $selectedSubtitleTrackIndex")
-        
-        val parametersBuilder = trackSelector.parameters.buildUpon()
-        
-        if (selectedSubtitleTrackIndex != null) {
-            // Enable subtitle track
-            parametersBuilder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-            
-            // Find and select the subtitle track
-            var subtitleTrackFound = false
-            exoPlayer.currentTracks.groups.forEachIndexed { groupIndex, group ->
-                if (group.type == C.TRACK_TYPE_TEXT && !subtitleTrackFound) {
-                    // For HLS, subtitles are usually in separate groups
-                    // Select the first available subtitle track
-                    for (trackIndex in 0 until group.length) {
-                        val override = TrackSelectionOverride(group.mediaTrackGroup, listOf(trackIndex))
-                        parametersBuilder.setOverrideForType(override)
-                        android.util.Log.d("VideoPlayerWithPreview", "Set subtitle override for group $groupIndex, track $trackIndex")
-                        subtitleTrackFound = true
-                        break
-                    }
-                }
-            }
-            if (!subtitleTrackFound) {
-                android.util.Log.w("VideoPlayerWithPreview", "No subtitle track found to select")
-            }
-        } else {
-            // Disable subtitles
-            parametersBuilder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
-            android.util.Log.d("VideoPlayerWithPreview", "Disabled subtitles")
-        }
-        
-        trackSelector.setParameters(parametersBuilder)
     }
     
     // Player event listeners for playback state and track changes
