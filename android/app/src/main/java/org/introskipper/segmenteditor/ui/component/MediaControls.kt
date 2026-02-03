@@ -22,7 +22,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -31,6 +30,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,8 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.media3.common.Player
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -67,6 +66,10 @@ fun MediaControls(
     var isLoading by remember { mutableStateOf(false) }
     var isScrubbing by remember { mutableStateOf(false) }
     var scrubPosition by remember { mutableLongStateOf(0L) }
+    
+    // Coroutine scope for preview loading, tied to composable lifecycle
+    val coroutineScope = rememberCoroutineScope()
+    var preloadJob by remember { mutableStateOf<Job?>(null) }
     
     // Update playback state
     LaunchedEffect(player) {
@@ -151,23 +154,25 @@ fun MediaControls(
                     Slider(
                         value = sliderPosition,
                         onValueChange = { newValue ->
-                            if (!isScrubbing) {
-                                // Scrub started
-                                isScrubbing = true
-                                player?.playWhenReady = false
-                                val position = newValue.toLong()
-                                scrubPosition = position
-                                onScrubStart(position)
-                                
-                                // Preload adjacent previews
-                                CoroutineScope(Dispatchers.IO).launch {
-                                    previewLoader?.preloadPreviews(position, count = 3)
-                                }
-                            }
                             sliderPosition = newValue
                             val position = newValue.toLong()
                             scrubPosition = position
-                            onScrubMove(position)
+                            
+                            if (!isScrubbing) {
+                                // First drag event - start scrubbing
+                                isScrubbing = true
+                                player?.playWhenReady = false
+                                onScrubStart(position)
+                                
+                                // Cancel any previous preload job and start new one
+                                preloadJob?.cancel()
+                                preloadJob = coroutineScope.launch {
+                                    previewLoader?.preloadPreviews(position, count = 3)
+                                }
+                            } else {
+                                // Continue scrubbing
+                                onScrubMove(position)
+                            }
                         },
                         onValueChangeFinished = {
                             val finalPosition = sliderPosition.toLong()
@@ -175,6 +180,8 @@ fun MediaControls(
                             player?.playWhenReady = true
                             onScrubEnd(finalPosition)
                             isScrubbing = false
+                            preloadJob?.cancel()
+                            preloadJob = null
                         },
                         valueRange = 0f..duration.toFloat(),
                         modifier = Modifier.fillMaxWidth()
