@@ -63,6 +63,8 @@ fun VideoPlayerWithPreview(
     var lastKnownPosition by remember { mutableStateOf(0L) }
     var lastKnownPlayWhenReady by remember { mutableStateOf(true) }
     
+    // Create a new ExoPlayer when streamUrl changes (e.g., when user selects different audio/subtitle track)
+    // The old player will be released by DisposableEffect cleanup
     val exoPlayer = remember(streamUrl) {
         // Get the current position from any existing player before creating new one
         val positionToRestore = lastKnownPosition

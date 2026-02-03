@@ -237,5 +237,28 @@ User selects track → New URL with track parameter → New stream with track �
 ✅ Code review completed  
 ✅ Ready for testing
 
+## Bug Fix (February 2026)
+**Issue**: Audio and subtitle changes were not reflected in the player. The player would pause but not change streams.
+
+**Root Cause**: The AndroidView factory was setting `player = exoPlayer` only once during PlayerView creation. When streamUrl changed and a new ExoPlayer was created, the PlayerView was never updated to use the new player instance.
+
+**Fix**: Moved `player = exoPlayer` from the factory block to an update block in AndroidView. The update block runs on every recomposition, ensuring the PlayerView always uses the current ExoPlayer instance.
+
+```kotlin
+AndroidView(
+    factory = { ctx ->
+        PlayerView(ctx).apply {
+            // Factory only runs once
+            this.useController = useController
+            // ... other setup ...
+        }
+    },
+    update = { playerView ->
+        // Update runs on every recomposition
+        playerView.player = exoPlayer
+    }
+)
+```
+
 ## Conclusion
 This implementation provides working audio and subtitle track selection by leveraging Jellyfin's stream URL parameters instead of attempting in-player track switching. The approach is more reliable and shows all available tracks to the user, not just those in the current stream.
