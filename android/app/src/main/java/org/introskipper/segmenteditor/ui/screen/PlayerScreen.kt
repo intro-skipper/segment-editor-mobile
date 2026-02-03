@@ -52,6 +52,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.C
+import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
 import kotlinx.coroutines.delay
@@ -162,13 +163,9 @@ fun PlayerScreen(
                 for (trackIndexInGroup in 0 until group.length) {
                     if (accumulatedIndex == targetIndex) {
                         exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters.buildUpon()
-                            .clearOverridesOfType(C.TRACK_TYPE_AUDIO)
                             .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
                             .setOverrideForType(
-                                androidx.media3.common.TrackSelectionOverride(
-                                    group.mediaTrackGroup,
-                                    trackIndexInGroup
-                                )
+                                TrackSelectionOverride(group.mediaTrackGroup, trackIndexInGroup)
                             )
                             .build()
 
@@ -182,7 +179,6 @@ fun PlayerScreen(
 
             // If we didn't find the track, clear overrides and let ExoPlayer choose
             exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters.buildUpon()
-                .clearOverridesOfType(C.TRACK_TYPE_AUDIO)
                 .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
                 .build()
 
@@ -201,7 +197,6 @@ fun PlayerScreen(
             if (trackIndex == null) {
                 // Disable subtitles
                 exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters.buildUpon()
-                    .clearOverridesOfType(C.TRACK_TYPE_TEXT)
                     .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
                     .build()
             } else {
@@ -215,13 +210,9 @@ fun PlayerScreen(
                     for (trackIndexInGroup in 0 until group.length) {
                         if (accumulatedIndex == trackIndex) {
                             exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters.buildUpon()
-                                .clearOverridesOfType(C.TRACK_TYPE_TEXT)
                                 .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
                                 .setOverrideForType(
-                                    androidx.media3.common.TrackSelectionOverride(
-                                        group.mediaTrackGroup,
-                                        trackIndexInGroup
-                                    )
+                                    TrackSelectionOverride(group.mediaTrackGroup, trackIndexInGroup)
                                 )
                                 .build()
 

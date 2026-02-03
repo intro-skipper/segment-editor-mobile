@@ -22,6 +22,7 @@ import androidx.media3.common.C.TRACK_TYPE_TEXT
 import androidx.media3.common.C.TRACK_TYPE_VIDEO
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
@@ -99,6 +100,10 @@ fun VideoPlayerWithPreview(
                     exoPlayer.currentPosition,
                     exoPlayer.bufferedPosition
                 )
+            }
+
+            override fun onTracksChanged(tracks: Tracks) {
+
             }
         }
         
