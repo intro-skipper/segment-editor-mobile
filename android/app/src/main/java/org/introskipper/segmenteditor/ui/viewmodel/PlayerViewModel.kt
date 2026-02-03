@@ -250,104 +250,13 @@ class PlayerViewModel @Inject constructor(
         Log.d(TAG, "Jellyfin tracks: $jellyfinAudioCount audio, $jellyfinSubtitleCount subtitles")
         Log.d(TAG, "ExoPlayer tracks: ${exoAudioTracks.size} audio, ${exoSubtitleTracks.size} subtitles")
         
-        // Merge tracks from both sources
-        val mergedAudioTracks = mergeTracksFromBothSources(
-            _uiState.value.audioTracks,
-            exoAudioTracks,
-            "audio"
-        )
-        val mergedSubtitleTracks = mergeTracksFromBothSources(
-            _uiState.value.subtitleTracks,
-            exoSubtitleTracks,
-            "subtitle"
-        )
-        
-        Log.d(TAG, "Merged tracks: ${mergedAudioTracks.size} audio, ${mergedSubtitleTracks.size} subtitles")
-        
         // Update UI state with merged tracks
         _uiState.update { state ->
             state.copy(
-                audioTracks = mergedAudioTracks,
-                subtitleTracks = mergedSubtitleTracks
+                audioTracks = _uiState.value.audioTracks.ifEmpty { exoAudioTracks },
+                subtitleTracks = _uiState.value.subtitleTracks.ifEmpty { exoSubtitleTracks }
             )
         }
-    }
-    
-    /**
-     * Merge tracks from Jellyfin and ExoPlayer to cover all possible tracks.
-     * Strategy:
-     * 1. Keep all Jellyfin tracks (they have correct indices for URL parameters)
-     * 2. Add ExoPlayer-only tracks that aren't in Jellyfin (by language/codec matching)
-     * 3. Mark tracks as MERGED if they appear in both sources
-     */
-    private fun mergeTracksFromBothSources(
-        jellyfinTracks: List<TrackInfo>,
-        exoPlayerTracks: List<TrackInfo>,
-        trackType: String
-    ): List<TrackInfo> {
-        val merged = mutableListOf<TrackInfo>()
-        
-        // Add all Jellyfin tracks, marking as MERGED if found in ExoPlayer
-        jellyfinTracks.forEach { jellyfinTrack ->
-            val matchingExoTrack = exoPlayerTracks.find { exoTrack ->
-                matchTracks(jellyfinTrack, exoTrack)
-            }
-            
-            if (matchingExoTrack != null) {
-                // Track exists in both sources - mark as MERGED
-                merged.add(jellyfinTrack.copy(
-                    source = org.introskipper.segmenteditor.ui.state.TrackSource.MERGED
-                ))
-                Log.d(TAG, "$trackType track matched: ${jellyfinTrack.displayTitle} (Jellyfin idx=${jellyfinTrack.index} ↔ ExoPlayer idx=${matchingExoTrack.index})")
-            } else {
-                // Track only in Jellyfin - keep as is
-                merged.add(jellyfinTrack)
-                Log.d(TAG, "$trackType track from Jellyfin only: ${jellyfinTrack.displayTitle}")
-            }
-        }
-        
-        // Add ExoPlayer-only tracks (not found in Jellyfin)
-        exoPlayerTracks.forEach { exoTrack ->
-            val existsInJellyfin = jellyfinTracks.any { jellyfinTrack ->
-                matchTracks(jellyfinTrack, exoTrack)
-            }
-            
-            if (!existsInJellyfin) {
-                // Track only in ExoPlayer - add with ExoPlayer source
-                // Note: ExoPlayer indices can't be used for Jellyfin URL parameters
-                merged.add(exoTrack.copy(
-                    displayTitle = "${exoTrack.displayTitle} [ExoPlayer only]"
-                ))
-                Log.d(TAG, "$trackType track from ExoPlayer only: ${exoTrack.displayTitle}")
-            }
-        }
-        
-        return merged
-    }
-    
-    /**
-     * Match tracks from different sources by language and codec.
-     * Returns true if tracks likely represent the same audio/subtitle stream.
-     */
-    private fun matchTracks(track1: TrackInfo, track2: TrackInfo): Boolean {
-        // Both tracks must have a language specified to match
-        val lang1 = track1.language?.lowercase()
-        val lang2 = track2.language?.lowercase()
-        
-        // If either track has no language, they don't match
-        if (lang1 == null || lang2 == null) {
-            return false
-        }
-        
-        // Languages must match
-        if (lang1 != lang2) {
-            return false
-        }
-        
-        // If languages match, tracks likely represent the same stream
-        // Codec matching is optional - same language track may have different quality/codec variants
-        // We prioritize matching by language to avoid showing duplicate tracks
-        return true
     }
     
     fun getStreamUrl(useHls: Boolean = true, audioStreamIndex: Int? = null, subtitleStreamIndex: Int? = null): String? {
