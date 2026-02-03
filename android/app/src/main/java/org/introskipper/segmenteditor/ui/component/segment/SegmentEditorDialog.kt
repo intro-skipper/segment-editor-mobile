@@ -26,7 +26,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -67,7 +66,6 @@ fun SegmentEditorDialog(
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     
     // Initialize view model
     LaunchedEffect(Unit) {
@@ -124,8 +122,7 @@ fun SegmentEditorDialog(
     }
     
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState
+        onDismissRequest = onDismiss
     ) {
         Column(
             modifier = Modifier
@@ -306,7 +303,7 @@ fun SegmentEditorDialog(
                     }
                 }
                 
-                // Spacer for gesture area
+                // Bottom spacing for the sheet's swipe-to-dismiss gesture area
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
