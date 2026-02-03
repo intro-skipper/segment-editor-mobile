@@ -185,8 +185,7 @@ fun VideoPlayerWithPreview(
                 }
             },
             update = { playerView ->
-                // Update player reference to ensure PlayerView picks up parameter changes
-                playerView.player = exoPlayer
+
             },
             modifier = Modifier.fillMaxSize()
         )

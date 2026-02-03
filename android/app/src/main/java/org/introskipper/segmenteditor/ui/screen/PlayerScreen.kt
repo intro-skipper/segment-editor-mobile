@@ -142,6 +142,16 @@ fun PlayerScreen(
         player?.setPlaybackSpeed(uiState.playbackSpeed)
     }
     
+    // Apply audio track selection
+    LaunchedEffect(uiState.selectedAudioTrack) {
+        player?.let { selectAudioTrack(it, uiState.selectedAudioTrack) }
+    }
+    
+    // Apply subtitle track selection
+    LaunchedEffect(uiState.selectedSubtitleTrack) {
+        player?.let { selectSubtitleTrack(it, uiState.selectedSubtitleTrack) }
+    }
+    
     Scaffold(
         topBar = {
             if (!uiState.isFullscreen) {
@@ -231,9 +241,6 @@ fun PlayerScreen(
             selectedTrackIndex = uiState.selectedAudioTrack,
             onTrackSelected = { trackIndex ->
                 viewModel.selectAudioTrack(trackIndex)
-                player?.let { 
-                    selectAudioTrack(it, trackIndex)
-                }
             },
             onDismiss = { showAudioTracks = false },
             allowDisable = false
@@ -248,9 +255,6 @@ fun PlayerScreen(
             selectedTrackIndex = uiState.selectedSubtitleTrack,
             onTrackSelected = { trackIndex ->
                 viewModel.selectSubtitleTrack(trackIndex)
-                player?.let { 
-                    selectSubtitleTrack(it, trackIndex)
-                }
             },
             onDismiss = { showSubtitleTracks = false },
             allowDisable = true
