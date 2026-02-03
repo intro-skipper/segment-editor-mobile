@@ -121,10 +121,18 @@ fun VideoPlayerWithPreview(
             }
             
             override fun onEvents(player: Player, events: Player.Events) {
-                // Update position on any player event to ensure we always have current position
+                // Update position on relevant player events to ensure we always have current position
                 // This ensures position is captured before streamUrl changes trigger new player
-                lastKnownPosition = player.currentPosition
-                lastKnownPlayWhenReady = player.playWhenReady
+                // Filter events to reduce unnecessary state updates
+                if (events.containsAny(
+                    Player.EVENT_POSITION_DISCONTINUITY,
+                    Player.EVENT_TIMELINE_CHANGED,
+                    Player.EVENT_IS_PLAYING_CHANGED,
+                    Player.EVENT_PLAYBACK_STATE_CHANGED
+                )) {
+                    lastKnownPosition = player.currentPosition
+                    lastKnownPlayWhenReady = player.playWhenReady
+                }
             }
         }
         
@@ -212,7 +220,12 @@ fun VideoPlayerWithPreview(
                                     override fun onScrubStart(timeBar: TimeBar, position: Long) {
                                         android.util.Log.d("VideoPlayerWithPreview", "Scrub started at position: $position")
                                         // Get player from PlayerView instead of capturing from closure
-                                        this@apply.player?.playWhenReady = false
+                                        val currentPlayer = this@apply.player
+                                        if (currentPlayer != null) {
+                                            currentPlayer.playWhenReady = false
+                                        } else {
+                                            android.util.Log.w("VideoPlayerWithPreview", "Player is null during scrub start")
+                                        }
                                         isScrubbing = true
                                         scrubPosition = position
                                         
@@ -225,7 +238,12 @@ fun VideoPlayerWithPreview(
                                     override fun onScrubMove(timeBar: TimeBar, position: Long) {
                                         android.util.Log.d("VideoPlayerWithPreview", "Scrub moved to position: $position")
                                         // Get player from PlayerView instead of capturing from closure
-                                        this@apply.player?.playWhenReady = false
+                                        val currentPlayer = this@apply.player
+                                        if (currentPlayer != null) {
+                                            currentPlayer.playWhenReady = false
+                                        } else {
+                                            android.util.Log.w("VideoPlayerWithPreview", "Player is null during scrub move")
+                                        }
                                         scrubPosition = position
                                     }
                                     
@@ -234,7 +252,12 @@ fun VideoPlayerWithPreview(
                                         isScrubbing = false
                                         scrubPosition = position
                                         // Get player from PlayerView instead of capturing from closure
-                                        this@apply.player?.playWhenReady = true
+                                        val currentPlayer = this@apply.player
+                                        if (currentPlayer != null) {
+                                            currentPlayer.playWhenReady = true
+                                        } else {
+                                            android.util.Log.w("VideoPlayerWithPreview", "Player is null during scrub stop")
+                                        }
                                     }
                                 })
                             } else {
