@@ -48,7 +48,8 @@ fun VideoPlayerWithPreview(
     useController: Boolean = true,
     previewLoader: PreviewLoader? = null,
     onPlayerReady: (ExoPlayer) -> Unit = {},
-    onPlaybackStateChanged: (isPlaying: Boolean, currentPosition: Long, bufferedPosition: Long) -> Unit = { _, _, _ -> }
+    onPlaybackStateChanged: (isPlaying: Boolean, currentPosition: Long, bufferedPosition: Long) -> Unit = { _, _, _ -> },
+    onTracksChanged: (Tracks) -> Unit = {}
 ) {
     val context = LocalContext.current
     var scrubPosition by remember { mutableStateOf(0L) }
@@ -103,7 +104,7 @@ fun VideoPlayerWithPreview(
             }
 
             override fun onTracksChanged(tracks: Tracks) {
-
+                onTracksChanged(tracks)
             }
         }
         

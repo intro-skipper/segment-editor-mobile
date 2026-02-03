@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.C
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -74,8 +75,7 @@ class PlayerViewModel @Inject constructor(
                             )
                         }
                         
-                        // Extract audio and subtitle tracks
-                        extractTracks(mediaItem.mediaStreams)
+                        // Tracks will be loaded via onTracksChanged callback from player
                         
                         // Load segments
                         loadSegments(itemId)
@@ -127,56 +127,100 @@ class PlayerViewModel @Inject constructor(
         }
     }
     
-    private fun extractTracks(mediaStreams: List<MediaStream>?) {
-        if (mediaStreams == null) return
-        
-        val audioTracks = mediaStreams
-            .filter { it.type == "Audio" }
-            .mapIndexed { idx, stream ->
-                TrackInfo(
-                    index = idx,  // Use accumulated index (position in filtered list)
-                    language = stream.language,
-                    displayTitle = stream.displayTitle ?: buildTrackTitle("Audio", stream.language, stream.codec),
-                    codec = stream.codec,
-                    isDefault = stream.isDefault
-                )
-            }
-        
-        val subtitleTracks = mediaStreams
-            .filter { it.type == "Subtitle" }
-            .mapIndexed { idx, stream ->
-                TrackInfo(
-                    index = idx,  // Use accumulated index (position in filtered list)
-                    language = stream.language,
-                    displayTitle = stream.displayTitle ?: buildTrackTitle("Subtitle", stream.language, stream.codec),
-                    codec = stream.codec,
-                    isDefault = stream.isDefault
-                )
-            }
-        
-        // Find the default track index or use the first track (index 0) if tracks exist
-        val defaultAudioIndex = if (audioTracks.isEmpty()) {
-            null
-        } else {
-            audioTracks.indexOfFirst { it.isDefault }.takeIf { it >= 0 } ?: 0
-        }
-        val defaultSubtitleIndex = subtitleTracks.indexOfFirst { it.isDefault }.takeIf { it >= 0 }
-        
-        _uiState.update { 
-            it.copy(
-                audioTracks = audioTracks,
-                subtitleTracks = subtitleTracks,
-                selectedAudioTrack = defaultAudioIndex,
-                selectedSubtitleTrack = defaultSubtitleIndex
-            )
-        }
-    }
-    
     private fun buildTrackTitle(type: String, language: String?, codec: String?): String {
         return buildString {
             append(type)
             if (language != null) append(" - $language")
             if (codec != null) append(" ($codec)")
+        }
+    }
+    
+    fun updateTracksFromPlayer(tracks: androidx.media3.common.Tracks) {
+        val audioTracks = mutableListOf<TrackInfo>()
+        val subtitleTracks = mutableListOf<TrackInfo>()
+        
+        tracks.groups.forEachIndexed { groupIndex, trackGroup ->
+            when (trackGroup.type) {
+                C.TRACK_TYPE_AUDIO -> {
+                    // Add each track in the group
+                    for (trackIndex in 0 until trackGroup.length) {
+                        val format = trackGroup.getTrackFormat(trackIndex)
+                        audioTracks.add(
+                            TrackInfo(
+                                index = audioTracks.size,  // Use accumulated index
+                                language = format.language,
+                                displayTitle = buildTrackTitle(
+                                    "Audio",
+                                    format.language,
+                                    format.codecs
+                                ),
+                                codec = format.codecs,
+                                isDefault = false // ExoPlayer doesn't expose default flag easily
+                            )
+                        )
+                    }
+                }
+                C.TRACK_TYPE_TEXT -> {
+                    // Add each track in the group
+                    for (trackIndex in 0 until trackGroup.length) {
+                        val format = trackGroup.getTrackFormat(trackIndex)
+                        subtitleTracks.add(
+                            TrackInfo(
+                                index = subtitleTracks.size,  // Use accumulated index
+                                language = format.language,
+                                displayTitle = buildTrackTitle(
+                                    "Subtitle",
+                                    format.language,
+                                    format.codecs
+                                ),
+                                codec = format.codecs,
+                                isDefault = false
+                            )
+                        )
+                    }
+                }
+            }
+        }
+        
+        // Find currently selected tracks
+        var selectedAudioIndex: Int? = null
+        var selectedSubtitleIndex: Int? = null
+        var audioAccumIndex = 0
+        var textAccumIndex = 0
+        
+        tracks.groups.forEach { trackGroup ->
+            when (trackGroup.type) {
+                C.TRACK_TYPE_AUDIO -> {
+                    for (trackIndex in 0 until trackGroup.length) {
+                        if (trackGroup.isTrackSelected(trackIndex)) {
+                            selectedAudioIndex = audioAccumIndex
+                        }
+                        audioAccumIndex++
+                    }
+                }
+                C.TRACK_TYPE_TEXT -> {
+                    for (trackIndex in 0 until trackGroup.length) {
+                        if (trackGroup.isTrackSelected(trackIndex)) {
+                            selectedSubtitleIndex = textAccumIndex
+                        }
+                        textAccumIndex++
+                    }
+                }
+            }
+        }
+        
+        // Default to first audio track if none selected and tracks exist
+        if (selectedAudioIndex == null && audioTracks.isNotEmpty()) {
+            selectedAudioIndex = 0
+        }
+        
+        _uiState.update {
+            it.copy(
+                audioTracks = audioTracks,
+                subtitleTracks = subtitleTracks,
+                selectedAudioTrack = selectedAudioIndex,
+                selectedSubtitleTrack = selectedSubtitleIndex
+            )
         }
     }
     
