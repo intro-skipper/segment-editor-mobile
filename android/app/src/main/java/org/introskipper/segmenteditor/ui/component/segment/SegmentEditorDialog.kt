@@ -3,8 +3,9 @@ package org.introskipper.segmenteditor.ui.component.segment
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -13,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -24,14 +24,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -44,8 +42,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.Segment
@@ -125,92 +121,59 @@ fun SegmentEditorDialog(
         }
     }
     
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            dismissOnBackPress = true,
-            dismissOnClickOutside = false
-        )
+    ModalBottomSheet(
+        onDismissRequest = onDismiss
     ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { 
-                        Text(
-                            if (state.mode == EditorMode.Create) {
-                                stringResource(R.string.segment_create_title)
-                            } else {
-                                stringResource(R.string.segment_edit_title)
-                            }
-                        ) 
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            // Header row with title and action buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (state.mode == EditorMode.Create) {
+                        stringResource(R.string.segment_create_title)
+                    } else {
+                        stringResource(R.string.segment_edit_title)
                     },
-                    navigationIcon = {
-                        IconButton(onClick = onDismiss) {
-                            Icon(Icons.Default.Close, contentDescription = null)
-                        }
-                    },
-                    actions = {
-                        if (state.mode == EditorMode.Edit) {
-                            IconButton(
-                                onClick = { showDeleteConfirmation = true },
-                                enabled = !state.isDeleting && !state.isSaving
-                            ) {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                            }
+                    style = MaterialTheme.typography.titleLarge
+                )
+                
+                Row {
+                    if (state.mode == EditorMode.Edit) {
+                        IconButton(
+                            onClick = { showDeleteConfirmation = true },
+                            enabled = !state.isDeleting && !state.isSaving
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = stringResource(R.string.delete),
+                                tint = MaterialTheme.colorScheme.error
+                            )
                         }
                     }
-                )
-            },
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            bottomBar = {
-                BottomAppBar {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = onDismiss,
-                            modifier = Modifier.weight(1f),
-                            enabled = !state.isSaving && !state.isDeleting
-                        ) {
-                            Text(stringResource(R.string.cancel))
-                        }
-                        
-                        Button(
-                            onClick = { viewModel.saveSegment() },
-                            modifier = Modifier.weight(1f),
-                            enabled = !state.isSaving && 
-                                     !state.isDeleting && 
-                                     state.validationError == null
-                        ) {
-                            if (state.isSaving) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Text(
-                                    if (state.mode == EditorMode.Create) stringResource(R.string.create) else stringResource(R.string.save)
-                                )
-                            }
-                        }
+                    
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            Icons.Default.Close, 
+                            contentDescription = stringResource(R.string.cancel)
+                        )
                     }
                 }
             }
-        ) { paddingValues ->
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Scrollable content
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Segment type selector
@@ -304,6 +267,44 @@ fun SegmentEditorDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                
+                // Action buttons
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        enabled = !state.isSaving && !state.isDeleting
+                    ) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                    
+                    Button(
+                        onClick = { viewModel.saveSegment() },
+                        modifier = Modifier.weight(1f),
+                        enabled = !state.isSaving && 
+                                 !state.isDeleting && 
+                                 state.validationError == null
+                    ) {
+                        if (state.isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                if (state.mode == EditorMode.Create) stringResource(R.string.create) else stringResource(R.string.save)
+                            )
+                        }
+                    }
+                }
+                
+                // Bottom spacing for the sheet's swipe-to-dismiss gesture area
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
