@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import org.introskipper.segmenteditor.data.model.MediaStream
+import org.introskipper.segmenteditor.data.model.Segment
+import org.introskipper.segmenteditor.data.model.SegmentCreateRequest
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
@@ -346,6 +348,63 @@ class PlayerViewModel @Inject constructor(
     fun clearCapturedTimes() {
         _uiState.update { 
             it.copy(capturedStartTime = null, capturedEndTime = null)
+        }
+    }
+    
+    /**
+     * Updates an existing segment by deleting the old one and creating a new one
+     * This matches the pattern used in SegmentEditorViewModel
+     */
+    fun updateSegment(oldSegment: Segment, newSegment: Segment) {
+        viewModelScope.launch {
+            try {
+                Log.d(TAG, "Updating segment: ${oldSegment.type}")
+                
+                // Delete the old segment
+                val segmentId = oldSegment.id
+                if (segmentId != null) {
+                    val deleteResult = segmentRepository.deleteSegmentResult(
+                        segmentId = segmentId,
+                        itemId = oldSegment.itemId,
+                        segmentType = oldSegment.type
+                    )
+                    
+                    if (deleteResult.isFailure) {
+                        Log.e(TAG, "Failed to delete old segment", deleteResult.exceptionOrNull())
+                        _events.value = PlayerEvent.Error("Failed to update segment")
+                        return@launch
+                    }
+                }
+                
+                // Create the new segment
+                val segmentRequest = SegmentCreateRequest(
+                    itemId = newSegment.itemId,
+                    type = newSegment.type,
+                    startTicks = newSegment.startTicks,
+                    endTicks = newSegment.endTicks
+                )
+                
+                val createResult = segmentRepository.createSegmentResult(
+                    itemId = newSegment.itemId,
+                    segment = segmentRequest
+                )
+                
+                createResult.fold(
+                    onSuccess = {
+                        Log.d(TAG, "Segment updated successfully")
+                        // Refresh segments to get the latest state
+                        refreshSegments()
+                        _events.value = PlayerEvent.SegmentUpdated
+                    },
+                    onFailure = { error ->
+                        Log.e(TAG, "Failed to create updated segment", error)
+                        _events.value = PlayerEvent.Error("Failed to save changes: ${error.message}")
+                    }
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception updating segment", e)
+                _events.value = PlayerEvent.Error("Error updating segment: ${e.message}")
+            }
         }
     }
     

@@ -34,6 +34,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -64,6 +67,7 @@ import org.introskipper.segmenteditor.ui.component.VideoPlayerWithPreview
 import org.introskipper.segmenteditor.ui.component.segment.SegmentEditorDialog
 import org.introskipper.segmenteditor.ui.navigation.Screen
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
+import org.introskipper.segmenteditor.ui.state.PlayerEvent
 import org.introskipper.segmenteditor.ui.viewmodel.PlayerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -107,6 +111,31 @@ fun PlayerScreen(
     var showSegmentEditor by remember(itemId) { mutableStateOf(false) }
     var editingSegment by remember(itemId) { mutableStateOf<Segment?>(null) }
     var activeSegmentIndex by remember(itemId) { mutableStateOf(0) }
+    
+    // Snackbar for showing feedback
+    val snackbarHostState = remember { SnackbarHostState() }
+    val events by viewModel.events.collectAsState()
+    
+    // Handle events (errors, success messages)
+    LaunchedEffect(events) {
+        when (val event = events) {
+            is PlayerEvent.Error -> {
+                snackbarHostState.showSnackbar(
+                    message = event.message,
+                    duration = SnackbarDuration.Long
+                )
+                viewModel.clearEvent()
+            }
+            is PlayerEvent.SegmentUpdated -> {
+                snackbarHostState.showSnackbar(
+                    message = "Segment updated successfully",
+                    duration = SnackbarDuration.Short
+                )
+                viewModel.clearEvent()
+            }
+            else -> {}
+        }
+    }
     
     // Load media item when itemId changes
     LaunchedEffect(itemId) {
@@ -171,6 +200,9 @@ fun PlayerScreen(
                     }
                 )
             }
+        },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
         }
     ) { paddingValues ->
         if (uiState.isLoading) {
@@ -404,8 +436,8 @@ private fun PlayerContent(
                             isActive = index == activeSegmentIndex,
                             runtimeSeconds = runtimeSeconds,
                             onUpdate = { updatedSegment ->
-                                // For now, trigger the edit dialog for persistence
-                                onEditSegment(updatedSegment)
+                                // Auto-save segment changes
+                                viewModel.updateSegment(segment, updatedSegment)
                             },
                             onDelete = {
                                 // Trigger edit dialog with delete option
