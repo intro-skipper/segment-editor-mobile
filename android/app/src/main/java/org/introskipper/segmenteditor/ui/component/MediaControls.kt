@@ -53,8 +53,8 @@ import org.introskipper.segmenteditor.ui.preview.ScrubPreviewOverlay
 @Composable
 fun MediaControls(
     player: Player?,
-    previewLoader: PreviewLoader? = null,
     modifier: Modifier = Modifier,
+    previewLoader: PreviewLoader? = null,
     onScrubStart: (Long) -> Unit = {},
     onScrubMove: (Long) -> Unit = {},
     onScrubEnd: (Long) -> Unit = {}

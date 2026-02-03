@@ -196,8 +196,8 @@ fun VideoPlayerWithPreview(
         if (useController) {
             MediaControls(
                 player = exoPlayer,
-                previewLoader = previewLoader,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                previewLoader = previewLoader
             )
         }
 
