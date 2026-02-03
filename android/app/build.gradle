@@ -76,14 +76,9 @@ android {
         }
     }
 
-    def commit = providers.exec {
-        commandLine("git", "rev-parse", "--short", "HEAD")
-    }.standardOutput.asText.get().trim()
-    def archivesBaseName = "${rootProject.name}-${commit}"
-
     applicationVariants.configureEach { variant ->
         variant.outputs.each { output ->
-            output.outputFileName = archivesBaseName + "-${output.baseName}.apk"
+            output.outputFileName = "${rootProject.name}-${commit}-${output.baseName}.apk"
         }
     }
 }
