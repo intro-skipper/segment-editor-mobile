@@ -1,6 +1,5 @@
 package org.introskipper.segmenteditor.ui.component
 
-import android.view.ViewGroup
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -13,9 +12,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import androidx.media3.common.C
 import androidx.media3.common.C.TRACK_TYPE_AUDIO
@@ -27,8 +26,7 @@ import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
-import androidx.media3.ui.PlayerView
-import androidx.media3.ui.TimeBar
+import androidx.media3.ui.compose.ContentFrame
 import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,8 +38,9 @@ import org.introskipper.segmenteditor.ui.preview.ScrubPreviewOverlay
 private const val MIN_POSITION_TO_RESTORE_MS = 1000L
 
 /**
- * Enhanced VideoPlayer with scrub preview support
+ * Enhanced VideoPlayer with scrub preview support using Media3 Compose
  * Shows thumbnail previews when dragging the video timeline
+ * Uses ContentFrame from media3-ui-compose instead of AndroidView
  */
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
@@ -55,8 +54,6 @@ fun VideoPlayerWithPreview(
     onTracksChanged: (Tracks) -> Unit = {}
 ) {
     val context = LocalContext.current
-    var scrubPosition by remember { mutableStateOf(0L) }
-    var isScrubbing by remember { mutableStateOf(false) }
     
     // Create ExoPlayer instance once - don't recreate on track changes
     val trackSelector = remember { DefaultTrackSelector(context) }
@@ -189,115 +186,27 @@ fun VideoPlayerWithPreview(
     }
     
     Box(modifier = modifier.fillMaxSize()) {
-        // Video player
-        AndroidView(
-            factory = { ctx ->
-                PlayerView(ctx).apply {
-                    this.player = exoPlayer
-                    this.useController = useController
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                    setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
-                    
-                    
-                    // Hook into the TimeBar to detect scrubbing
-                    // Note: This depends on media3 library's internal view structure
-                    // The exo_progress ID may not exist in custom layouts or future versions
-                    val layoutListener = object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
-                        override fun onGlobalLayout() {
-                            // Remove listener to avoid multiple calls and prevent memory leaks
-                            if (viewTreeObserver.isAlive) {
-                                viewTreeObserver.removeOnGlobalLayoutListener(this)
-                            }
-                            
-                            // Check if view is still attached
-                            if (!isAttachedToWindow) {
-                                return
-                            }
-                            
-                            // Now the view hierarchy is fully laid out
-                            val timeBarView = this@apply.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_progress)
-                            if (timeBarView is TimeBar) {
-                                android.util.Log.d("VideoPlayerWithPreview", "TimeBar found, attaching scrub listener")
-                                timeBarView.addListener(object : TimeBar.OnScrubListener {
-                                    override fun onScrubStart(timeBar: TimeBar, position: Long) {
-                                        android.util.Log.d("VideoPlayerWithPreview", "Scrub started at position: $position")
-                                        // Get player from PlayerView instead of capturing from closure
-                                        val currentPlayer = this@apply.player
-                                        if (currentPlayer != null) {
-                                            currentPlayer.playWhenReady = false
-                                        } else {
-                                            android.util.Log.w("VideoPlayerWithPreview", "Player is null during scrub start")
-                                        }
-                                        isScrubbing = true
-                                        scrubPosition = position
-                                        
-                                        // Preload adjacent previews for smoother scrubbing
-                                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-                                            previewLoader?.preloadPreviews(position, count = 3)
-                                        }
-                                    }
-                                    
-                                    override fun onScrubMove(timeBar: TimeBar, position: Long) {
-                                        android.util.Log.d("VideoPlayerWithPreview", "Scrub moved to position: $position")
-                                        // Get player from PlayerView instead of capturing from closure
-                                        val currentPlayer = this@apply.player
-                                        if (currentPlayer != null) {
-                                            currentPlayer.playWhenReady = false
-                                        } else {
-                                            android.util.Log.w("VideoPlayerWithPreview", "Player is null during scrub move")
-                                        }
-                                        scrubPosition = position
-                                    }
-                                    
-                                    override fun onScrubStop(timeBar: TimeBar, position: Long, canceled: Boolean) {
-                                        android.util.Log.d("VideoPlayerWithPreview", "Scrub stopped at position: $position")
-                                        isScrubbing = false
-                                        scrubPosition = position
-                                        // Get player from PlayerView instead of capturing from closure
-                                        val currentPlayer = this@apply.player
-                                        if (currentPlayer != null) {
-                                            currentPlayer.playWhenReady = true
-                                        } else {
-                                            android.util.Log.w("VideoPlayerWithPreview", "Player is null during scrub stop")
-                                        }
-                                    }
-                                })
-                            } else {
-                                // TimeBar not found - preview scrubbing won't work but video playback will
-                                android.util.Log.w("VideoPlayerWithPreview", "TimeBar (exo_progress) not found in PlayerView. Found: ${timeBarView?.javaClass?.name}")
-                            }
-                        }
-                    }
-                    viewTreeObserver.addOnGlobalLayoutListener(layoutListener)
-                }
-            },
+        // Video player using Media3 Compose ContentFrame
+        ContentFrame(
+            player = exoPlayer,
+            contentScale = ContentScale.Fit,
             modifier = Modifier.fillMaxSize()
         )
+        
+        // Media controls overlay with scrubbing preview support
+        if (useController) {
+            MediaControls(
+                player = exoPlayer,
+                modifier = Modifier.fillMaxSize(),
+                previewLoader = previewLoader
+            )
+        }
 
         SideEffect {
             CoroutineScope(Dispatchers.IO).launch {
                 // Load initial preview and preload adjacent ones
                 previewLoader?.loadPreview(0)
                 previewLoader?.preloadPreviews(0, count = 3)
-            }
-        }
-        
-        // Preview overlay (shown when scrubbing)
-        if (isScrubbing) {
-            Box(
-                modifier = Modifier
-                    .align(androidx.compose.ui.Alignment.TopCenter)
-                    .padding(top = 16.dp)
-                    .zIndex(10f)
-            ) {
-                ScrubPreviewOverlay(
-                    previewLoader = previewLoader,
-                    positionMs = scrubPosition,
-                    isVisible = true
-                )
             }
         }
     }
