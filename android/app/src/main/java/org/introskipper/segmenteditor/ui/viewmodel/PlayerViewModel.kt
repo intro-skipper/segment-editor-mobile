@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.C
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -74,8 +75,8 @@ class PlayerViewModel @Inject constructor(
                             )
                         }
                         
-                        // Extract audio and subtitle tracks
-                        extractTracks(mediaItem.mediaStreams)
+                        // Extract all available tracks from Jellyfin metadata
+                        extractTracksFromMediaStreams(mediaItem.mediaStreams)
                         
                         // Load segments
                         loadSegments(itemId)
@@ -127,14 +128,25 @@ class PlayerViewModel @Inject constructor(
         }
     }
     
-    private fun extractTracks(mediaStreams: List<MediaStream>?) {
-        if (mediaStreams == null) return
+    private fun buildTrackTitle(type: String, language: String?, codec: String?): String {
+        return buildString {
+            append(type)
+            if (language != null) append(" - $language")
+            if (codec != null) append(" ($codec)")
+        }
+    }
+    
+    private fun extractTracksFromMediaStreams(mediaStreams: List<MediaStream>?) {
+        if (mediaStreams == null) {
+            Log.d(TAG, "No media streams available")
+            return
+        }
         
         val audioTracks = mediaStreams
             .filter { it.type == "Audio" }
-            .mapIndexed { idx, stream ->
+            .map { stream ->
                 TrackInfo(
-                    index = idx,  // Use accumulated index (position in filtered list)
+                    index = stream.index,  // Use Jellyfin stream index
                     language = stream.language,
                     displayTitle = stream.displayTitle ?: buildTrackTitle("Audio", stream.language, stream.codec),
                     codec = stream.codec,
@@ -144,9 +156,9 @@ class PlayerViewModel @Inject constructor(
         
         val subtitleTracks = mediaStreams
             .filter { it.type == "Subtitle" }
-            .mapIndexed { idx, stream ->
+            .map { stream ->
                 TrackInfo(
-                    index = idx,  // Use accumulated index (position in filtered list)
+                    index = stream.index,  // Use Jellyfin stream index
                     language = stream.language,
                     displayTitle = stream.displayTitle ?: buildTrackTitle("Subtitle", stream.language, stream.codec),
                     codec = stream.codec,
@@ -154,13 +166,21 @@ class PlayerViewModel @Inject constructor(
                 )
             }
         
-        // Find the default track index or use the first track (index 0) if tracks exist
+        // Find the default track index or use the first track if tracks exist
         val defaultAudioIndex = if (audioTracks.isEmpty()) {
             null
         } else {
-            audioTracks.indexOfFirst { it.isDefault }.takeIf { it >= 0 } ?: 0
+            audioTracks.firstOrNull { it.isDefault }?.index ?: audioTracks.firstOrNull()?.index
         }
-        val defaultSubtitleIndex = subtitleTracks.indexOfFirst { it.isDefault }.takeIf { it >= 0 }
+        val defaultSubtitleIndex = subtitleTracks.firstOrNull { it.isDefault }?.index
+        
+        Log.d(TAG, "Extracted from Jellyfin: ${audioTracks.size} audio tracks, ${subtitleTracks.size} subtitle tracks")
+        audioTracks.forEach { track ->
+            Log.d(TAG, "Audio track: index=${track.index}, title=${track.displayTitle}, default=${track.isDefault}")
+        }
+        subtitleTracks.forEach { track ->
+            Log.d(TAG, "Subtitle track: index=${track.index}, title=${track.displayTitle}, default=${track.isDefault}")
+        }
         
         _uiState.update { 
             it.copy(
@@ -172,15 +192,16 @@ class PlayerViewModel @Inject constructor(
         }
     }
     
-    private fun buildTrackTitle(type: String, language: String?, codec: String?): String {
-        return buildString {
-            append(type)
-            if (language != null) append(" - $language")
-            if (codec != null) append(" ($codec)")
-        }
+    fun updateTracksFromPlayer(tracks: androidx.media3.common.Tracks) {
+        // This method is kept for debugging purposes only
+        // Track selection is now handled by regenerating the stream URL with correct indices
+        val exoAudioCount = tracks.groups.count { it.type == C.TRACK_TYPE_AUDIO }
+        val exoSubtitleCount = tracks.groups.count { it.type == C.TRACK_TYPE_TEXT }
+        
+        Log.d(TAG, "ExoPlayer loaded with $exoAudioCount audio track groups, $exoSubtitleCount subtitle track groups")
     }
     
-    fun getStreamUrl(useHls: Boolean = true): String? {
+    fun getStreamUrl(useHls: Boolean = true, audioStreamIndex: Int? = null, subtitleStreamIndex: Int? = null): String? {
         val mediaItem = _uiState.value.mediaItem ?: return null
         val serverUrl = securePreferences.getServerUrl() ?: return null
         val apiKey = securePreferences.getApiKey() ?: return null
@@ -199,6 +220,16 @@ class PlayerViewModel @Inject constructor(
                 append("&SegmentContainer=ts")
                 append("&MinSegments=2")
                 append("&BreakOnNonKeyFrames=true")
+                
+                // Add audio stream index if specified
+                if (audioStreamIndex != null) {
+                    append("&AudioStreamIndex=$audioStreamIndex")
+                }
+                
+                // Add subtitle stream index if specified
+                if (subtitleStreamIndex != null) {
+                    append("&SubtitleStreamIndex=$subtitleStreamIndex")
+                }
             }
         } else {
             // Direct play fallback

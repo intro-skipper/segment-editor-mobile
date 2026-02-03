@@ -51,8 +51,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.media3.common.C
-import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
 import kotlinx.coroutines.delay
@@ -79,8 +77,16 @@ fun PlayerScreen(
     val context = LocalContext.current
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     
+    // Stream URL that updates when tracks change
+    val streamUrl = remember(uiState.selectedAudioTrack, uiState.selectedSubtitleTrack) {
+        viewModel.getStreamUrl(
+            useHls = true,
+            audioStreamIndex = uiState.selectedAudioTrack,
+            subtitleStreamIndex = uiState.selectedSubtitleTrack
+        )
+    }
+    
     // Preview loader
-    val streamUrl = viewModel.getStreamUrl(useHls = true)
     val previewLoader = remember {
         viewModel.createPreviewLoader(itemId)
     }
@@ -140,94 +146,6 @@ fun PlayerScreen(
     // Apply playback speed
     LaunchedEffect(uiState.playbackSpeed) {
         player?.setPlaybackSpeed(uiState.playbackSpeed)
-    }
-    
-    // Apply audio track selection
-    LaunchedEffect(uiState.selectedAudioTrack) {
-        player?.let { exoPlayer ->
-            // Save playback state
-            val wasPlaying = exoPlayer.playWhenReady
-
-            // For audio tracks, if null is passed, select the first available track (index 0)
-            // This ensures audio is always enabled. Unlike subtitles, we don't want to disable audio.
-            // Note: If no audio tracks exist, the fallback logic below will handle it gracefully.
-            val targetIndex = uiState.selectedAudioTrack ?: 0
-
-            // Select specific audio track by accumulating indices across all groups
-            val currentTracks = exoPlayer.currentTracks
-            val audioGroups = currentTracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
-
-            var accumulatedIndex = 0
-
-            for (group in audioGroups) {
-                for (trackIndexInGroup in 0 until group.length) {
-                    if (accumulatedIndex == targetIndex) {
-                        exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters.buildUpon()
-                            .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
-                            .setOverrideForType(
-                                TrackSelectionOverride(group.mediaTrackGroup, trackIndexInGroup)
-                            )
-                            .build()
-
-                        // Restore playback state and return
-                        exoPlayer.playWhenReady = wasPlaying
-                        return@LaunchedEffect
-                    }
-                    accumulatedIndex++
-                }
-            }
-
-            // If we didn't find the track, clear overrides and let ExoPlayer choose
-            exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters.buildUpon()
-                .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
-                .build()
-
-            // Restore playback state
-            exoPlayer.playWhenReady = wasPlaying
-        }
-    }
-    
-    // Apply subtitle track selection
-    LaunchedEffect(uiState.selectedSubtitleTrack) {
-        player?.let { exoPlayer ->
-            // Save playback state
-            val wasPlaying = exoPlayer.playWhenReady
-            val trackIndex = uiState.selectedSubtitleTrack
-
-            if (trackIndex == null) {
-                // Disable subtitles
-                exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters.buildUpon()
-                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
-                    .build()
-            } else {
-                // Select specific subtitle track by accumulating indices across all groups
-                val currentTracks = exoPlayer.currentTracks
-                val textGroups = currentTracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
-
-                var accumulatedIndex = 0
-
-                for (group in textGroups) {
-                    for (trackIndexInGroup in 0 until group.length) {
-                        if (accumulatedIndex == trackIndex) {
-                            exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters.buildUpon()
-                                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-                                .setOverrideForType(
-                                    TrackSelectionOverride(group.mediaTrackGroup, trackIndexInGroup)
-                                )
-                                .build()
-
-                            // Restore playback state and return
-                            exoPlayer.playWhenReady = wasPlaying
-                            return@LaunchedEffect
-                        }
-                        accumulatedIndex++
-                    }
-                }
-            }
-
-            // Restore playback state
-            exoPlayer.playWhenReady = wasPlaying
-        }
     }
     
     Scaffold(
