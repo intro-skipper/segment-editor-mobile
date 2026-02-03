@@ -7,6 +7,9 @@ on:
       - '**/README.md'
       - '.github/ISSUE_TEMPLATE/**'
       - 'assets/**'
+  pull_request:
+    types:
+      - ready_for_review
 
 permissions:
   actions: write
@@ -88,7 +91,7 @@ jobs:
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         automatic_release_tag: ${{ env.GIT_HASH }}
-        prerelease: ${{ env.GIT_BRANCH != 'main' }}
+        prerelease: ${{ github.event_name == 'pull_request' }}
         title: Segment Editor ${{ env.GIT_HASH }}
         files: |
           ${{steps.sign_main.outputs.signedReleaseFile}}
