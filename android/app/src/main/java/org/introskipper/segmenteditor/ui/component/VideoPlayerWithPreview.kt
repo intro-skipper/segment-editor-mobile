@@ -122,8 +122,9 @@ fun VideoPlayerWithPreview(
             
             override fun onEvents(player: Player, events: Player.Events) {
                 // Update position on relevant player events to ensure we always have current position
-                // This ensures position is captured before streamUrl changes trigger new player
-                // Filter events to reduce unnecessary state updates
+                // This is needed because onPositionDiscontinuity only fires on seeks (not during normal playback)
+                // and onPlayWhenReadyChanged only fires on play/pause changes
+                // By updating on these events, we capture position during continuous playback
                 if (events.containsAny(
                     Player.EVENT_POSITION_DISCONTINUITY,
                     Player.EVENT_TIMELINE_CHANGED,
@@ -186,7 +187,8 @@ fun VideoPlayerWithPreview(
     
     Box(modifier = modifier.fillMaxSize()) {
         // Keep reference to PlayerView to explicitly update when player changes
-        var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
+        // Use simple var instead of mutableStateOf since this doesn't need to trigger recomposition
+        var playerViewRef: PlayerView? = null
         
         // Explicitly update PlayerView.player when exoPlayer changes
         // This ensures the new player is set even if AndroidView update block doesn't trigger
