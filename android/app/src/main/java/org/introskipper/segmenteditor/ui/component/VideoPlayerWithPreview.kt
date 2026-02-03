@@ -80,7 +80,6 @@ fun VideoPlayerWithPreview(
                     .setRendererDisabled(TRACK_TYPE_VIDEO, false)
                     .setRendererDisabled(TRACK_TYPE_AUDIO, false)
                     .setRendererDisabled(TRACK_TYPE_TEXT, false)
-                    .setPreferredAudioLanguage(Locale.getDefault().language)
                     .setExceedRendererCapabilitiesIfNecessary(true))
             })
             .build().apply {
