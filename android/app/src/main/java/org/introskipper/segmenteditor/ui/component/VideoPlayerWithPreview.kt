@@ -38,6 +38,9 @@ import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.preview.ScrubPreviewOverlay
 import java.util.Locale
 
+// Minimum position to restore when reloading stream (avoids restoring during initial load)
+private const val MIN_POSITION_TO_RESTORE_MS = 1000L
+
 /**
  * Enhanced VideoPlayer with scrub preview support
  * Shows thumbnail previews when dragging the video timeline
@@ -89,7 +92,8 @@ fun VideoPlayerWithPreview(
                 setMediaItem(MediaItem.fromUri(streamUrl))
                 
                 // Seek to saved position before preparing if we're reloading
-                if (positionToRestore > 1000) { // Only restore if >1 second (avoid initial load)
+                // MIN_POSITION_TO_RESTORE_MS threshold avoids restoring during initial load
+                if (positionToRestore > MIN_POSITION_TO_RESTORE_MS) {
                     seekTo(positionToRestore)
                 }
                 
@@ -98,14 +102,29 @@ fun VideoPlayerWithPreview(
             }
     }
     
-    // Update lastKnown values continuously by listening to player events
-    LaunchedEffect(exoPlayer) {
-        while (true) {
-            delay(500)
-            exoPlayer?.let { player ->
-                lastKnownPosition = player.currentPosition
-                lastKnownPlayWhenReady = player.playWhenReady
+    // Update lastKnown values using player listener callbacks instead of polling
+    DisposableEffect(exoPlayer) {
+        val listener = object : Player.Listener {
+            override fun onPositionDiscontinuity(
+                oldPosition: Player.PositionInfo,
+                newPosition: Player.PositionInfo,
+                reason: Int
+            ) {
+                lastKnownPosition = newPosition.positionMs
             }
+            
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                lastKnownPlayWhenReady = playWhenReady
+            }
+        }
+        
+        exoPlayer.addListener(listener)
+        
+        onDispose {
+            // Save position one last time before player is disposed
+            lastKnownPosition = exoPlayer.currentPosition
+            lastKnownPlayWhenReady = exoPlayer.playWhenReady
+            exoPlayer.removeListener(listener)
         }
     }
     
