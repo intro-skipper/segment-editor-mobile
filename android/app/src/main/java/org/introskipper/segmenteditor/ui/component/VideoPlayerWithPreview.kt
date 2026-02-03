@@ -171,7 +171,6 @@ fun VideoPlayerWithPreview(
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
-                    player = exoPlayer
                     this.useController = useController
                     layoutParams = ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
@@ -233,6 +232,10 @@ fun VideoPlayerWithPreview(
                     }
                     viewTreeObserver.addOnGlobalLayoutListener(layoutListener)
                 }
+            },
+            update = { playerView ->
+                // Update the player when exoPlayer changes (e.g., when stream URL changes for track selection)
+                playerView.player = exoPlayer
             },
             modifier = Modifier.fillMaxSize()
         )
