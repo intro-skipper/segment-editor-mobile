@@ -54,25 +54,24 @@ fun VideoPlayerWithPreview(
     var isScrubbing by remember { mutableStateOf(false) }
     
     val exoPlayer = remember(streamUrl) {
-        val trackSelector = DefaultTrackSelector(context).apply {
-            setParameters(buildUponParameters()
-                .setAllowVideoMixedMimeTypeAdaptiveness(true)
-                .setAllowVideoNonSeamlessAdaptiveness(true)
-                .setSelectUndeterminedTextLanguage(true)
-                .setAllowAudioMixedMimeTypeAdaptiveness(true)
-                .setAllowMultipleAdaptiveSelections(true)
-                .setPreferredTextLanguage(Locale.getDefault().language)
-                .setPreferredTextRoleFlags(C.ROLE_FLAG_SUBTITLE)
-                .setRendererDisabled(TRACK_TYPE_VIDEO, false)
-                .setRendererDisabled(TRACK_TYPE_AUDIO, false)
-                .setRendererDisabled(TRACK_TYPE_TEXT, false)
-                .setMaxVideoSize(1, 1)
-                .setPreferredAudioLanguage(Locale.getDefault().language)
-                .setExceedRendererCapabilitiesIfNecessary(true))
-        }
         ExoPlayer.Builder(context)
             .setRenderersFactory(NextRenderersFactory(context))
-            .setTrackSelector(trackSelector)
+            .setTrackSelector(DefaultTrackSelector(context).apply {
+                setParameters(buildUponParameters()
+                    .setAllowVideoMixedMimeTypeAdaptiveness(true)
+                    .setAllowVideoNonSeamlessAdaptiveness(true)
+                    .setSelectUndeterminedTextLanguage(true)
+                    .setAllowAudioMixedMimeTypeAdaptiveness(true)
+                    .setAllowMultipleAdaptiveSelections(true)
+                    .setPreferredTextLanguage(Locale.getDefault().language)
+                    .setPreferredTextRoleFlags(C.ROLE_FLAG_SUBTITLE)
+                    .setRendererDisabled(TRACK_TYPE_VIDEO, false)
+                    .setRendererDisabled(TRACK_TYPE_AUDIO, false)
+                    .setRendererDisabled(TRACK_TYPE_TEXT, false)
+                    .setMaxVideoSize(1, 1)
+                    .setPreferredAudioLanguage(Locale.getDefault().language)
+                    .setExceedRendererCapabilitiesIfNecessary(true))
+            })
             .build().apply {
                 setMediaItem(MediaItem.fromUri(streamUrl))
                 prepare()
@@ -81,9 +80,6 @@ fun VideoPlayerWithPreview(
     }
     
     DisposableEffect(exoPlayer, previewLoader) {
-        // Track whether initial selections have been applied for this effect instance
-        val initialTracksApplied = java.util.concurrent.atomic.AtomicBoolean(false)
-        
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 onPlaybackStateChanged(
@@ -184,9 +180,6 @@ fun VideoPlayerWithPreview(
                     viewTreeObserver.addOnGlobalLayoutListener(layoutListener)
                 }
             },
-            update = { playerView ->
-
-            },
             modifier = Modifier.fillMaxSize()
         )
 
@@ -215,101 +208,3 @@ fun VideoPlayerWithPreview(
         }
     }
 }
-
-
-@androidx.annotation.OptIn(UnstableApi::class)
-fun ExoPlayer.selectAudioTrack(trackIndex: Int?) {
-
-    // Save playback state
-    val wasPlaying = this.playWhenReady
-
-    // For audio tracks, if null is passed, select the first available track (index 0)
-    // This ensures audio is always enabled. Unlike subtitles, we don't want to disable audio.
-    // Note: If no audio tracks exist, the fallback logic below will handle it gracefully.
-    val targetIndex = trackIndex ?: 0
-
-    // Select specific audio track by accumulating indices across all groups
-    val currentTracks = this.currentTracks
-    val audioGroups = currentTracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
-
-    var accumulatedIndex = 0
-
-    for (group in audioGroups) {
-        for (trackIndexInGroup in 0 until group.length) {
-            if (accumulatedIndex == targetIndex) {
-                trackSelectionParameters = trackSelectionParameters.buildUpon()
-                    .clearOverridesOfType(C.TRACK_TYPE_AUDIO)
-                    .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
-                    .setOverrideForType(
-                        androidx.media3.common.TrackSelectionOverride(
-                            group.mediaTrackGroup,
-                            trackIndexInGroup
-                        )
-                    )
-                    .build()
-
-                // Restore playback state and return
-                this.playWhenReady = wasPlaying
-                return
-            }
-            accumulatedIndex++
-        }
-    }
-
-    // If we didn't find the track, clear overrides and let ExoPlayer choose
-    trackSelectionParameters = trackSelectionParameters.buildUpon()
-        .clearOverridesOfType(C.TRACK_TYPE_AUDIO)
-        .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
-        .build()
-
-    // Restore playback state
-    this.playWhenReady = wasPlaying
-}
-
-@androidx.annotation.OptIn(UnstableApi::class)
-fun ExoPlayer.selectSubtitleTrack(trackIndex: Int?) {
-    val trackSelector = this.trackSelector as? DefaultTrackSelector ?: return
-
-    // Save playback state
-    val wasPlaying = this.playWhenReady
-
-    if (trackIndex == null) {
-        // Disable subtitles
-        trackSelectionParameters = trackSelectionParameters.buildUpon()
-            .clearOverridesOfType(C.TRACK_TYPE_TEXT)
-            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
-            .build()
-    } else {
-        // Select specific subtitle track by accumulating indices across all groups
-        val currentTracks = this.currentTracks
-        val textGroups = currentTracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
-
-        var accumulatedIndex = 0
-
-        for (group in textGroups) {
-            for (trackIndexInGroup in 0 until group.length) {
-                if (accumulatedIndex == trackIndex) {
-                    trackSelectionParameters = trackSelectionParameters.buildUpon()
-                        .clearOverridesOfType(C.TRACK_TYPE_TEXT)
-                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-                        .setOverrideForType(
-                            androidx.media3.common.TrackSelectionOverride(
-                                group.mediaTrackGroup,
-                                trackIndexInGroup
-                            )
-                        )
-                        .build()
-
-                    // Restore playback state and return
-                    this.playWhenReady = wasPlaying
-                    return
-                }
-                accumulatedIndex++
-            }
-        }
-    }
-
-    // Restore playback state
-    this.playWhenReady = wasPlaying
-}
-
