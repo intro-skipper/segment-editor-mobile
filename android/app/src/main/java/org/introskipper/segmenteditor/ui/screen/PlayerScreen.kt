@@ -51,8 +51,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.media3.common.C
-import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
 import kotlinx.coroutines.delay
@@ -79,8 +77,16 @@ fun PlayerScreen(
     val context = LocalContext.current
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     
+    // Stream URL that updates when tracks change
+    val streamUrl = remember(uiState.selectedAudioTrack, uiState.selectedSubtitleTrack) {
+        viewModel.getStreamUrl(
+            useHls = true,
+            audioStreamIndex = uiState.selectedAudioTrack,
+            subtitleStreamIndex = uiState.selectedSubtitleTrack
+        )
+    }
+    
     // Preview loader
-    val streamUrl = viewModel.getStreamUrl(useHls = true)
     val previewLoader = remember {
         viewModel.createPreviewLoader(itemId)
     }
@@ -140,73 +146,6 @@ fun PlayerScreen(
     // Apply playback speed
     LaunchedEffect(uiState.playbackSpeed) {
         player?.setPlaybackSpeed(uiState.playbackSpeed)
-    }
-    
-    // Apply audio track selection
-    LaunchedEffect(uiState.selectedAudioTrack, player) {
-        player?.let { exoPlayer ->
-            val trackIndex = uiState.selectedAudioTrack
-            if (trackIndex == null) return@LaunchedEffect
-            
-            val currentTracks = exoPlayer.currentTracks
-            val audioGroups = currentTracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
-            
-            var accumulatedIndex = 0
-            for (group in audioGroups) {
-                for (trackIndexInGroup in 0 until group.length) {
-                    if (accumulatedIndex == trackIndex) {
-                        exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
-                            .buildUpon()
-                            .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
-                            .clearOverridesOfType(C.TRACK_TYPE_AUDIO)
-                            .setOverrideForType(
-                                TrackSelectionOverride(group.mediaTrackGroup, trackIndexInGroup)
-                            )
-                            .build()
-                        return@LaunchedEffect
-                    }
-                    accumulatedIndex++
-                }
-            }
-        }
-    }
-    
-    // Apply subtitle track selection
-    LaunchedEffect(uiState.selectedSubtitleTrack, player) {
-        player?.let { exoPlayer ->
-            val trackIndex = uiState.selectedSubtitleTrack
-            
-            if (trackIndex == null) {
-                // Disable subtitles
-                exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
-                    .buildUpon()
-                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
-                    .clearOverridesOfType(C.TRACK_TYPE_TEXT)
-                    .build()
-            } else {
-                // Select specific subtitle track
-                val currentTracks = exoPlayer.currentTracks
-                val textGroups = currentTracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
-                
-                var accumulatedIndex = 0
-                for (group in textGroups) {
-                    for (trackIndexInGroup in 0 until group.length) {
-                        if (accumulatedIndex == trackIndex) {
-                            exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
-                                .buildUpon()
-                                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-                                .clearOverridesOfType(C.TRACK_TYPE_TEXT)
-                                .setOverrideForType(
-                                    TrackSelectionOverride(group.mediaTrackGroup, trackIndexInGroup)
-                                )
-                                .build()
-                            return@LaunchedEffect
-                        }
-                        accumulatedIndex++
-                    }
-                }
-            }
-        }
     }
     
     Scaffold(
@@ -385,9 +324,6 @@ private fun PlayerContent(
                     onPlayerReady = onPlayerReady,
                     onPlaybackStateChanged = { isPlaying, currentPos, bufferedPos ->
                         viewModel.updatePlaybackState(isPlaying, currentPos, bufferedPos)
-                    },
-                    onTracksChanged = { tracks ->
-                        viewModel.updateTracksFromPlayer(tracks)
                     }
                 )
             } else {

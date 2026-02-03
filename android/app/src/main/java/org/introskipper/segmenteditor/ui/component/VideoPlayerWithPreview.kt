@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +32,7 @@ import androidx.media3.ui.TimeBar
 import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.preview.ScrubPreviewOverlay
@@ -48,14 +50,23 @@ fun VideoPlayerWithPreview(
     useController: Boolean = true,
     previewLoader: PreviewLoader? = null,
     onPlayerReady: (ExoPlayer) -> Unit = {},
-    onPlaybackStateChanged: (isPlaying: Boolean, currentPosition: Long, bufferedPosition: Long) -> Unit = { _, _, _ -> },
-    onTracksChanged: (Tracks) -> Unit = {}
+    onPlaybackStateChanged: (isPlaying: Boolean, currentPosition: Long, bufferedPosition: Long) -> Unit = { _, _, _ -> }
 ) {
     val context = LocalContext.current
     var scrubPosition by remember { mutableStateOf(0L) }
     var isScrubbing by remember { mutableStateOf(false) }
     
+    // Track the playback position across stream URL changes
+    var lastKnownPosition by remember { mutableStateOf(0L) }
+    var lastKnownPlayWhenReady by remember { mutableStateOf(true) }
+    
     val exoPlayer = remember(streamUrl) {
+        // Get the current position from any existing player before creating new one
+        val positionToRestore = lastKnownPosition
+        val playWhenReadyToRestore = lastKnownPlayWhenReady
+        
+        android.util.Log.d("VideoPlayerWithPreview", "Creating new player with URL: $streamUrl, restoring position: $positionToRestore")
+        
         ExoPlayer.Builder(context)
             .setRenderersFactory(NextRenderersFactory(context))
             .setTrackSelector(DefaultTrackSelector(context).apply {
@@ -76,9 +87,26 @@ fun VideoPlayerWithPreview(
             })
             .build().apply {
                 setMediaItem(MediaItem.fromUri(streamUrl))
+                
+                // Seek to saved position before preparing if we're reloading
+                if (positionToRestore > 1000) { // Only restore if >1 second (avoid initial load)
+                    seekTo(positionToRestore)
+                }
+                
                 prepare()
-                playWhenReady = true
+                playWhenReady = playWhenReadyToRestore
             }
+    }
+    
+    // Update lastKnown values continuously by listening to player events
+    LaunchedEffect(exoPlayer) {
+        while (true) {
+            delay(500)
+            exoPlayer?.let { player ->
+                lastKnownPosition = player.currentPosition
+                lastKnownPlayWhenReady = player.playWhenReady
+            }
+        }
     }
     
     DisposableEffect(exoPlayer, previewLoader) {
@@ -104,7 +132,8 @@ fun VideoPlayerWithPreview(
             }
 
             override fun onTracksChanged(tracks: Tracks) {
-                onTracksChanged(tracks)
+                // Track selection is now handled by regenerating the stream URL
+                // No need to process track changes here
             }
         }
         

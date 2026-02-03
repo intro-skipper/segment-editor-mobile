@@ -75,7 +75,8 @@ class PlayerViewModel @Inject constructor(
                             )
                         }
                         
-                        // Tracks will be loaded via onTracksChanged callback from player
+                        // Extract all available tracks from Jellyfin metadata
+                        extractTracksFromMediaStreams(mediaItem.mediaStreams)
                         
                         // Load segments
                         loadSegments(itemId)
@@ -135,96 +136,72 @@ class PlayerViewModel @Inject constructor(
         }
     }
     
-    fun updateTracksFromPlayer(tracks: androidx.media3.common.Tracks) {
-        val audioTracks = mutableListOf<TrackInfo>()
-        val subtitleTracks = mutableListOf<TrackInfo>()
+    private fun extractTracksFromMediaStreams(mediaStreams: List<MediaStream>?) {
+        if (mediaStreams == null) {
+            Log.d(TAG, "No media streams available")
+            return
+        }
         
-        tracks.groups.forEachIndexed { groupIndex, trackGroup ->
-            when (trackGroup.type) {
-                C.TRACK_TYPE_AUDIO -> {
-                    // Add each track in the group
-                    for (trackIndex in 0 until trackGroup.length) {
-                        val format = trackGroup.getTrackFormat(trackIndex)
-                        audioTracks.add(
-                            TrackInfo(
-                                index = audioTracks.size,  // Use accumulated index
-                                language = format.language,
-                                displayTitle = buildTrackTitle(
-                                    "Audio",
-                                    format.language,
-                                    format.codecs
-                                ),
-                                codec = format.codecs,
-                                isDefault = false // ExoPlayer doesn't expose default flag easily
-                            )
-                        )
-                    }
-                }
-                C.TRACK_TYPE_TEXT -> {
-                    // Add each track in the group
-                    for (trackIndex in 0 until trackGroup.length) {
-                        val format = trackGroup.getTrackFormat(trackIndex)
-                        subtitleTracks.add(
-                            TrackInfo(
-                                index = subtitleTracks.size,  // Use accumulated index
-                                language = format.language,
-                                displayTitle = buildTrackTitle(
-                                    "Subtitle",
-                                    format.language,
-                                    format.codecs
-                                ),
-                                codec = format.codecs,
-                                isDefault = false
-                            )
-                        )
-                    }
-                }
+        val audioTracks = mediaStreams
+            .filter { it.type == "Audio" }
+            .map { stream ->
+                TrackInfo(
+                    index = stream.index,  // Use Jellyfin stream index
+                    language = stream.language,
+                    displayTitle = stream.displayTitle ?: buildTrackTitle("Audio", stream.language, stream.codec),
+                    codec = stream.codec,
+                    isDefault = stream.isDefault
+                )
             }
-        }
         
-        // Find currently selected tracks
-        var selectedAudioIndex: Int? = null
-        var selectedSubtitleIndex: Int? = null
-        var audioAccumIndex = 0
-        var textAccumIndex = 0
-        
-        tracks.groups.forEach { trackGroup ->
-            when (trackGroup.type) {
-                C.TRACK_TYPE_AUDIO -> {
-                    for (trackIndex in 0 until trackGroup.length) {
-                        if (trackGroup.isTrackSelected(trackIndex)) {
-                            selectedAudioIndex = audioAccumIndex
-                        }
-                        audioAccumIndex++
-                    }
-                }
-                C.TRACK_TYPE_TEXT -> {
-                    for (trackIndex in 0 until trackGroup.length) {
-                        if (trackGroup.isTrackSelected(trackIndex)) {
-                            selectedSubtitleIndex = textAccumIndex
-                        }
-                        textAccumIndex++
-                    }
-                }
+        val subtitleTracks = mediaStreams
+            .filter { it.type == "Subtitle" }
+            .map { stream ->
+                TrackInfo(
+                    index = stream.index,  // Use Jellyfin stream index
+                    language = stream.language,
+                    displayTitle = stream.displayTitle ?: buildTrackTitle("Subtitle", stream.language, stream.codec),
+                    codec = stream.codec,
+                    isDefault = stream.isDefault
+                )
             }
+        
+        // Find the default track index or use the first track if tracks exist
+        val defaultAudioIndex = if (audioTracks.isEmpty()) {
+            null
+        } else {
+            audioTracks.firstOrNull { it.isDefault }?.index ?: audioTracks.firstOrNull()?.index
+        }
+        val defaultSubtitleIndex = subtitleTracks.firstOrNull { it.isDefault }?.index
+        
+        Log.d(TAG, "Extracted from Jellyfin: ${audioTracks.size} audio tracks, ${subtitleTracks.size} subtitle tracks")
+        audioTracks.forEach { track ->
+            Log.d(TAG, "Audio track: index=${track.index}, title=${track.displayTitle}, default=${track.isDefault}")
+        }
+        subtitleTracks.forEach { track ->
+            Log.d(TAG, "Subtitle track: index=${track.index}, title=${track.displayTitle}, default=${track.isDefault}")
         }
         
-        // Default to first audio track if none selected and tracks exist
-        if (selectedAudioIndex == null && audioTracks.isNotEmpty()) {
-            selectedAudioIndex = 0
-        }
-        
-        _uiState.update {
+        _uiState.update { 
             it.copy(
                 audioTracks = audioTracks,
                 subtitleTracks = subtitleTracks,
-                selectedAudioTrack = selectedAudioIndex,
-                selectedSubtitleTrack = selectedSubtitleIndex
+                selectedAudioTrack = defaultAudioIndex,
+                selectedSubtitleTrack = defaultSubtitleIndex
             )
         }
     }
     
-    fun getStreamUrl(useHls: Boolean = true): String? {
+    fun updateTracksFromPlayer(tracks: androidx.media3.common.Tracks) {
+        // This method is kept for debugging purposes only
+        // Track selection is now handled by regenerating the stream URL with correct indices
+        val exoAudioCount = tracks.groups.count { it.type == C.TRACK_TYPE_AUDIO }
+        val exoSubtitleCount = tracks.groups.count { it.type == C.TRACK_TYPE_TEXT }
+        
+        Log.d(TAG, "ExoPlayer loaded with $exoAudioCount audio track groups, $exoSubtitleCount subtitle track groups")
+    }
+    
+    fun getStreamUrl(useHls: Boolean = true, audioStreamIndex: Int? = null, subtitleStreamIndex: Int? = null): String? {
         val mediaItem = _uiState.value.mediaItem ?: return null
         val serverUrl = securePreferences.getServerUrl() ?: return null
         val apiKey = securePreferences.getApiKey() ?: return null
@@ -243,6 +220,16 @@ class PlayerViewModel @Inject constructor(
                 append("&SegmentContainer=ts")
                 append("&MinSegments=2")
                 append("&BreakOnNonKeyFrames=true")
+                
+                // Add audio stream index if specified
+                if (audioStreamIndex != null) {
+                    append("&AudioStreamIndex=$audioStreamIndex")
+                }
+                
+                // Add subtitle stream index if specified
+                if (subtitleStreamIndex != null) {
+                    append("&SubtitleStreamIndex=$subtitleStreamIndex")
+                }
             }
         } else {
             // Direct play fallback
