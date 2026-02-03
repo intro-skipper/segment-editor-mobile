@@ -109,12 +109,13 @@ fun SegmentEditorDialog(
     // Handle save success
     LaunchedEffect(state.saveSuccess) {
         if (state.saveSuccess) {
+            val message = when {
+                state.isDeleting -> context.getString(R.string.segment_deleted)
+                state.mode == EditorMode.Create -> context.getString(R.string.segment_created)
+                else -> context.getString(R.string.segment_updated)
+            }
             snackbarHostState.showSnackbar(
-                message = if (state.mode == EditorMode.Create) {
-                    context.getString(R.string.segment_created)
-                } else {
-                    context.getString(R.string.segment_updated)
-                },
+                message = message,
                 duration = SnackbarDuration.Short
             )
             onSaved()

@@ -21,12 +21,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Audiotrack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -35,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -107,6 +111,10 @@ fun PlayerScreen(
     var showSegmentEditor by remember(itemId) { mutableStateOf(false) }
     var editingSegment by remember(itemId) { mutableStateOf<Segment?>(null) }
     var activeSegmentIndex by remember(itemId) { mutableStateOf(0) }
+    
+    // Delete confirmation state
+    var showDeleteConfirmation by remember(itemId) { mutableStateOf(false) }
+    var segmentToDelete by remember(itemId) { mutableStateOf<Segment?>(null) }
     
     // Load media item when itemId changes
     LaunchedEffect(itemId) {
@@ -222,6 +230,10 @@ fun PlayerScreen(
                     editingSegment = segment
                     showSegmentEditor = true
                 },
+                onDeleteSegment = { segment ->
+                    segmentToDelete = segment
+                    showDeleteConfirmation = true
+                },
                 onSetActiveSegment = { index ->
                     activeSegmentIndex = index
                 },
@@ -289,6 +301,45 @@ fun PlayerScreen(
             }
         )
     }
+    
+    // Delete confirmation dialog
+    if (showDeleteConfirmation && segmentToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { 
+                showDeleteConfirmation = false
+                segmentToDelete = null
+            },
+            icon = { Icon(Icons.Default.Delete, contentDescription = null) },
+            title = { Text(stringResource(R.string.segment_delete_title)) },
+            text = { 
+                Text(stringResource(R.string.segment_delete_message, segmentToDelete?.type ?: ""))
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        segmentToDelete?.let { segment ->
+                            viewModel.deleteSegment(segment)
+                            showDeleteConfirmation = false
+                            segmentToDelete = null
+                        }
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { 
+                    showDeleteConfirmation = false
+                    segmentToDelete = null
+                }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -304,6 +355,7 @@ private fun PlayerContent(
     onSubtitleTracksClick: () -> Unit,
     onCreateSegment: () -> Unit,
     onEditSegment: (Segment) -> Unit,
+    onDeleteSegment: (Segment) -> Unit,
     onSetActiveSegment: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -404,12 +456,12 @@ private fun PlayerContent(
                             isActive = index == activeSegmentIndex,
                             runtimeSeconds = runtimeSeconds,
                             onUpdate = { updatedSegment ->
-                                // For now, trigger the edit dialog for persistence
+                                // Trigger the edit dialog for persistence
                                 onEditSegment(updatedSegment)
                             },
                             onDelete = {
-                                // Trigger edit dialog with delete option
-                                onEditSegment(segment)
+                                // Trigger delete confirmation directly
+                                onDeleteSegment(segment)
                             },
                             onSeekTo = { timeSeconds ->
                                 player?.seekTo((timeSeconds * 1000).toLong())
