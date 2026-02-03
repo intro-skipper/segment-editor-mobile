@@ -104,7 +104,8 @@ fun VideoPlayerWithPreview(
             }
     }
     
-    // Update lastKnown values using player listener callbacks instead of polling
+    // Update lastKnown values using player listener callbacks
+    // We need to track position continuously so it's available when streamUrl changes
     DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
             override fun onPositionDiscontinuity(
@@ -117,6 +118,22 @@ fun VideoPlayerWithPreview(
             
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                 lastKnownPlayWhenReady = playWhenReady
+            }
+            
+            override fun onEvents(player: Player, events: Player.Events) {
+                // Update position on relevant player events to ensure we always have current position
+                // This is needed because onPositionDiscontinuity only fires on seeks (not during normal playback)
+                // and onPlayWhenReadyChanged only fires on play/pause changes
+                // By updating on these events, we capture position during continuous playback
+                if (events.containsAny(
+                    Player.EVENT_POSITION_DISCONTINUITY,
+                    Player.EVENT_TIMELINE_CHANGED,
+                    Player.EVENT_IS_PLAYING_CHANGED,
+                    Player.EVENT_PLAYBACK_STATE_CHANGED
+                )) {
+                    lastKnownPosition = player.currentPosition
+                    lastKnownPlayWhenReady = player.playWhenReady
+                }
             }
         }
         
@@ -169,10 +186,24 @@ fun VideoPlayerWithPreview(
     }
     
     Box(modifier = modifier.fillMaxSize()) {
+        // Keep reference to PlayerView to explicitly update when player changes
+        // Use simple var instead of mutableStateOf since this doesn't need to trigger recomposition
+        var playerViewRef: PlayerView? = null
+        
+        // Explicitly update PlayerView.player when exoPlayer changes
+        // This ensures the new player is set even if AndroidView update block doesn't trigger
+        LaunchedEffect(exoPlayer) {
+            playerViewRef?.let { view ->
+                android.util.Log.d("VideoPlayerWithPreview", "LaunchedEffect: Explicitly setting new player to PlayerView")
+                view.player = exoPlayer
+            }
+        }
+        
         // Video player
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
+                    playerViewRef = this
                     this.useController = useController
                     layoutParams = ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
@@ -203,7 +234,13 @@ fun VideoPlayerWithPreview(
                                 timeBarView.addListener(object : TimeBar.OnScrubListener {
                                     override fun onScrubStart(timeBar: TimeBar, position: Long) {
                                         android.util.Log.d("VideoPlayerWithPreview", "Scrub started at position: $position")
-                                        exoPlayer.playWhenReady = false
+                                        // Get player from PlayerView instead of capturing from closure
+                                        val currentPlayer = this@apply.player
+                                        if (currentPlayer != null) {
+                                            currentPlayer.playWhenReady = false
+                                        } else {
+                                            android.util.Log.w("VideoPlayerWithPreview", "Player is null during scrub start")
+                                        }
                                         isScrubbing = true
                                         scrubPosition = position
                                         
@@ -215,7 +252,13 @@ fun VideoPlayerWithPreview(
                                     
                                     override fun onScrubMove(timeBar: TimeBar, position: Long) {
                                         android.util.Log.d("VideoPlayerWithPreview", "Scrub moved to position: $position")
-                                        exoPlayer.playWhenReady = false
+                                        // Get player from PlayerView instead of capturing from closure
+                                        val currentPlayer = this@apply.player
+                                        if (currentPlayer != null) {
+                                            currentPlayer.playWhenReady = false
+                                        } else {
+                                            android.util.Log.w("VideoPlayerWithPreview", "Player is null during scrub move")
+                                        }
                                         scrubPosition = position
                                     }
                                     
@@ -223,7 +266,13 @@ fun VideoPlayerWithPreview(
                                         android.util.Log.d("VideoPlayerWithPreview", "Scrub stopped at position: $position")
                                         isScrubbing = false
                                         scrubPosition = position
-                                        exoPlayer.playWhenReady = true
+                                        // Get player from PlayerView instead of capturing from closure
+                                        val currentPlayer = this@apply.player
+                                        if (currentPlayer != null) {
+                                            currentPlayer.playWhenReady = true
+                                        } else {
+                                            android.util.Log.w("VideoPlayerWithPreview", "Player is null during scrub stop")
+                                        }
                                     }
                                 })
                             } else {
@@ -237,6 +286,7 @@ fun VideoPlayerWithPreview(
             },
             update = { playerView ->
                 // Update the player when exoPlayer changes (e.g., when stream URL changes for track selection)
+                android.util.Log.d("VideoPlayerWithPreview", "AndroidView update block called, setting player")
                 playerView.player = exoPlayer
             },
             modifier = Modifier.fillMaxSize()
