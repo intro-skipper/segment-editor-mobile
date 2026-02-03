@@ -382,38 +382,28 @@ private fun TimeInputRow(
     onSeek: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Row(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically
+        IconButton(
+            onClick = onSeek,
+            modifier = Modifier.size(32.dp)
         ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = "Seek to $label",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp)
             )
-            
-            IconButton(
-                onClick = onSeek,
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Seek to $label",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
         }
         
         TimeInputField(
-            label = "",
+            label = label.removeSuffix(":"),
             timeInSeconds = timeSeconds,
             onTimeChanged = onTimeChanged,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.weight(1f)
         )
     }
 }
