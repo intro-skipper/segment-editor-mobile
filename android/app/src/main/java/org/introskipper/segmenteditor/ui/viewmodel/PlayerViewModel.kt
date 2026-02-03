@@ -330,19 +330,24 @@ class PlayerViewModel @Inject constructor(
      * Returns true if tracks likely represent the same audio/subtitle stream.
      */
     private fun matchTracks(track1: TrackInfo, track2: TrackInfo): Boolean {
-        // Match by language (case-insensitive, handle null)
-        val languageMatch = track1.language?.lowercase() == track2.language?.lowercase()
+        // Both tracks must have a language specified to match
+        val lang1 = track1.language?.lowercase()
+        val lang2 = track2.language?.lowercase()
         
-        // Match by codec (case-insensitive, handle null, compare MIME types)
-        val codecMatch = track1.codec?.lowercase()?.let { codec1 ->
-            track2.codec?.lowercase()?.let { codec2 ->
-                // Handle MIME type matching (e.g., "audio/mp4a-latm" contains "mp4")
-                codec1.contains(codec2) || codec2.contains(codec1) || codec1 == codec2
-            }
-        } ?: false
+        // If either track has no language, they don't match
+        if (lang1 == null || lang2 == null) {
+            return false
+        }
         
-        // Tracks match if both language and codec match
-        return languageMatch && codecMatch
+        // Languages must match
+        if (lang1 != lang2) {
+            return false
+        }
+        
+        // If languages match, tracks likely represent the same stream
+        // Codec matching is optional - same language track may have different quality/codec variants
+        // We prioritize matching by language to avoid showing duplicate tracks
+        return true
     }
     
     fun getStreamUrl(useHls: Boolean = true, audioStreamIndex: Int? = null, subtitleStreamIndex: Int? = null): String? {
