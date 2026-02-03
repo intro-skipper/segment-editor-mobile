@@ -150,7 +150,8 @@ class PlayerViewModel @Inject constructor(
                     language = stream.language,
                     displayTitle = stream.displayTitle ?: buildTrackTitle("Audio", stream.language, stream.codec),
                     codec = stream.codec,
-                    isDefault = stream.isDefault
+                    isDefault = stream.isDefault,
+                    source = org.introskipper.segmenteditor.ui.state.TrackSource.JELLYFIN
                 )
             }
         
@@ -162,7 +163,8 @@ class PlayerViewModel @Inject constructor(
                     language = stream.language,
                     displayTitle = stream.displayTitle ?: buildTrackTitle("Subtitle", stream.language, stream.codec),
                     codec = stream.codec,
-                    isDefault = stream.isDefault
+                    isDefault = stream.isDefault,
+                    source = org.introskipper.segmenteditor.ui.state.TrackSource.JELLYFIN
                 )
             }
         
@@ -176,10 +178,10 @@ class PlayerViewModel @Inject constructor(
         
         Log.d(TAG, "Extracted from Jellyfin: ${audioTracks.size} audio tracks, ${subtitleTracks.size} subtitle tracks")
         audioTracks.forEach { track ->
-            Log.d(TAG, "Audio track: index=${track.index}, title=${track.displayTitle}, default=${track.isDefault}")
+            Log.d(TAG, "Audio track: index=${track.index}, title=${track.displayTitle}, default=${track.isDefault}, source=${track.source}")
         }
         subtitleTracks.forEach { track ->
-            Log.d(TAG, "Subtitle track: index=${track.index}, title=${track.displayTitle}, default=${track.isDefault}")
+            Log.d(TAG, "Subtitle track: index=${track.index}, title=${track.displayTitle}, default=${track.isDefault}, source=${track.source}")
         }
         
         _uiState.update { 
@@ -194,7 +196,7 @@ class PlayerViewModel @Inject constructor(
     
     fun updateTracksFromPlayer(tracks: androidx.media3.common.Tracks) {
         // Extract actual available tracks from ExoPlayer player
-        // This is useful for debugging and to see what tracks are actually available in the stream
+        // Merge with Jellyfin tracks to cover all possible audio and subtitle types
         val exoAudioCount = tracks.groups.count { it.type == C.TRACK_TYPE_AUDIO }
         val exoSubtitleCount = tracks.groups.count { it.type == C.TRACK_TYPE_TEXT }
         
@@ -213,7 +215,8 @@ class PlayerViewModel @Inject constructor(
                         language = language,
                         displayTitle = label,
                         codec = format.sampleMimeType,
-                        isDefault = false
+                        isDefault = false,
+                        source = org.introskipper.segmenteditor.ui.state.TrackSource.EXOPLAYER
                     ))
                     Log.d(TAG, "ExoPlayer audio track: index=$trackIndex, language=$language, label=$label")
                 }
@@ -233,18 +236,113 @@ class PlayerViewModel @Inject constructor(
                         language = language,
                         displayTitle = label,
                         codec = format.sampleMimeType,
-                        isDefault = false
+                        isDefault = false,
+                        source = org.introskipper.segmenteditor.ui.state.TrackSource.EXOPLAYER
                     ))
                     Log.d(TAG, "ExoPlayer subtitle track: index=$trackIndex, language=$language, label=$label")
                 }
             }
         }
         
-        // If ExoPlayer has tracks available and our Jellyfin-extracted tracks are empty or different,
-        // we could optionally update the UI state here
-        // For now, just log the comparison
-        Log.d(TAG, "Jellyfin tracks: ${_uiState.value.audioTracks.size} audio, ${_uiState.value.subtitleTracks.size} subtitles")
+        // Log track counts from both sources
+        val jellyfinAudioCount = _uiState.value.audioTracks.size
+        val jellyfinSubtitleCount = _uiState.value.subtitleTracks.size
+        Log.d(TAG, "Jellyfin tracks: $jellyfinAudioCount audio, $jellyfinSubtitleCount subtitles")
         Log.d(TAG, "ExoPlayer tracks: ${exoAudioTracks.size} audio, ${exoSubtitleTracks.size} subtitles")
+        
+        // Merge tracks from both sources
+        val mergedAudioTracks = mergeTracksFromBothSources(
+            _uiState.value.audioTracks,
+            exoAudioTracks,
+            "audio"
+        )
+        val mergedSubtitleTracks = mergeTracksFromBothSources(
+            _uiState.value.subtitleTracks,
+            exoSubtitleTracks,
+            "subtitle"
+        )
+        
+        Log.d(TAG, "Merged tracks: ${mergedAudioTracks.size} audio, ${mergedSubtitleTracks.size} subtitles")
+        
+        // Update UI state with merged tracks
+        _uiState.update { state ->
+            state.copy(
+                audioTracks = mergedAudioTracks,
+                subtitleTracks = mergedSubtitleTracks
+            )
+        }
+    }
+    
+    /**
+     * Merge tracks from Jellyfin and ExoPlayer to cover all possible tracks.
+     * Strategy:
+     * 1. Keep all Jellyfin tracks (they have correct indices for URL parameters)
+     * 2. Add ExoPlayer-only tracks that aren't in Jellyfin (by language/codec matching)
+     * 3. Mark tracks as MERGED if they appear in both sources
+     */
+    private fun mergeTracksFromBothSources(
+        jellyfinTracks: List<TrackInfo>,
+        exoPlayerTracks: List<TrackInfo>,
+        trackType: String
+    ): List<TrackInfo> {
+        val merged = mutableListOf<TrackInfo>()
+        
+        // Add all Jellyfin tracks, marking as MERGED if found in ExoPlayer
+        jellyfinTracks.forEach { jellyfinTrack ->
+            val matchingExoTrack = exoPlayerTracks.find { exoTrack ->
+                matchTracks(jellyfinTrack, exoTrack)
+            }
+            
+            if (matchingExoTrack != null) {
+                // Track exists in both sources - mark as MERGED
+                merged.add(jellyfinTrack.copy(
+                    source = org.introskipper.segmenteditor.ui.state.TrackSource.MERGED
+                ))
+                Log.d(TAG, "$trackType track matched: ${jellyfinTrack.displayTitle} (Jellyfin idx=${jellyfinTrack.index} ↔ ExoPlayer idx=${matchingExoTrack.index})")
+            } else {
+                // Track only in Jellyfin - keep as is
+                merged.add(jellyfinTrack)
+                Log.d(TAG, "$trackType track from Jellyfin only: ${jellyfinTrack.displayTitle}")
+            }
+        }
+        
+        // Add ExoPlayer-only tracks (not found in Jellyfin)
+        exoPlayerTracks.forEach { exoTrack ->
+            val existsInJellyfin = jellyfinTracks.any { jellyfinTrack ->
+                matchTracks(jellyfinTrack, exoTrack)
+            }
+            
+            if (!existsInJellyfin) {
+                // Track only in ExoPlayer - add with ExoPlayer source
+                // Note: ExoPlayer indices can't be used for Jellyfin URL parameters
+                merged.add(exoTrack.copy(
+                    displayTitle = "${exoTrack.displayTitle} [ExoPlayer only]"
+                ))
+                Log.d(TAG, "$trackType track from ExoPlayer only: ${exoTrack.displayTitle}")
+            }
+        }
+        
+        return merged
+    }
+    
+    /**
+     * Match tracks from different sources by language and codec.
+     * Returns true if tracks likely represent the same audio/subtitle stream.
+     */
+    private fun matchTracks(track1: TrackInfo, track2: TrackInfo): Boolean {
+        // Match by language (case-insensitive, handle null)
+        val languageMatch = track1.language?.lowercase() == track2.language?.lowercase()
+        
+        // Match by codec (case-insensitive, handle null, compare MIME types)
+        val codecMatch = track1.codec?.lowercase()?.let { codec1 ->
+            track2.codec?.lowercase()?.let { codec2 ->
+                // Handle MIME type matching (e.g., "audio/mp4a-latm" contains "mp4")
+                codec1.contains(codec2) || codec2.contains(codec1) || codec1 == codec2
+            }
+        } ?: false
+        
+        // Tracks match if both language and codec match
+        return languageMatch && codecMatch
     }
     
     fun getStreamUrl(useHls: Boolean = true, audioStreamIndex: Int? = null, subtitleStreamIndex: Int? = null): String? {
