@@ -276,7 +276,7 @@ class PlayerViewModel @Inject constructor(
                 if (subtitleStreamIndex != null) {
                     append("&SubtitleStreamIndex=$subtitleStreamIndex")
                     // For HLS, subtitles need to be encoded into the stream
-                    append("&SubtitleMethod=Encode")
+                    // append("&SubtitleMethod=Encode")
                 }
             }
         } else {
