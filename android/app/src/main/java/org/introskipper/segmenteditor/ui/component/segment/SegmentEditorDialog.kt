@@ -21,7 +21,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -57,7 +56,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import org.introskipper.segmenteditor.R
@@ -83,6 +81,11 @@ fun SegmentEditorDialog(
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    
+    // Store original values for restoration on dismiss
+    val originalStartTime = remember { editSegment?.getStartSeconds() ?: initialStartTime }
+    val originalEndTime = remember { editSegment?.getEndSeconds() ?: initialEndTime }
+    val originalSegmentType = remember { editSegment?.type }
     
     // Initialize view model
     LaunchedEffect(Unit) {
@@ -138,8 +141,25 @@ fun SegmentEditorDialog(
         }
     }
     
+    // Function to handle dismiss - restores original values
+    val handleDismiss = {
+        // Restore original values when dismissing without saving
+        if (!state.saveSuccess) {
+            if (originalStartTime != null) {
+                viewModel.setStartTime(originalStartTime)
+            }
+            if (originalEndTime != null) {
+                viewModel.setEndTime(originalEndTime)
+            }
+            if (originalSegmentType != null) {
+                viewModel.setSegmentType(originalSegmentType)
+            }
+        }
+        onDismiss()
+    }
+    
     ModalBottomSheet(
-        onDismissRequest = onDismiss
+        onDismissRequest = handleDismiss
     ) {
         Column(
             modifier = Modifier
@@ -152,45 +172,27 @@ fun SegmentEditorDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Left spacer for balance (always present for centering)
-                Spacer(modifier = Modifier.size(48.dp))
-                
-                // Centered title
                 Text(
                     text = if (state.mode == EditorMode.Create) {
                         stringResource(R.string.segment_create_title)
                     } else {
                         stringResource(R.string.segment_edit_title)
                     },
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Center
+                    style = MaterialTheme.typography.titleLarge
                 )
                 
-                // Right side: Delete button in edit mode, Close button only in edit mode, empty in create mode
+                // Only show delete button in edit mode
                 if (state.mode == EditorMode.Edit) {
-                    Row {
-                        IconButton(
-                            onClick = { showDeleteConfirmation = true },
-                            enabled = !state.isDeleting && !state.isSaving
-                        ) {
-                            Icon(
-                                Icons.Default.Delete,
-                                contentDescription = stringResource(R.string.delete),
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                        }
-                        
-                        IconButton(onClick = onDismiss) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = stringResource(R.string.cancel)
-                            )
-                        }
+                    IconButton(
+                        onClick = { showDeleteConfirmation = true },
+                        enabled = !state.isDeleting && !state.isSaving
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.delete),
+                            tint = MaterialTheme.colorScheme.error
+                        )
                     }
-                } else {
-                    // Right spacer for balance in create mode (no close button)
-                    Spacer(modifier = Modifier.size(48.dp))
                 }
             }
             
@@ -301,7 +303,7 @@ fun SegmentEditorDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     OutlinedButton(
-                        onClick = onDismiss,
+                        onClick = handleDismiss,
                         modifier = Modifier.weight(1f),
                         enabled = !state.isSaving && !state.isDeleting
                     ) {
