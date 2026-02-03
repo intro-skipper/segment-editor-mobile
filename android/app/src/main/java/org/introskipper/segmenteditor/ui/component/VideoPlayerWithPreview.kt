@@ -104,7 +104,8 @@ fun VideoPlayerWithPreview(
             }
     }
     
-    // Update lastKnown values using player listener callbacks instead of polling
+    // Update lastKnown values using player listener callbacks
+    // We need to track position continuously so it's available when streamUrl changes
     DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
             override fun onPositionDiscontinuity(
@@ -117,6 +118,13 @@ fun VideoPlayerWithPreview(
             
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                 lastKnownPlayWhenReady = playWhenReady
+            }
+            
+            override fun onEvents(player: Player, events: Player.Events) {
+                // Update position on any player event to ensure we always have current position
+                // This ensures position is captured before streamUrl changes trigger new player
+                lastKnownPosition = player.currentPosition
+                lastKnownPlayWhenReady = player.playWhenReady
             }
         }
         
@@ -203,7 +211,8 @@ fun VideoPlayerWithPreview(
                                 timeBarView.addListener(object : TimeBar.OnScrubListener {
                                     override fun onScrubStart(timeBar: TimeBar, position: Long) {
                                         android.util.Log.d("VideoPlayerWithPreview", "Scrub started at position: $position")
-                                        exoPlayer.playWhenReady = false
+                                        // Get player from PlayerView instead of capturing from closure
+                                        this@apply.player?.playWhenReady = false
                                         isScrubbing = true
                                         scrubPosition = position
                                         
@@ -215,7 +224,8 @@ fun VideoPlayerWithPreview(
                                     
                                     override fun onScrubMove(timeBar: TimeBar, position: Long) {
                                         android.util.Log.d("VideoPlayerWithPreview", "Scrub moved to position: $position")
-                                        exoPlayer.playWhenReady = false
+                                        // Get player from PlayerView instead of capturing from closure
+                                        this@apply.player?.playWhenReady = false
                                         scrubPosition = position
                                     }
                                     
@@ -223,7 +233,8 @@ fun VideoPlayerWithPreview(
                                         android.util.Log.d("VideoPlayerWithPreview", "Scrub stopped at position: $position")
                                         isScrubbing = false
                                         scrubPosition = position
-                                        exoPlayer.playWhenReady = true
+                                        // Get player from PlayerView instead of capturing from closure
+                                        this@apply.player?.playWhenReady = true
                                     }
                                 })
                             } else {
@@ -237,6 +248,7 @@ fun VideoPlayerWithPreview(
             },
             update = { playerView ->
                 // Update the player when exoPlayer changes (e.g., when stream URL changes for track selection)
+                android.util.Log.d("VideoPlayerWithPreview", "AndroidView update block called, setting player")
                 playerView.player = exoPlayer
             },
             modifier = Modifier.fillMaxSize()
