@@ -94,8 +94,11 @@ fun VideoPlayerWithPreview(
         // Restore position and play state if this is a track switch (position > threshold)
         if (currentPosition > MIN_POSITION_TO_RESTORE_MS) {
             exoPlayer.seekTo(currentPosition)
+            exoPlayer.playWhenReady = wasPlaying  // Preserve play state on track change
+        } else {
+            // On initial load, start playback automatically
+            exoPlayer.playWhenReady = true
         }
-        exoPlayer.playWhenReady = wasPlaying
     }
     
     // Apply subtitle track selection using ExoPlayer's TrackSelectionParameters
