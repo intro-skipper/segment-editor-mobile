@@ -8,6 +8,10 @@ plugins {
     id 'com.google.devtools.ksp'
 }
 
+def commit = providers.exec {
+    commandLine("git", "rev-parse", "--short", "HEAD")
+}.standardOutput.asText.get().trim()
+
 android {
     namespace 'org.introskipper.segmenteditor'
 
@@ -24,9 +28,6 @@ android {
             useSupportLibrary true
         }
 
-        def commit = providers.exec {
-            commandLine("git", "rev-parse", "--short", "HEAD")
-        }.standardOutput.asText.get().trim()
         buildConfigField "String", "COMMIT", "\""+commit+"\""
     }
     androidResources {
