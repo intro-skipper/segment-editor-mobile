@@ -98,22 +98,6 @@ fun VideoPlayerWithPreview(
         exoPlayer.playWhenReady = wasPlaying
     }
     
-    // Update media item when streamUrl changes (without recreating player)
-    LaunchedEffect(streamUrl) {
-        android.util.Log.d("VideoPlayerWithPreview", "Stream URL changed: $streamUrl")
-        val currentPosition = exoPlayer.currentPosition
-        val wasPlaying = exoPlayer.playWhenReady
-        
-        exoPlayer.setMediaItem(MediaItem.fromUri(streamUrl))
-        exoPlayer.prepare()
-        
-        // Restore position and play state if this is a track switch (position > threshold)
-        if (currentPosition > MIN_POSITION_TO_RESTORE_MS) {
-            exoPlayer.seekTo(currentPosition)
-        }
-        exoPlayer.playWhenReady = wasPlaying
-    }
-    
     // Apply subtitle track selection using ExoPlayer's TrackSelectionParameters
     // Audio track selection is handled via AudioStreamIndex URL parameter
     LaunchedEffect(selectedSubtitleTrackIndex) {
