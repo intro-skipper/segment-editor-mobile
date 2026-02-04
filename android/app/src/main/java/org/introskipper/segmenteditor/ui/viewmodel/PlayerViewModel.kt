@@ -54,7 +54,12 @@ class PlayerViewModel @Inject constructor(
                     error = null,
                     segments = emptyList(),
                     currentPosition = 0L,
-                    isPlaying = false
+                    isPlaying = false,
+                    // Clear track information when loading new media item
+                    audioTracks = emptyList(),
+                    subtitleTracks = emptyList(),
+                    selectedAudioTrack = null,
+                    selectedSubtitleTrack = null
                 )
             }
             
@@ -150,9 +155,10 @@ class PlayerViewModel @Inject constructor(
         
         val audioTracks = mediaStreams
             .filter { it.type == "Audio" }
-            .map { stream ->
+            .mapIndexed { relativeIndex, stream ->
                 TrackInfo(
                     index = stream.index,  // Use Jellyfin stream index
+                    relativeIndex = relativeIndex,  // Sequential 0-based index within audio tracks
                     language = stream.language,
                     displayTitle = stream.displayTitle ?: buildTrackTitle("Audio", stream.language, stream.codec),
                     codec = stream.codec,
@@ -163,9 +169,10 @@ class PlayerViewModel @Inject constructor(
         
         val subtitleTracks = mediaStreams
             .filter { it.type == "Subtitle" }
-            .map { stream ->
+            .mapIndexed { relativeIndex, stream ->
                 TrackInfo(
                     index = stream.index,  // Use Jellyfin stream index
+                    relativeIndex = relativeIndex,  // Sequential 0-based index within subtitle tracks
                     language = stream.language,
                     displayTitle = stream.displayTitle ?: buildTrackTitle("Subtitle", stream.language, stream.codec),
                     codec = stream.codec,
@@ -174,20 +181,21 @@ class PlayerViewModel @Inject constructor(
                 )
             }
         
-        // Find the default track index or use the first track if tracks exist
+        // Find the default track relativeIndex or use the first track if tracks exist
+        // Use relativeIndex for consistency across both HLS and Direct Play modes
         val defaultAudioIndex = if (audioTracks.isEmpty()) {
             null
         } else {
-            audioTracks.firstOrNull { it.isDefault }?.index ?: audioTracks.firstOrNull()?.index
+            audioTracks.firstOrNull { it.isDefault }?.relativeIndex ?: audioTracks.firstOrNull()?.relativeIndex
         }
-        val defaultSubtitleIndex = subtitleTracks.firstOrNull { it.isDefault }?.index
+        val defaultSubtitleIndex = subtitleTracks.firstOrNull { it.isDefault }?.relativeIndex
         
         Log.d(TAG, "Extracted from Jellyfin: ${audioTracks.size} audio tracks, ${subtitleTracks.size} subtitle tracks")
         audioTracks.forEach { track ->
-            Log.d(TAG, "Audio track: index=${track.index}, title=${track.displayTitle}, default=${track.isDefault}, source=${track.source}")
+            Log.d(TAG, "Audio track: index=${track.index}, relativeIndex=${track.relativeIndex}, title=${track.displayTitle}, default=${track.isDefault}, source=${track.source}")
         }
         subtitleTracks.forEach { track ->
-            Log.d(TAG, "Subtitle track: index=${track.index}, title=${track.displayTitle}, default=${track.isDefault}, source=${track.source}")
+            Log.d(TAG, "Subtitle track: index=${track.index}, relativeIndex=${track.relativeIndex}, title=${track.displayTitle}, default=${track.isDefault}, source=${track.source}")
         }
         
         _uiState.update { 
@@ -276,12 +284,33 @@ class PlayerViewModel @Inject constructor(
                 )
             }
         } else {
-            // HLS mode: keep existing Jellyfin tracks, only use ExoPlayer tracks if none exist
+            // HLS mode: keep existing Jellyfin tracks, only use ExoPlayer tracks if none exist OR if existing tracks are from ExoPlayer
             Log.d(TAG, "HLS mode: keeping Jellyfin tracks, ExoPlayer tracks as fallback")
             _uiState.update { state ->
+                // Check if existing tracks are from Jellyfin or ExoPlayer
+                // Check all tracks to ensure they're all from the same source
+                val hasJellyfinTracks = state.audioTracks.isNotEmpty() && 
+                    state.audioTracks.all { it.source == org.introskipper.segmenteditor.ui.state.TrackSource.JELLYFIN }
+                
+                // Only keep existing tracks if they're from Jellyfin
+                // If they're from ExoPlayer (e.g., after switching from Direct Play), replace them with new ExoPlayer tracks from HLS
+                val shouldKeepExistingTracks = state.audioTracks.isNotEmpty() && hasJellyfinTracks
+                
                 state.copy(
-                    audioTracks = state.audioTracks.ifEmpty { exoAudioTracks },
-                    subtitleTracks = state.subtitleTracks.ifEmpty { exoSubtitleTracks }
+                    audioTracks = if (shouldKeepExistingTracks) state.audioTracks else exoAudioTracks,
+                    subtitleTracks = if (shouldKeepExistingTracks) state.subtitleTracks else exoSubtitleTracks,
+                    // When replacing tracks, reset selections to defaults if current selection is out of bounds
+                    selectedAudioTrack = if (shouldKeepExistingTracks) {
+                        state.selectedAudioTrack
+                    } else {
+                        exoAudioTracks.firstOrNull { it.isDefault }?.relativeIndex 
+                            ?: exoAudioTracks.firstOrNull()?.relativeIndex
+                    },
+                    selectedSubtitleTrack = if (shouldKeepExistingTracks) {
+                        state.selectedSubtitleTrack
+                    } else {
+                        exoSubtitleTracks.firstOrNull { it.isDefault }?.relativeIndex
+                    }
                 )
             }
         }
@@ -313,14 +342,26 @@ class PlayerViewModel @Inject constructor(
                 append("&BreakOnNonKeyFrames=true")
                 
                 // Add track parameters directly to URL (not via ResolvingDataSource)
-                val audioIndex = _uiState.value.selectedAudioTrack
-                if (audioIndex != null) {
-                    append("&AudioStreamIndex=$audioIndex")
+                // selectedAudioTrack/selectedSubtitleTrack are relativeIndex values,
+                // but HLS needs the Jellyfin MediaStream index, so look up the track
+                val audioRelativeIndex = _uiState.value.selectedAudioTrack
+                if (audioRelativeIndex != null) {
+                    val audioTrack = _uiState.value.audioTracks.firstOrNull { it.relativeIndex == audioRelativeIndex }
+                    if (audioTrack != null) {
+                        append("&AudioStreamIndex=${audioTrack.index}")
+                    } else {
+                        Log.w(TAG, "Failed to find audio track with relativeIndex $audioRelativeIndex")
+                    }
                 }
                 
-                val subtitleIndex = _uiState.value.selectedSubtitleTrack
-                if (subtitleIndex != null) {
-                    append("&SubtitleStreamIndex=$subtitleIndex")
+                val subtitleRelativeIndex = _uiState.value.selectedSubtitleTrack
+                if (subtitleRelativeIndex != null) {
+                    val subtitleTrack = _uiState.value.subtitleTracks.firstOrNull { it.relativeIndex == subtitleRelativeIndex }
+                    if (subtitleTrack != null) {
+                        append("&SubtitleStreamIndex=${subtitleTrack.index}")
+                    } else {
+                        Log.w(TAG, "Failed to find subtitle track with relativeIndex $subtitleRelativeIndex")
+                    }
                 }
             }
         } else {
