@@ -150,9 +150,10 @@ class PlayerViewModel @Inject constructor(
         
         val audioTracks = mediaStreams
             .filter { it.type == "Audio" }
-            .map { stream ->
+            .mapIndexed { relativeIndex, stream ->
                 TrackInfo(
                     index = stream.index,  // Use Jellyfin stream index
+                    relativeIndex = relativeIndex,  // Sequential 0-based index within audio tracks
                     language = stream.language,
                     displayTitle = stream.displayTitle ?: buildTrackTitle("Audio", stream.language, stream.codec),
                     codec = stream.codec,
@@ -163,9 +164,10 @@ class PlayerViewModel @Inject constructor(
         
         val subtitleTracks = mediaStreams
             .filter { it.type == "Subtitle" }
-            .map { stream ->
+            .mapIndexed { relativeIndex, stream ->
                 TrackInfo(
                     index = stream.index,  // Use Jellyfin stream index
+                    relativeIndex = relativeIndex,  // Sequential 0-based index within subtitle tracks
                     language = stream.language,
                     displayTitle = stream.displayTitle ?: buildTrackTitle("Subtitle", stream.language, stream.codec),
                     codec = stream.codec,
@@ -174,20 +176,21 @@ class PlayerViewModel @Inject constructor(
                 )
             }
         
-        // Find the default track index or use the first track if tracks exist
+        // Find the default track relativeIndex or use the first track if tracks exist
+        // Use relativeIndex for consistency across both HLS and Direct Play modes
         val defaultAudioIndex = if (audioTracks.isEmpty()) {
             null
         } else {
-            audioTracks.firstOrNull { it.isDefault }?.index ?: audioTracks.firstOrNull()?.index
+            audioTracks.firstOrNull { it.isDefault }?.relativeIndex ?: audioTracks.firstOrNull()?.relativeIndex
         }
-        val defaultSubtitleIndex = subtitleTracks.firstOrNull { it.isDefault }?.index
+        val defaultSubtitleIndex = subtitleTracks.firstOrNull { it.isDefault }?.relativeIndex
         
         Log.d(TAG, "Extracted from Jellyfin: ${audioTracks.size} audio tracks, ${subtitleTracks.size} subtitle tracks")
         audioTracks.forEach { track ->
-            Log.d(TAG, "Audio track: index=${track.index}, title=${track.displayTitle}, default=${track.isDefault}, source=${track.source}")
+            Log.d(TAG, "Audio track: index=${track.index}, relativeIndex=${track.relativeIndex}, title=${track.displayTitle}, default=${track.isDefault}, source=${track.source}")
         }
         subtitleTracks.forEach { track ->
-            Log.d(TAG, "Subtitle track: index=${track.index}, title=${track.displayTitle}, default=${track.isDefault}, source=${track.source}")
+            Log.d(TAG, "Subtitle track: index=${track.index}, relativeIndex=${track.relativeIndex}, title=${track.displayTitle}, default=${track.isDefault}, source=${track.source}")
         }
         
         _uiState.update { 
@@ -313,14 +316,22 @@ class PlayerViewModel @Inject constructor(
                 append("&BreakOnNonKeyFrames=true")
                 
                 // Add track parameters directly to URL (not via ResolvingDataSource)
-                val audioIndex = _uiState.value.selectedAudioTrack
-                if (audioIndex != null) {
-                    append("&AudioStreamIndex=$audioIndex")
+                // selectedAudioTrack/selectedSubtitleTrack are relativeIndex values,
+                // but HLS needs the Jellyfin MediaStream index, so look up the track
+                val audioRelativeIndex = _uiState.value.selectedAudioTrack
+                if (audioRelativeIndex != null) {
+                    val audioTrack = _uiState.value.audioTracks.firstOrNull { it.relativeIndex == audioRelativeIndex }
+                    if (audioTrack != null) {
+                        append("&AudioStreamIndex=${audioTrack.index}")
+                    }
                 }
                 
-                val subtitleIndex = _uiState.value.selectedSubtitleTrack
-                if (subtitleIndex != null) {
-                    append("&SubtitleStreamIndex=$subtitleIndex")
+                val subtitleRelativeIndex = _uiState.value.selectedSubtitleTrack
+                if (subtitleRelativeIndex != null) {
+                    val subtitleTrack = _uiState.value.subtitleTracks.firstOrNull { it.relativeIndex == subtitleRelativeIndex }
+                    if (subtitleTrack != null) {
+                        append("&SubtitleStreamIndex=${subtitleTrack.index}")
+                    }
                 }
             }
         } else {
