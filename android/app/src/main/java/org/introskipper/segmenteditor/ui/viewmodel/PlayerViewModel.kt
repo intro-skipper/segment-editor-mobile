@@ -284,13 +284,11 @@ class PlayerViewModel @Inject constructor(
             }
         } else {
             // HLS mode: keep existing Jellyfin tracks, only use ExoPlayer tracks if none exist
-            // DO NOT update track selections in HLS mode to prevent reload loops
+            // DO NOT update track selections in HLS mode to prevent reload loops:
+            // Track selection changes trigger streamUrl recalculation (tracks are remember keys in PlayerScreen)
+            // which causes the player to reload repeatedly
             Log.d(TAG, "HLS mode: keeping Jellyfin tracks and current selections, ExoPlayer tracks as fallback")
             _uiState.update { state ->
-                // Check if existing tracks are from Jellyfin
-                val hasJellyfinTracks = state.audioTracks.isNotEmpty() && 
-                    state.audioTracks.all { it.source == org.introskipper.segmenteditor.ui.state.TrackSource.JELLYFIN }
-                
                 // Only update tracks if we have no tracks at all
                 // This handles the initial HLS load when tracks haven't been set yet
                 val shouldUpdateTracks = state.audioTracks.isEmpty()
