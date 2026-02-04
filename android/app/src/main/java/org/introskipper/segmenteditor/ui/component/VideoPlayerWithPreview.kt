@@ -145,11 +145,12 @@ fun VideoPlayerWithPreview(
             val parametersBuilder = trackSelector.parameters.buildUpon()
             
             // Handle audio track selection
+            val currentTracks = exoPlayer.currentTracks
             if (currentAudioIndex != null) {
                 // Find the audio track group and select the specific track
-                val currentTracks = exoPlayer.currentTracks
-                currentTracks.groups.forEachIndexed { groupIndex, group ->
-                    if (group.type == C.TRACK_TYPE_AUDIO && group.length > currentAudioIndex) {
+                var audioTrackSet = false
+                for (group in currentTracks.groups) {
+                    if (group.type == C.TRACK_TYPE_AUDIO && !audioTrackSet && group.length > currentAudioIndex) {
                         parametersBuilder.setOverrideForType(
                             androidx.media3.common.TrackSelectionOverride(
                                 group.mediaTrackGroup,
@@ -157,6 +158,7 @@ fun VideoPlayerWithPreview(
                             )
                         )
                         android.util.Log.d("VideoPlayerWithPreview", "Selected audio track: $currentAudioIndex")
+                        audioTrackSet = true
                     }
                 }
             }
@@ -164,9 +166,9 @@ fun VideoPlayerWithPreview(
             // Handle subtitle track selection
             if (currentSubtitleIndex != null) {
                 // Find the subtitle track group and select the specific track
-                val currentTracks = exoPlayer.currentTracks
-                currentTracks.groups.forEachIndexed { groupIndex, group ->
-                    if (group.type == C.TRACK_TYPE_TEXT && group.length > currentSubtitleIndex) {
+                var subtitleTrackSet = false
+                for (group in currentTracks.groups) {
+                    if (group.type == C.TRACK_TYPE_TEXT && !subtitleTrackSet && group.length > currentSubtitleIndex) {
                         parametersBuilder.setOverrideForType(
                             androidx.media3.common.TrackSelectionOverride(
                                 group.mediaTrackGroup,
@@ -174,6 +176,7 @@ fun VideoPlayerWithPreview(
                             )
                         )
                         android.util.Log.d("VideoPlayerWithPreview", "Selected subtitle track: $currentSubtitleIndex")
+                        subtitleTrackSet = true
                     }
                 }
             } else {
