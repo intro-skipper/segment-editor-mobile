@@ -332,12 +332,11 @@ fun VideoPlayerWithPreview(
                 
                 // Notify the error handler if in direct play mode and error is codec capability related
                 if (useDirectPlay) {
-                    // ERROR_CODE_DECODER_INIT_FAILED = 4001
-                    // ERROR_CODE_DECODER_QUERY_FAILED = 4002
-                    // ERROR_CODE_DECODING_FAILED = 4003
-                    // ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES = 4004
-                    // ERROR_CODE_DECODING_FORMAT_UNSUPPORTED = 4005
-                    // ERROR_CODE_DECODING_RESOURCES_RECLAIMED = 4006
+                    // IO - 2000
+                    // PARSING - 3000
+                    // DECODER - 4000
+                    // AUDIO - 5000
+                    // DRM - 6000
                     val isCodecError = error.errorCode in 4000..5000
                     
                     if (isCodecError) {
