@@ -288,7 +288,7 @@ class PlayerViewModel @Inject constructor(
     }
     
     /**
-     * Get the stream URL with track-specific parameters built in.
+     * Build the stream URL with track-specific parameters.
      * For HLS: includes AudioStreamIndex and SubtitleStreamIndex parameters if set
      * For Direct Play: no track parameters needed
      */

@@ -61,7 +61,7 @@ fun VideoPlayerWithPreview(
     val trackSelector = remember { DefaultTrackSelector(context) }
 
     // Create simple data source factory without ResolvingDataSource
-    // Track parameters are now built into the URL upfront by the caller
+    // Track parameters are now built into the URL upfront in PlayerViewModel.getStreamUrl()
     val dataSourceFactory = remember {
         DefaultHttpDataSource.Factory()
     }
