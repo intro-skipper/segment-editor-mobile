@@ -26,23 +26,36 @@ class TrackParametersDataSourceFactory(
         override fun resolveDataSpec(dataSpec: DataSpec): DataSpec {
             val originalUri = dataSpec.uri
             
-            // Build new URI with dynamic parameters
-            val uriBuilder = originalUri.buildUpon()
+            // First, strip any existing track parameters to avoid duplication
+            val baseBuilder = Uri.Builder()
+                .scheme(originalUri.scheme)
+                .authority(originalUri.authority)
+                .path(originalUri.path)
             
-            // Add audio stream index if selected
+            // Copy all non-track parameters from original URI
+            for (paramName in originalUri.queryParameterNames) {
+                if (paramName != "AudioStreamIndex" && paramName != "SubtitleStreamIndex") {
+                    val values = originalUri.getQueryParameters(paramName)
+                    for (value in values) {
+                        baseBuilder.appendQueryParameter(paramName, value)
+                    }
+                }
+            }
+            
+            // Add current audio stream index if selected
             // Note: Lambda is called here at request time, ensuring we get current value
             val audioIndex = getAudioStreamIndex()
             if (audioIndex != null) {
-                uriBuilder.appendQueryParameter("AudioStreamIndex", audioIndex.toString())
+                baseBuilder.appendQueryParameter("AudioStreamIndex", audioIndex.toString())
             }
             
-            // Add subtitle stream index if selected
+            // Add current subtitle stream index if selected
             val subtitleIndex = getSubtitleStreamIndex()
             if (subtitleIndex != null) {
-                uriBuilder.appendQueryParameter("SubtitleStreamIndex", subtitleIndex.toString())
+                baseBuilder.appendQueryParameter("SubtitleStreamIndex", subtitleIndex.toString())
             }
             
-            val resolvedUri = uriBuilder.build()
+            val resolvedUri = baseBuilder.build()
             
             // Log the resolution for debugging
             if (originalUri != resolvedUri) {
