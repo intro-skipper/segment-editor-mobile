@@ -83,13 +83,18 @@ fun PlayerScreen(
     val context = LocalContext.current
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     
+    // Determine if we should use direct play (no HLS transcoding)
+    // Allow fallback to HLS if direct play fails
+    var useDirectPlay by remember(itemId) { mutableStateOf(viewModel.shouldUseDirectPlay()) }
+    var hasTriedDirectPlay by remember(itemId) { mutableStateOf(false) }
+    
     // Keep updated references to track selections for ResolvingDataSource
     val audioTrackState = rememberUpdatedState(uiState.selectedAudioTrack)
     val subtitleTrackState = rememberUpdatedState(uiState.selectedSubtitleTrack)
     
-    // Base stream URL (without track parameters - those will be added dynamically by ResolvingDataSource)
-    val streamUrl = remember(uiState.mediaItem) {
-        viewModel.getBaseStreamUrl(useHls = true)
+    // Base stream URL (without track parameters when using HLS - those will be added dynamically by ResolvingDataSource)
+    val streamUrl = remember(uiState.mediaItem, useDirectPlay) {
+        viewModel.getBaseStreamUrl(useHls = !useDirectPlay)
     }
     
     // Preview loader
@@ -220,6 +225,7 @@ fun PlayerScreen(
                 streamUrl = streamUrl,
                 previewLoader = previewLoader,
                 activeSegmentIndex = activeSegmentIndex,
+                useDirectPlay = useDirectPlay,
                 getAudioStreamIndex = { audioTrackState.value },
                 getSubtitleStreamIndex = { subtitleTrackState.value },
                 onPlayerReady = { player = it },
@@ -239,6 +245,15 @@ fun PlayerScreen(
                 },
                 onSetActiveSegment = { index ->
                     activeSegmentIndex = index
+                },
+                onPlaybackError = { error ->
+                    // Handle playback error - fallback to HLS if direct play fails
+                    if (useDirectPlay && !hasTriedDirectPlay) {
+                        android.util.Log.w("PlayerScreen", "Direct play failed, falling back to HLS transcoding")
+                        hasTriedDirectPlay = true
+                        useDirectPlay = false
+                        // streamUrl will be regenerated automatically via remember(useDirectPlay)
+                    }
                 },
                 modifier = Modifier.padding(paddingValues)
             )
@@ -353,6 +368,7 @@ private fun PlayerContent(
     streamUrl: String?,
     previewLoader: PreviewLoader?,
     activeSegmentIndex: Int,
+    useDirectPlay: Boolean,
     getAudioStreamIndex: () -> Int?,
     getSubtitleStreamIndex: () -> Int?,
     onPlayerReady: (ExoPlayer) -> Unit,
@@ -362,6 +378,7 @@ private fun PlayerContent(
     onEditSegment: (Segment) -> Unit,
     onDeleteSegment: (Segment) -> Unit,
     onSetActiveSegment: (Int) -> Unit,
+    onPlaybackError: (androidx.media3.common.PlaybackException) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -380,6 +397,8 @@ private fun PlayerContent(
                     headers = viewModel.getStreamHeaders(),
                     useController = true,
                     previewLoader = previewLoader,
+                    useDirectPlay = useDirectPlay,
+                    exoPlayer = player,
                     getAudioStreamIndex = getAudioStreamIndex,
                     getSubtitleStreamIndex = getSubtitleStreamIndex,
                     onPlayerReady = onPlayerReady,
@@ -388,7 +407,8 @@ private fun PlayerContent(
                     },
                     onTracksChanged = { tracks ->
                         viewModel.updateTracksFromPlayer(tracks)
-                    }
+                    },
+                    onPlaybackError = onPlaybackError
                 )
             } else {
                 Box(

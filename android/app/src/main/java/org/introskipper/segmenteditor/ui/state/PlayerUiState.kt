@@ -35,7 +35,8 @@ data class PlayerUiState(
 )
 
 data class TrackInfo(
-    val index: Int,
+    val index: Int,              // Jellyfin MediaStream index (for HLS mode)
+    val relativeIndex: Int = 0,  // 0-based position within tracks of same type (for Direct Play)
     val language: String?,
     val displayTitle: String,
     val codec: String?,

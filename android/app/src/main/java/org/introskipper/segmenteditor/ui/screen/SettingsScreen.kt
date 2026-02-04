@@ -121,6 +121,13 @@ fun SettingsScreen(
             item {
                 SettingsSection(title = stringResource(R.string.settings_section_playback)) {
                     SwitchSettingItem(
+                        title = stringResource(R.string.settings_prefer_direct_play),
+                        subtitle = stringResource(R.string.settings_prefer_direct_play_subtitle),
+                        checked = uiState.preferDirectPlay,
+                        onCheckedChange = viewModel::setPreferDirectPlay
+                    )
+                    
+                    SwitchSettingItem(
                         title = stringResource(R.string.settings_autoplay_next),
                         subtitle = stringResource(R.string.settings_autoplay_next_subtitle),
                         checked = uiState.autoPlayNextEpisode,

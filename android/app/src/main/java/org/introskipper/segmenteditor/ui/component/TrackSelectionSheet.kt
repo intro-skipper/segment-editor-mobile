@@ -70,8 +70,8 @@ fun TrackSelectionSheet(
                 tracks.forEach { track ->
                     TrackItem(
                         displayTitle = track.displayTitle,
-                        isSelected = track.index == selectedTrackIndex,
-                        onClick = { onTrackSelected(track.index) }
+                        isSelected = track.relativeIndex == selectedTrackIndex,
+                        onClick = { onTrackSelected(track.relativeIndex) }
                     )
                 }
             }
