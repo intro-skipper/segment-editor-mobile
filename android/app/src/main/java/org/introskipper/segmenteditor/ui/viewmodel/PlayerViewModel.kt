@@ -333,13 +333,22 @@ class PlayerViewModel @Inject constructor(
                                 }
 
                             // Preserve current selections (same relativeIndex should work for both sources)
-                            // Only validate they're within bounds
+                            // Audio: current selection (if valid) → default track → first track → null
+                            // Subtitle: current selection (if valid) → null (subtitles are optional)
                             val preservedAudioSelection = state.selectedAudioTrack?.let { current ->
-                                if (current < jellyfinAudioTracks.size) current else null
+                                // Keep current if within bounds, otherwise try fallbacks
+                                if (current < jellyfinAudioTracks.size) {
+                                    current
+                                } else {
+                                    // Current selection invalid, use default or first track
+                                    jellyfinAudioTracks.firstOrNull { it.isDefault }?.relativeIndex
+                                        ?: jellyfinAudioTracks.firstOrNull()?.relativeIndex
+                                }
                             } ?: jellyfinAudioTracks.firstOrNull { it.isDefault }?.relativeIndex
                                 ?: jellyfinAudioTracks.firstOrNull()?.relativeIndex
 
                             val preservedSubtitleSelection = state.selectedSubtitleTrack?.let { current ->
+                                // Keep current if within bounds, otherwise clear (subtitles are optional)
                                 if (current < jellyfinSubtitleTracks.size) current else null
                             }
 
