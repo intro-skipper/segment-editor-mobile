@@ -115,94 +115,98 @@ fun VideoPlayerWithPreview(
         loadMedia("Loading media URL: $streamUrl")
     }
     
-    // Handle track selection changes for direct play mode ONLY
+    // Handle track selection changes for direct play mode
     // In HLS mode, track changes are handled via streamUrl changes that trigger reload above
-    // Only run this effect in Direct Play mode to avoid redundant processing
-    if (useDirectPlay) {
-        LaunchedEffect(selectedAudioTrack, selectedSubtitleTrack) {
-            // Skip on initial composition (when exoPlayer is not prepared yet)
-            if (exoPlayer.playbackState == Player.STATE_IDLE) {
-                android.util.Log.d("VideoPlayerWithPreview", "Skipping track change - player not ready")
-                return@LaunchedEffect
-            }
-            // Direct play mode: Use ExoPlayer's native track selection API
-            // The index here is the relativeIndex (0-based position within tracks of same type)
-            android.util.Log.d("VideoPlayerWithPreview", "Direct play mode - applying track selection (Audio relativeIndex: $selectedAudioTrack, Subtitle relativeIndex: $selectedSubtitleTrack)")
-            
-            val currentTracks = exoPlayer.currentTracks
-            val parametersBuilder = trackSelector.parameters.buildUpon()
-            
-            // Handle audio track selection using relativeIndex
-            if (selectedAudioTrack != null) {
-                var foundAudio = false
-                var currentRelativeIndex = 0
-                
-                // Iterate through all track groups to find audio track at relativeIndex
-                for (trackGroup in currentTracks.groups) {
-                    if (trackGroup.type == C.TRACK_TYPE_AUDIO) {
-                        for (trackIndex in 0 until trackGroup.length) {
-                            if (currentRelativeIndex == selectedAudioTrack) {
-                                // Found the track at the relative index
-                                parametersBuilder.setOverrideForType(
-                                    androidx.media3.common.TrackSelectionOverride(
-                                        trackGroup.mediaTrackGroup,
-                                        listOf(trackIndex)
-                                    )
-                                )
-                                android.util.Log.d("VideoPlayerWithPreview", "Selected audio track: relativeIndex=$selectedAudioTrack, trackIndex=$trackIndex in group")
-                                foundAudio = true
-                                break
-                            }
-                            currentRelativeIndex++
-                        }
-                        if (foundAudio) break
-                    }
-                }
-                
-                if (!foundAudio) {
-                    android.util.Log.w("VideoPlayerWithPreview", "Audio track with relativeIndex $selectedAudioTrack not found")
-                }
-            }
-            
-            // Handle subtitle track selection using relativeIndex
-            if (selectedSubtitleTrack != null) {
-                var foundSubtitle = false
-                var currentRelativeIndex = 0
-                
-                // Iterate through all track groups to find subtitle track at relativeIndex
-                for (trackGroup in currentTracks.groups) {
-                    if (trackGroup.type == C.TRACK_TYPE_TEXT) {
-                        for (trackIndex in 0 until trackGroup.length) {
-                            if (currentRelativeIndex == selectedSubtitleTrack) {
-                                // Found the track at the relative index
-                                parametersBuilder.setOverrideForType(
-                                    androidx.media3.common.TrackSelectionOverride(
-                                        trackGroup.mediaTrackGroup,
-                                        listOf(trackIndex)
-                                    )
-                                )
-                                android.util.Log.d("VideoPlayerWithPreview", "Selected subtitle track: relativeIndex=$selectedSubtitleTrack, trackIndex=$trackIndex in group")
-                                foundSubtitle = true
-                                break
-                            }
-                            currentRelativeIndex++
-                        }
-                        if (foundSubtitle) break
-                    }
-                }
-                
-                if (!foundSubtitle) {
-                    android.util.Log.w("VideoPlayerWithPreview", "Subtitle track with relativeIndex $selectedSubtitleTrack not found")
-                }
-            } else {
-                // Disable subtitles if null
-                parametersBuilder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
-                android.util.Log.d("VideoPlayerWithPreview", "Disabled subtitles")
-            }
-            
-            // Apply the track selection parameters
-            trackSelector.setParameters(parametersBuilder)
+    // Keep useDirectPlay in the key to ensure proper cleanup when switching modes
+    LaunchedEffect(selectedAudioTrack, selectedSubtitleTrack, useDirectPlay) {
+        // Skip in HLS mode - track changes are handled via streamUrl changes
+        if (!useDirectPlay) {
+            android.util.Log.d("VideoPlayerWithPreview", "Skipping track change in HLS mode - handled via streamUrl")
+            return@LaunchedEffect
         }
+        
+        // Skip on initial composition (when exoPlayer is not prepared yet)
+        if (exoPlayer.playbackState == Player.STATE_IDLE) {
+            android.util.Log.d("VideoPlayerWithPreview", "Skipping track change - player not ready")
+            return@LaunchedEffect
+        }
+        // Direct play mode: Use ExoPlayer's native track selection API
+        // The index here is the relativeIndex (0-based position within tracks of same type)
+        android.util.Log.d("VideoPlayerWithPreview", "Direct play mode - applying track selection (Audio relativeIndex: $selectedAudioTrack, Subtitle relativeIndex: $selectedSubtitleTrack)")
+        
+        val currentTracks = exoPlayer.currentTracks
+        val parametersBuilder = trackSelector.parameters.buildUpon()
+        
+        // Handle audio track selection using relativeIndex
+        if (selectedAudioTrack != null) {
+            var foundAudio = false
+            var currentRelativeIndex = 0
+            
+            // Iterate through all track groups to find audio track at relativeIndex
+            for (trackGroup in currentTracks.groups) {
+                if (trackGroup.type == C.TRACK_TYPE_AUDIO) {
+                    for (trackIndex in 0 until trackGroup.length) {
+                        if (currentRelativeIndex == selectedAudioTrack) {
+                            // Found the track at the relative index
+                            parametersBuilder.setOverrideForType(
+                                androidx.media3.common.TrackSelectionOverride(
+                                    trackGroup.mediaTrackGroup,
+                                    listOf(trackIndex)
+                                )
+                            )
+                            android.util.Log.d("VideoPlayerWithPreview", "Selected audio track: relativeIndex=$selectedAudioTrack, trackIndex=$trackIndex in group")
+                            foundAudio = true
+                            break
+                        }
+                        currentRelativeIndex++
+                    }
+                    if (foundAudio) break
+                }
+            }
+            
+            if (!foundAudio) {
+                android.util.Log.w("VideoPlayerWithPreview", "Audio track with relativeIndex $selectedAudioTrack not found")
+            }
+        }
+        
+        // Handle subtitle track selection using relativeIndex
+        if (selectedSubtitleTrack != null) {
+            var foundSubtitle = false
+            var currentRelativeIndex = 0
+            
+            // Iterate through all track groups to find subtitle track at relativeIndex
+            for (trackGroup in currentTracks.groups) {
+                if (trackGroup.type == C.TRACK_TYPE_TEXT) {
+                    for (trackIndex in 0 until trackGroup.length) {
+                        if (currentRelativeIndex == selectedSubtitleTrack) {
+                            // Found the track at the relative index
+                            parametersBuilder.setOverrideForType(
+                                androidx.media3.common.TrackSelectionOverride(
+                                    trackGroup.mediaTrackGroup,
+                                    listOf(trackIndex)
+                                )
+                            )
+                            android.util.Log.d("VideoPlayerWithPreview", "Selected subtitle track: relativeIndex=$selectedSubtitleTrack, trackIndex=$trackIndex in group")
+                            foundSubtitle = true
+                            break
+                        }
+                        currentRelativeIndex++
+                    }
+                    if (foundSubtitle) break
+                }
+            }
+            
+            if (!foundSubtitle) {
+                android.util.Log.w("VideoPlayerWithPreview", "Subtitle track with relativeIndex $selectedSubtitleTrack not found")
+            }
+        } else {
+            // Disable subtitles if null
+            parametersBuilder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+            android.util.Log.d("VideoPlayerWithPreview", "Disabled subtitles")
+        }
+        
+        // Apply the track selection parameters
+        trackSelector.setParameters(parametersBuilder)
     }
     
     // Player event listeners for playback state and track changes
