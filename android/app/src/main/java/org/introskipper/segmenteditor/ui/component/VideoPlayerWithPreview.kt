@@ -328,12 +328,18 @@ fun VideoPlayerWithPreview(
             }
             
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                android.util.Log.e("VideoPlayerWithPreview", "Player error occurred", error)
+                android.util.Log.e("VideoPlayerWithPreview", "Player error occurred: errorCode=${error.errorCode}", error)
                 
-                // Notify the error handler if in direct play mode
+                // Notify the error handler if in direct play mode and error is codec capability related
                 if (useDirectPlay) {
-                    android.util.Log.w("VideoPlayerWithPreview", "Direct play error, notifying error handler")
-                    onPlaybackError(error)
+                    // Check specifically for format exceeds capabilities or unsupported format errors
+                    val isCodecError = error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES ||
+                                      error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED
+                    
+                    if (isCodecError) {
+                        android.util.Log.w("VideoPlayerWithPreview", "Codec capability/unsupported format error in direct play mode, notifying error handler")
+                        onPlaybackError(error)
+                    }
                 }
             }
         }

@@ -87,7 +87,7 @@ fun PlayerScreen(
     // Allow fallback to HLS if direct play fails (but ask user first)
     var useDirectPlay by remember(itemId) { mutableStateOf(viewModel.shouldUseDirectPlay()) }
     var showDirectPlayFailedDialog by remember(itemId) { mutableStateOf(false) }
-    var hasShownCodecErrorDialog by remember(itemId) { mutableStateOf(false) }
+    var hasShownErrorDialog by remember(itemId) { mutableStateOf(false) }
     
     // Keep updated references to track selections for ResolvingDataSource
     val audioTrackState = rememberUpdatedState(uiState.selectedAudioTrack)
@@ -249,9 +249,9 @@ fun PlayerScreen(
                 },
                 onPlaybackError = { error ->
                     // Handle playback error - prompt user to switch to HLS if direct play fails
-                    if (useDirectPlay && !hasShownCodecErrorDialog) {
-                        android.util.Log.w("PlayerScreen", "Direct play failed, prompting user to switch to HLS: ${error.message}")
-                        hasShownCodecErrorDialog = true
+                    if (useDirectPlay && !hasShownErrorDialog) {
+                        android.util.Log.w("PlayerScreen", "Direct play decoder error, prompting user to switch to HLS: errorCode=${error.errorCode}")
+                        hasShownErrorDialog = true
                         showDirectPlayFailedDialog = true
                     }
                 },
