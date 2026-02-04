@@ -54,8 +54,21 @@ class TrackParametersDataSourceFactory(
 
         override fun resolveReportedUri(uri: Uri): Uri {
             // Return the original URI for reporting purposes
-            // (strip the dynamic parameters we added)
-            return uri
+            // Strip the dynamic parameters we added
+            val builder = uri.buildUpon()
+            builder.clearQuery()
+            
+            // Re-add all query parameters except the track-specific ones
+            for (paramName in uri.queryParameterNames) {
+                if (paramName != "AudioStreamIndex" && paramName != "SubtitleStreamIndex") {
+                    val values = uri.getQueryParameters(paramName)
+                    for (value in values) {
+                        builder.appendQueryParameter(paramName, value)
+                    }
+                }
+            }
+            
+            return builder.build()
         }
     }
     

@@ -118,67 +118,33 @@ fun VideoPlayerWithPreview(
         }
     }
     
-    // Update ExoPlayer track selection when audio/subtitle tracks change
-    // This uses ExoPlayer's TrackSelector to override which tracks are played
-    LaunchedEffect(getAudioStreamIndex, getSubtitleStreamIndex) {
-        val audioIndex = getAudioStreamIndex()
-        val subtitleIndex = getSubtitleStreamIndex()
-        
-        android.util.Log.d("VideoPlayerWithPreview", "Track selection changed - Audio: $audioIndex, Subtitle: $subtitleIndex")
-        
-        // Build track selection overrides
-        val parametersBuilder = trackSelector.parameters.buildUpon()
-        
-        // Clear all overrides first
-        parametersBuilder.clearOverrides()
-        
-        // Override audio track selection if specified
-        if (audioIndex != null) {
-            exoPlayer.currentTracks.groups.forEachIndexed { groupIndex, trackGroup ->
-                if (trackGroup.type == TRACK_TYPE_AUDIO) {
-                    // Find the track with matching index
-                    for (trackIndex in 0 until trackGroup.length) {
-                        // Match based on the index from Jellyfin metadata
-                        // For now, we'll select the track at the specified index within the audio group
-                        if (trackIndex == audioIndex) {
-                            parametersBuilder.setOverrideForType(
-                                androidx.media3.common.TrackSelectionOverride(
-                                    trackGroup.mediaTrackGroup,
-                                    listOf(trackIndex)
-                                )
-                            )
-                            android.util.Log.d("VideoPlayerWithPreview", "Selected audio track $trackIndex in group $groupIndex")
-                            break
-                        }
-                    }
-                }
-            }
+    // Reload media when track selection changes to get new transcoded HLS manifest
+    // Jellyfin server-side transcoding means only selected tracks are in the HLS stream,
+    // so we need to reload to get a new manifest with the newly selected tracks.
+    val currentAudioIndex = getAudioStreamIndex()
+    val currentSubtitleIndex = getSubtitleStreamIndex()
+    LaunchedEffect(currentAudioIndex, currentSubtitleIndex) {
+        // Skip reload on initial composition (when exoPlayer is not prepared yet)
+        if (exoPlayer.playbackState == Player.STATE_IDLE) {
+            android.util.Log.d("VideoPlayerWithPreview", "Skipping track change reload - player not ready")
+            return@LaunchedEffect
         }
         
-        // Override subtitle track selection if specified
-        if (subtitleIndex != null) {
-            exoPlayer.currentTracks.groups.forEachIndexed { groupIndex, trackGroup ->
-                if (trackGroup.type == TRACK_TYPE_TEXT) {
-                    for (trackIndex in 0 until trackGroup.length) {
-                        if (trackIndex == subtitleIndex) {
-                            parametersBuilder.setOverrideForType(
-                                androidx.media3.common.TrackSelectionOverride(
-                                    trackGroup.mediaTrackGroup,
-                                    listOf(trackIndex)
-                                )
-                            )
-                            android.util.Log.d("VideoPlayerWithPreview", "Selected subtitle track $trackIndex in group $groupIndex")
-                            break
-                        }
-                    }
-                }
-            }
-        } else {
-            // Disable subtitles if null
-            parametersBuilder.setTrackTypeDisabled(TRACK_TYPE_TEXT, true)
-        }
+        android.util.Log.d("VideoPlayerWithPreview", "Track selection changed - reloading media (Audio: $currentAudioIndex, Subtitle: $currentSubtitleIndex)")
         
-        trackSelector.setParameters(parametersBuilder)
+        val currentPosition = exoPlayer.currentPosition
+        val wasPlaying = exoPlayer.playWhenReady
+        
+        // Reload the media source with new track parameters (added by ResolvingDataSource)
+        exoPlayer.setMediaSource(mediaFactory.createMediaSource(MediaItem.fromUri(streamUrl)))
+        exoPlayer.prepare()
+        
+        // Restore position and play state
+        if (currentPosition > MIN_POSITION_TO_RESTORE_MS) {
+            exoPlayer.seekTo(currentPosition)
+            exoPlayer.playWhenReady = wasPlaying
+            android.util.Log.d("VideoPlayerWithPreview", "Restored position: $currentPosition ms, playing: $wasPlaying")
+        }
     }
     
     // Player event listeners for playback state and track changes
