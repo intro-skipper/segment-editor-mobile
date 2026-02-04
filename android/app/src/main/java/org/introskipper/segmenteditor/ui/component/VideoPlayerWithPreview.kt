@@ -332,9 +332,13 @@ fun VideoPlayerWithPreview(
                 
                 // Notify the error handler if in direct play mode and error is codec capability related
                 if (useDirectPlay) {
-                    // Check specifically for format exceeds capabilities or unsupported format errors
-                    val isCodecError = error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES ||
-                                      error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED
+                    // ERROR_CODE_DECODER_INIT_FAILED = 4001
+                    // ERROR_CODE_DECODER_QUERY_FAILED = 4002
+                    // ERROR_CODE_DECODING_FAILED = 4003
+                    // ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES = 4004
+                    // ERROR_CODE_DECODING_FORMAT_UNSUPPORTED = 4005
+                    // ERROR_CODE_DECODING_RESOURCES_RECLAIMED = 4006
+                    val isCodecError = error.errorCode in 4000..5000
                     
                     if (isCodecError) {
                         android.util.Log.w("VideoPlayerWithPreview", "Codec capability/unsupported format error in direct play mode, notifying error handler")
