@@ -288,17 +288,17 @@ class PlayerViewModel @Inject constructor(
     }
     
     /**
-     * Get the base stream URL without track-specific parameters.
-     * Track parameters (AudioStreamIndex, SubtitleStreamIndex) will be added
-     * dynamically by the ResolvingDataSource.
+     * Get the stream URL with track-specific parameters built in.
+     * For HLS: includes AudioStreamIndex and SubtitleStreamIndex parameters if set
+     * For Direct Play: no track parameters needed
      */
-    fun getBaseStreamUrl(useHls: Boolean = true): String? {
+    fun getStreamUrl(useHls: Boolean = true): String? {
         val mediaItem = _uiState.value.mediaItem ?: return null
         val serverUrl = securePreferences.getServerUrl() ?: return null
         val apiKey = securePreferences.getApiKey() ?: return null
         
         return if (useHls) {
-            // HLS streaming (preferred) - base URL without track parameters
+            // HLS streaming - build URL with track parameters upfront
             buildString {
                 append("$serverUrl/Videos/${mediaItem.id}/master.m3u8")
                 append("?MediaSourceId=${mediaItem.id}")
@@ -311,7 +311,17 @@ class PlayerViewModel @Inject constructor(
                 append("&SegmentContainer=ts")
                 append("&MinSegments=1")
                 append("&BreakOnNonKeyFrames=true")
-                // Note: AudioStreamIndex and SubtitleStreamIndex will be added by ResolvingDataSource
+                
+                // Add track parameters directly to URL (not via ResolvingDataSource)
+                val audioIndex = _uiState.value.selectedAudioTrack
+                if (audioIndex != null) {
+                    append("&AudioStreamIndex=$audioIndex")
+                }
+                
+                val subtitleIndex = _uiState.value.selectedSubtitleTrack
+                if (subtitleIndex != null) {
+                    append("&SubtitleStreamIndex=$subtitleIndex")
+                }
             }
         } else {
             // Direct play fallback

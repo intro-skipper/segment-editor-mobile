@@ -30,7 +30,6 @@ import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.introskipper.segmenteditor.data.TrackParametersDataSourceFactory
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 
 // Minimum position to restore when reloading stream (avoids restoring during initial load)
@@ -49,8 +48,8 @@ fun VideoPlayerWithPreview(
     useController: Boolean = true,
     previewLoader: PreviewLoader? = null,
     useDirectPlay: Boolean = false,
-    getAudioStreamIndex: () -> Int? = { null },
-    getSubtitleStreamIndex: () -> Int? = { null },
+    selectedAudioTrack: Int? = null,
+    selectedSubtitleTrack: Int? = null,
     onPlayerReady: (ExoPlayer) -> Unit = {},
     onPlaybackStateChanged: (isPlaying: Boolean, currentPosition: Long, bufferedPosition: Long) -> Unit = { _, _, _ -> },
     onTracksChanged: (Tracks) -> Unit = {},
@@ -61,30 +60,16 @@ fun VideoPlayerWithPreview(
     // Create ExoPlayer instance once - don't recreate on track changes
     val trackSelector = remember { DefaultTrackSelector(context) }
 
-    // Create data source factory
-    // When using HLS (useDirectPlay=false): Use ResolvingDataSource to add track parameters to URL
-    // When using direct play (useDirectPlay=true): Use plain HTTP data source without track parameters
-    val dataSourceFactory = remember(useDirectPlay) {
-        if (useDirectPlay) {
-            // Direct play: no track parameters needed, ExoPlayer handles track selection natively
-            TrackParametersDataSourceFactory(
-                upstreamFactory =  DefaultHttpDataSource.Factory(),
-                getAudioStreamIndex = { null },
-                getSubtitleStreamIndex = { null }
-            )
-        } else {
-            // HLS mode: add track parameters to URL for Jellyfin transcoding
-            TrackParametersDataSourceFactory(
-                upstreamFactory =  DefaultHttpDataSource.Factory(),
-                getAudioStreamIndex = getAudioStreamIndex,
-                getSubtitleStreamIndex = getSubtitleStreamIndex
-            )
-        }
+    // Create simple data source factory without ResolvingDataSource
+    // Track parameters are now built into the URL upfront by the caller
+    val dataSourceFactory = remember {
+        DefaultHttpDataSource.Factory()
     }
 
-    val mediaFactory = remember(dataSourceFactory) {
+    val mediaFactory = remember {
         DefaultMediaSourceFactory(context).setDataSourceFactory(dataSourceFactory)
     }
+    
     val exoPlayer = remember {
         android.util.Log.d("VideoPlayerWithPreview", "Creating ExoPlayer instance")
         
@@ -130,42 +115,25 @@ fun VideoPlayerWithPreview(
         loadMedia("Loading media URL: $streamUrl")
     }
     
-    // Handle track selection changes based on mode
-    val currentAudioIndex = getAudioStreamIndex()
-    val currentSubtitleIndex = getSubtitleStreamIndex()
-    
-    // Track previous values to detect actual changes vs mode switches
-    // Initialize with current values to avoid false positives on first real change
-    var previousAudioIndex by remember { mutableStateOf(currentAudioIndex) }
-    var previousSubtitleIndex by remember { mutableStateOf(currentSubtitleIndex) }
-    var previousUseDirectPlay by remember { mutableStateOf(useDirectPlay) }
-    
-    LaunchedEffect(currentAudioIndex, currentSubtitleIndex, useDirectPlay) {
+    // Handle track selection changes for direct play mode
+    // In HLS mode, track changes are handled via streamUrl changes that trigger reload
+    LaunchedEffect(selectedAudioTrack, selectedSubtitleTrack, useDirectPlay) {
         // Skip on initial composition (when exoPlayer is not prepared yet)
         if (exoPlayer.playbackState == Player.STATE_IDLE) {
             android.util.Log.d("VideoPlayerWithPreview", "Skipping track change - player not ready")
             return@LaunchedEffect
         }
         
-        // Detect if only the mode changed (fallback scenario) without track changes
-        val modeChanged = useDirectPlay != previousUseDirectPlay
-        val tracksChanged = currentAudioIndex != previousAudioIndex || currentSubtitleIndex != previousSubtitleIndex
-        
-        // Update previous values for next comparison
-        previousAudioIndex = currentAudioIndex
-        previousSubtitleIndex = currentSubtitleIndex
-        previousUseDirectPlay = useDirectPlay
-        
         if (useDirectPlay) {
             // Direct play mode: Use ExoPlayer's native track selection API
             // The index here is the relativeIndex (0-based position within tracks of same type)
-            android.util.Log.d("VideoPlayerWithPreview", "Direct play mode - using ExoPlayer track selection (Audio relativeIndex: $currentAudioIndex, Subtitle relativeIndex: $currentSubtitleIndex)")
+            android.util.Log.d("VideoPlayerWithPreview", "Direct play mode - applying track selection (Audio relativeIndex: $selectedAudioTrack, Subtitle relativeIndex: $selectedSubtitleTrack)")
             
             val currentTracks = exoPlayer.currentTracks
             val parametersBuilder = trackSelector.parameters.buildUpon()
             
             // Handle audio track selection using relativeIndex
-            if (currentAudioIndex != null) {
+            if (selectedAudioTrack != null) {
                 var foundAudio = false
                 var currentRelativeIndex = 0
                 
@@ -173,16 +141,15 @@ fun VideoPlayerWithPreview(
                 for (trackGroup in currentTracks.groups) {
                     if (trackGroup.type == C.TRACK_TYPE_AUDIO) {
                         for (trackIndex in 0 until trackGroup.length) {
-                            if (currentRelativeIndex == currentAudioIndex) {
+                            if (currentRelativeIndex == selectedAudioTrack) {
                                 // Found the track at the relative index
-                                // Use TrackSelectionOverride with the MediaTrackGroup
                                 parametersBuilder.setOverrideForType(
                                     androidx.media3.common.TrackSelectionOverride(
                                         trackGroup.mediaTrackGroup,
                                         listOf(trackIndex)
                                     )
                                 )
-                                android.util.Log.d("VideoPlayerWithPreview", "Selected audio track: relativeIndex=$currentAudioIndex, trackIndex=$trackIndex in group")
+                                android.util.Log.d("VideoPlayerWithPreview", "Selected audio track: relativeIndex=$selectedAudioTrack, trackIndex=$trackIndex in group")
                                 foundAudio = true
                                 break
                             }
@@ -193,12 +160,12 @@ fun VideoPlayerWithPreview(
                 }
                 
                 if (!foundAudio) {
-                    android.util.Log.w("VideoPlayerWithPreview", "Audio track with relativeIndex $currentAudioIndex not found")
+                    android.util.Log.w("VideoPlayerWithPreview", "Audio track with relativeIndex $selectedAudioTrack not found")
                 }
             }
             
             // Handle subtitle track selection using relativeIndex
-            if (currentSubtitleIndex != null) {
+            if (selectedSubtitleTrack != null) {
                 var foundSubtitle = false
                 var currentRelativeIndex = 0
                 
@@ -206,16 +173,15 @@ fun VideoPlayerWithPreview(
                 for (trackGroup in currentTracks.groups) {
                     if (trackGroup.type == C.TRACK_TYPE_TEXT) {
                         for (trackIndex in 0 until trackGroup.length) {
-                            if (currentRelativeIndex == currentSubtitleIndex) {
+                            if (currentRelativeIndex == selectedSubtitleTrack) {
                                 // Found the track at the relative index
-                                // Use TrackSelectionOverride with the MediaTrackGroup
                                 parametersBuilder.setOverrideForType(
                                     androidx.media3.common.TrackSelectionOverride(
                                         trackGroup.mediaTrackGroup,
                                         listOf(trackIndex)
                                     )
                                 )
-                                android.util.Log.d("VideoPlayerWithPreview", "Selected subtitle track: relativeIndex=$currentSubtitleIndex, trackIndex=$trackIndex in group")
+                                android.util.Log.d("VideoPlayerWithPreview", "Selected subtitle track: relativeIndex=$selectedSubtitleTrack, trackIndex=$trackIndex in group")
                                 foundSubtitle = true
                                 break
                             }
@@ -226,7 +192,7 @@ fun VideoPlayerWithPreview(
                 }
                 
                 if (!foundSubtitle) {
-                    android.util.Log.w("VideoPlayerWithPreview", "Subtitle track with relativeIndex $currentSubtitleIndex not found")
+                    android.util.Log.w("VideoPlayerWithPreview", "Subtitle track with relativeIndex $selectedSubtitleTrack not found")
                 }
             } else {
                 // Disable subtitles if null
@@ -236,18 +202,9 @@ fun VideoPlayerWithPreview(
             
             // Apply the track selection parameters
             trackSelector.setParameters(parametersBuilder)
-        } else {
-            // HLS mode: Reload media to get new transcoded manifest from Jellyfin
-            // In HLS mode, currentAudioIndex and currentSubtitleIndex are Jellyfin MediaStream indices
-            // Only reload if tracks changed, but skip if ONLY mode changed (not tracks)
-            // This prevents double-loading during fallback while allowing track changes
-            if (tracksChanged) {
-                android.util.Log.d("VideoPlayerWithPreview", "HLS mode - reloading media for track change (AudioStreamIndex=$currentAudioIndex, SubtitleStreamIndex=$currentSubtitleIndex)")
-                loadMedia("HLS mode - reloading media for track change (AudioStreamIndex=$currentAudioIndex, SubtitleStreamIndex=$currentSubtitleIndex)")
-            } else if (modeChanged) {
-                android.util.Log.d("VideoPlayerWithPreview", "HLS mode - skipping reload due to mode change without track change (already loaded by streamUrl change)")
-            }
         }
+        // Note: In HLS mode, track parameters are built into the URL.
+        // When tracks change, streamUrl changes, triggering a reload via LaunchedEffect(streamUrl).
     }
     
     // Player event listeners for playback state and track changes

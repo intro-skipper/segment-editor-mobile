@@ -89,13 +89,9 @@ fun PlayerScreen(
     var showDirectPlayFailedDialog by remember(itemId) { mutableStateOf(false) }
     var hasShownErrorDialog by remember(itemId) { mutableStateOf(false) }
     
-    // Keep updated references to track selections for ResolvingDataSource
-    val audioTrackState = rememberUpdatedState(uiState.selectedAudioTrack)
-    val subtitleTrackState = rememberUpdatedState(uiState.selectedSubtitleTrack)
-    
-    // Base stream URL (without track parameters when using HLS - those will be added dynamically by ResolvingDataSource)
-    val streamUrl = remember(uiState.mediaItem, useDirectPlay) {
-        viewModel.getBaseStreamUrl(useHls = !useDirectPlay)
+    // Stream URL with track parameters built in (changes when tracks or mode changes)
+    val streamUrl = remember(uiState.mediaItem, useDirectPlay, uiState.selectedAudioTrack, uiState.selectedSubtitleTrack) {
+        viewModel.getStreamUrl(useHls = !useDirectPlay)
     }
     
     // Preview loader
@@ -227,8 +223,6 @@ fun PlayerScreen(
                 previewLoader = previewLoader,
                 activeSegmentIndex = activeSegmentIndex,
                 useDirectPlay = useDirectPlay,
-                getAudioStreamIndex = { audioTrackState.value },
-                getSubtitleStreamIndex = { subtitleTrackState.value },
                 onPlayerReady = { player = it },
                 onAudioTracksClick = { showAudioTracks = true },
                 onSubtitleTracksClick = { showSubtitleTracks = true },
@@ -400,8 +394,6 @@ private fun PlayerContent(
     previewLoader: PreviewLoader?,
     activeSegmentIndex: Int,
     useDirectPlay: Boolean,
-    getAudioStreamIndex: () -> Int?,
-    getSubtitleStreamIndex: () -> Int?,
     onPlayerReady: (ExoPlayer) -> Unit,
     onAudioTracksClick: () -> Unit,
     onSubtitleTracksClick: () -> Unit,
@@ -428,8 +420,8 @@ private fun PlayerContent(
                     useController = true,
                     previewLoader = previewLoader,
                     useDirectPlay = useDirectPlay,
-                    getAudioStreamIndex = getAudioStreamIndex,
-                    getSubtitleStreamIndex = getSubtitleStreamIndex,
+                    selectedAudioTrack = uiState.selectedAudioTrack,
+                    selectedSubtitleTrack = uiState.selectedSubtitleTrack,
                     onPlayerReady = onPlayerReady,
                     onPlaybackStateChanged = { isPlaying, currentPos, bufferedPos ->
                         viewModel.updatePlaybackState(isPlaying, currentPos, bufferedPos)
