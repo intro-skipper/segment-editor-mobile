@@ -48,6 +48,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -82,13 +83,13 @@ fun PlayerScreen(
     val context = LocalContext.current
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     
-    // Stream URL that updates when audio or subtitle track changes (for HLS transcoding)
-    val streamUrl = remember(uiState.selectedAudioTrack, uiState.selectedSubtitleTrack, uiState.mediaItem) {
-        viewModel.getStreamUrl(
-            useHls = true,
-            audioStreamIndex = uiState.selectedAudioTrack,
-            subtitleStreamIndex = uiState.selectedSubtitleTrack
-        )
+    // Keep updated references to track selections for ResolvingDataSource
+    val audioTrackState = rememberUpdatedState(uiState.selectedAudioTrack)
+    val subtitleTrackState = rememberUpdatedState(uiState.selectedSubtitleTrack)
+    
+    // Base stream URL (without track parameters - those will be added dynamically by ResolvingDataSource)
+    val streamUrl = remember(uiState.mediaItem) {
+        viewModel.getBaseStreamUrl(useHls = true)
     }
     
     // Preview loader
@@ -219,6 +220,8 @@ fun PlayerScreen(
                 streamUrl = streamUrl,
                 previewLoader = previewLoader,
                 activeSegmentIndex = activeSegmentIndex,
+                getAudioStreamIndex = { audioTrackState.value },
+                getSubtitleStreamIndex = { subtitleTrackState.value },
                 onPlayerReady = { player = it },
                 onAudioTracksClick = { showAudioTracks = true },
                 onSubtitleTracksClick = { showSubtitleTracks = true },
@@ -350,6 +353,8 @@ private fun PlayerContent(
     streamUrl: String?,
     previewLoader: PreviewLoader?,
     activeSegmentIndex: Int,
+    getAudioStreamIndex: () -> Int?,
+    getSubtitleStreamIndex: () -> Int?,
     onPlayerReady: (ExoPlayer) -> Unit,
     onAudioTracksClick: () -> Unit,
     onSubtitleTracksClick: () -> Unit,
@@ -375,6 +380,8 @@ private fun PlayerContent(
                     headers = viewModel.getStreamHeaders(),
                     useController = true,
                     previewLoader = previewLoader,
+                    getAudioStreamIndex = getAudioStreamIndex,
+                    getSubtitleStreamIndex = getSubtitleStreamIndex,
                     onPlayerReady = onPlayerReady,
                     onPlaybackStateChanged = { isPlaying, currentPos, bufferedPos ->
                         viewModel.updatePlaybackState(isPlaying, currentPos, bufferedPos)

@@ -27,6 +27,7 @@ import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.introskipper.segmenteditor.data.TrackParametersDataSourceFactory
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 
 // Minimum position to restore when reloading stream (avoids restoring during initial load)
@@ -45,6 +46,8 @@ fun VideoPlayerWithPreview(
     modifier: Modifier = Modifier,
     useController: Boolean = true,
     previewLoader: PreviewLoader? = null,
+    getAudioStreamIndex: () -> Int? = { null },
+    getSubtitleStreamIndex: () -> Int? = { null },
     onPlayerReady: (ExoPlayer) -> Unit = {},
     onPlaybackStateChanged: (isPlaying: Boolean, currentPosition: Long, bufferedPosition: Long) -> Unit = { _, _, _ -> },
     onTracksChanged: (Tracks) -> Unit = {}
@@ -53,10 +56,22 @@ fun VideoPlayerWithPreview(
     
     // Create ExoPlayer instance once - don't recreate on track changes
     val trackSelector = remember { DefaultTrackSelector(context) }
-    val mediaFactory = remember(headers) {
-        DefaultMediaSourceFactory(context).setDataSourceFactory(
-            DefaultHttpDataSource.Factory().setDefaultRequestProperties(headers)
+    
+    // Create data source factory with ResolvingDataSource that dynamically adds track parameters
+    // Note: We only key on headers, not the lambda functions, since those capture current state
+    val dataSourceFactory = remember(headers) {
+        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+            .setDefaultRequestProperties(headers)
+        
+        TrackParametersDataSourceFactory(
+            upstreamFactory = httpDataSourceFactory,
+            getAudioStreamIndex = getAudioStreamIndex,
+            getSubtitleStreamIndex = getSubtitleStreamIndex
         )
+    }
+    
+    val mediaFactory = remember(dataSourceFactory) {
+        DefaultMediaSourceFactory(context).setDataSourceFactory(dataSourceFactory)
     }
     val exoPlayer = remember {
         android.util.Log.d("VideoPlayerWithPreview", "Creating ExoPlayer instance")
