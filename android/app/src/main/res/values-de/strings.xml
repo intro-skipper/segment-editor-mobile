@@ -38,10 +38,6 @@
     <string name="settings_section_playback">Wiedergabe</string>
     <string name="settings_autoplay_next">Nächste Episode automatisch abspielen</string>
     <string name="settings_autoplay_next_subtitle">Automatisch die nächste Episode abspielen</string>
-    <string name="settings_skip_intro">Intro automatisch überspringen</string>
-    <string name="settings_skip_intro_subtitle">Intros automatisch überspringen, wenn erkannt</string>
-    <string name="settings_skip_credits">Abspann automatisch überspringen</string>
-    <string name="settings_skip_credits_subtitle">Abspann automatisch überspringen, wenn erkannt</string>
     
     <string name="settings_section_export">Export</string>
     <string name="settings_export_format">Standard-Exportformat</string>

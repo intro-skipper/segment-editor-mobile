@@ -38,10 +38,6 @@
     <string name="settings_section_playback">Reproducción</string>
     <string name="settings_autoplay_next">Reproducir siguiente episodio automáticamente</string>
     <string name="settings_autoplay_next_subtitle">Reproducir automáticamente el siguiente episodio</string>
-    <string name="settings_skip_intro">Saltar intro automáticamente</string>
-    <string name="settings_skip_intro_subtitle">Saltar intros automáticamente cuando se detecten</string>
-    <string name="settings_skip_credits">Saltar créditos automáticamente</string>
-    <string name="settings_skip_credits_subtitle">Saltar créditos finales automáticamente cuando se detecten</string>
     
     <string name="settings_section_export">Exportar</string>
     <string name="settings_export_format">Formato de exportación predeterminado</string>

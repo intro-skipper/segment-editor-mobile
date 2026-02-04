@@ -16,8 +16,6 @@ data class SettingsUiState(
     val theme: AppTheme = AppTheme.SYSTEM,
     val preferDirectPlay: Boolean = true,
     val autoPlayNextEpisode: Boolean = true,
-    val skipIntroAutomatically: Boolean = true,
-    val skipCreditsAutomatically: Boolean = false,
     val exportFormat: ExportFormat = ExportFormat.JSON,
     val prettyPrintJson: Boolean = true,
     val itemsPerPage: Int = 20
@@ -41,8 +39,6 @@ class SettingsViewModel @Inject constructor(
                 theme = securePreferences.getTheme(),
                 preferDirectPlay = securePreferences.getPreferDirectPlay(),
                 autoPlayNextEpisode = securePreferences.getAutoPlayNextEpisode(),
-                skipIntroAutomatically = securePreferences.getSkipIntroAutomatically(),
-                skipCreditsAutomatically = securePreferences.getSkipCreditsAutomatically(),
                 exportFormat = securePreferences.getExportFormat(),
                 prettyPrintJson = securePreferences.getPrettyPrintJson(),
                 itemsPerPage = securePreferences.getItemsPerPage()
@@ -63,16 +59,6 @@ class SettingsViewModel @Inject constructor(
     fun setAutoPlayNextEpisode(enabled: Boolean) {
         securePreferences.setAutoPlayNextEpisode(enabled)
         _uiState.value = _uiState.value.copy(autoPlayNextEpisode = enabled)
-    }
-
-    fun setSkipIntroAutomatically(enabled: Boolean) {
-        securePreferences.setSkipIntroAutomatically(enabled)
-        _uiState.value = _uiState.value.copy(skipIntroAutomatically = enabled)
-    }
-
-    fun setSkipCreditsAutomatically(enabled: Boolean) {
-        securePreferences.setSkipCreditsAutomatically(enabled)
-        _uiState.value = _uiState.value.copy(skipCreditsAutomatically = enabled)
     }
 
     fun setExportFormat(format: ExportFormat) {

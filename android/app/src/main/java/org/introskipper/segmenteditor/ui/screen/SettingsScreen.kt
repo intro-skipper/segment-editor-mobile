@@ -133,20 +133,6 @@ fun SettingsScreen(
                         checked = uiState.autoPlayNextEpisode,
                         onCheckedChange = viewModel::setAutoPlayNextEpisode
                     )
-                    
-                    SwitchSettingItem(
-                        title = stringResource(R.string.settings_skip_intro),
-                        subtitle = stringResource(R.string.settings_skip_intro_subtitle),
-                        checked = uiState.skipIntroAutomatically,
-                        onCheckedChange = viewModel::setSkipIntroAutomatically
-                    )
-                    
-                    SwitchSettingItem(
-                        title = stringResource(R.string.settings_skip_credits),
-                        subtitle = stringResource(R.string.settings_skip_credits_subtitle),
-                        checked = uiState.skipCreditsAutomatically,
-                        onCheckedChange = viewModel::setSkipCreditsAutomatically
-                    )
                 }
             }
             

@@ -77,31 +77,7 @@ class SecurePreferences(context: Context) {
     }
     
     fun getAutoPlayNextEpisode(): Boolean {
-        return sharedPreferences.getBoolean(KEY_AUTO_PLAY_NEXT, true)
-    }
-    
-    fun setSkipIntroAutomatically(enabled: Boolean) {
-        sharedPreferences.edit { putBoolean(KEY_SKIP_INTRO_AUTO, enabled) }
-    }
-    
-    fun getSkipIntroAutomatically(): Boolean {
-        return sharedPreferences.getBoolean(KEY_SKIP_INTRO_AUTO, true)
-    }
-    
-    fun setSkipCreditsAutomatically(enabled: Boolean) {
-        sharedPreferences.edit { putBoolean(KEY_SKIP_CREDITS_AUTO, enabled) }
-    }
-    
-    fun getSkipCreditsAutomatically(): Boolean {
-        return sharedPreferences.getBoolean(KEY_SKIP_CREDITS_AUTO, false)
-    }
-    
-    fun setShowSkipButtons(enabled: Boolean) {
-        sharedPreferences.edit { putBoolean(KEY_SHOW_SKIP_BUTTONS, enabled) }
-    }
-    
-    fun getShowSkipButtons(): Boolean {
-        return sharedPreferences.getBoolean(KEY_SHOW_SKIP_BUTTONS, true)
+        return sharedPreferences.getBoolean(KEY_AUTO_PLAY_NEXT, false)
     }
     
     // ========== UI Settings ==========
