@@ -53,7 +53,7 @@ fun VideoPlayerWithPreview(
     
     // Create ExoPlayer instance once - don't recreate on track changes
     val trackSelector = remember { DefaultTrackSelector(context) }
-    val mediaFactory = remember {
+    val mediaFactory = remember(headers) {
         DefaultMediaSourceFactory(context).setDataSourceFactory(
             DefaultHttpDataSource.Factory().setDefaultRequestProperties(headers)
         )
