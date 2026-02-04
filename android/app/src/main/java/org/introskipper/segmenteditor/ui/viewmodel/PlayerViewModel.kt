@@ -54,7 +54,12 @@ class PlayerViewModel @Inject constructor(
                     error = null,
                     segments = emptyList(),
                     currentPosition = 0L,
-                    isPlaying = false
+                    isPlaying = false,
+                    // Clear track information when loading new media item
+                    audioTracks = emptyList(),
+                    subtitleTracks = emptyList(),
+                    selectedAudioTrack = null,
+                    selectedSubtitleTrack = null
                 )
             }
             
