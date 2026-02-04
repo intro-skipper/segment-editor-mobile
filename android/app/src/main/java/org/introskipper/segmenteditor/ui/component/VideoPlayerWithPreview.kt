@@ -159,7 +159,11 @@ fun VideoPlayerWithPreview(
                         )
                         android.util.Log.d("VideoPlayerWithPreview", "Selected audio track: $currentAudioIndex")
                         audioTrackSet = true
+                        break
                     }
+                }
+                if (!audioTrackSet) {
+                    android.util.Log.w("VideoPlayerWithPreview", "Audio track index $currentAudioIndex not found in available tracks")
                 }
             }
             
@@ -177,7 +181,11 @@ fun VideoPlayerWithPreview(
                         )
                         android.util.Log.d("VideoPlayerWithPreview", "Selected subtitle track: $currentSubtitleIndex")
                         subtitleTrackSet = true
+                        break
                     }
+                }
+                if (!subtitleTrackSet) {
+                    android.util.Log.w("VideoPlayerWithPreview", "Subtitle track index $currentSubtitleIndex not found in available tracks")
                 }
             } else {
                 // Disable subtitles if null
