@@ -284,12 +284,32 @@ class PlayerViewModel @Inject constructor(
                 )
             }
         } else {
-            // HLS mode: keep existing Jellyfin tracks, only use ExoPlayer tracks if none exist
+            // HLS mode: keep existing Jellyfin tracks, only use ExoPlayer tracks if none exist OR if existing tracks are from ExoPlayer
             Log.d(TAG, "HLS mode: keeping Jellyfin tracks, ExoPlayer tracks as fallback")
             _uiState.update { state ->
+                // Check if existing tracks are from Jellyfin or ExoPlayer
+                val hasJellyfinTracks = state.audioTracks.isNotEmpty() && 
+                    state.audioTracks.first().source == org.introskipper.segmenteditor.ui.state.TrackSource.JELLYFIN
+                
+                // Only keep existing tracks if they're from Jellyfin
+                // If they're from ExoPlayer (e.g., after switching from Direct Play), replace them with new ExoPlayer tracks from HLS
+                val shouldKeepExistingTracks = state.audioTracks.isNotEmpty() && hasJellyfinTracks
+                
                 state.copy(
-                    audioTracks = state.audioTracks.ifEmpty { exoAudioTracks },
-                    subtitleTracks = state.subtitleTracks.ifEmpty { exoSubtitleTracks }
+                    audioTracks = if (shouldKeepExistingTracks) state.audioTracks else exoAudioTracks,
+                    subtitleTracks = if (shouldKeepExistingTracks) state.subtitleTracks else exoSubtitleTracks,
+                    // When replacing tracks, reset selections to defaults if current selection is out of bounds
+                    selectedAudioTrack = if (shouldKeepExistingTracks) {
+                        state.selectedAudioTrack
+                    } else {
+                        exoAudioTracks.firstOrNull { it.isDefault }?.relativeIndex 
+                            ?: exoAudioTracks.firstOrNull()?.relativeIndex
+                    },
+                    selectedSubtitleTrack = if (shouldKeepExistingTracks) {
+                        state.selectedSubtitleTrack
+                    } else {
+                        exoSubtitleTracks.firstOrNull { it.isDefault }?.relativeIndex
+                    }
                 )
             }
         }
