@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- 
+        Theme for Jetpack Compose Material3 app
+        Uses native Android Material theme (not AppCompat) since this is a Compose-only app
+        If you need to use View-based Material components, use Compose alternatives instead:
+        - Instead of com.google.android.material.snackbar.Snackbar, use androidx.compose.material3.Snackbar
+        - Instead of AppCompat dialogs, use androidx.compose.material3.AlertDialog
+    -->
     <style name="Theme.ReactInMobile" parent="android:Theme.Material.Light.NoActionBar" />
 </resources>
