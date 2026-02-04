@@ -37,6 +37,11 @@ class PlayerViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
     
+    // Get the preferDirectPlay setting (when true, use direct play instead of HLS)
+    fun shouldUseDirectPlay(): Boolean {
+        return securePreferences.getPreferDirectPlay()
+    }
+    
     private val _events = MutableStateFlow<PlayerEvent?>(null)
     val events: StateFlow<PlayerEvent?> = _events.asStateFlow()
     

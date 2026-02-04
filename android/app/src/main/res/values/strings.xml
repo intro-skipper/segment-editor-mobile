@@ -37,6 +37,8 @@
     <string name="settings_theme_system">📱 System Default</string>
     
     <string name="settings_section_playback">Playback</string>
+    <string name="settings_prefer_direct_play">Use Direct Play</string>
+    <string name="settings_prefer_direct_play_subtitle">Play media directly without transcoding (uses ExoPlayer track selection)</string>
     <string name="settings_autoplay_next">Auto-play Next Episode</string>
     <string name="settings_autoplay_next_subtitle">Automatically play the next episode</string>
     <string name="settings_skip_intro">Skip Intro Automatically</string>

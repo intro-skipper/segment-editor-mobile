@@ -46,6 +46,8 @@ fun VideoPlayerWithPreview(
     modifier: Modifier = Modifier,
     useController: Boolean = true,
     previewLoader: PreviewLoader? = null,
+    useDirectPlay: Boolean = false,
+    exoPlayer: ExoPlayer? = null,
     getAudioStreamIndex: () -> Int? = { null },
     getSubtitleStreamIndex: () -> Int? = { null },
     onPlayerReady: (ExoPlayer) -> Unit = {},
@@ -57,21 +59,24 @@ fun VideoPlayerWithPreview(
     // Create ExoPlayer instance once - don't recreate on track changes
     val trackSelector = remember { DefaultTrackSelector(context) }
     
-    // Create data source factory with ResolvingDataSource that dynamically adds track parameters
-    // Note: We only key on headers, NOT the lambda functions. This is intentional because:
-    // 1. The lambdas are passed from PlayerScreen using rememberUpdatedState
-    // 2. They read from State objects that always contain current values
-    // 3. The lambdas are called at HTTP request time by the resolver, so they get current state
-    // 4. Keying on lambdas would cause recreation on every recomposition (lambda refs change)
-    val dataSourceFactory = remember(headers) {
+    // Create data source factory
+    // When using HLS (useDirectPlay=false): Use ResolvingDataSource to add track parameters to URL
+    // When using direct play (useDirectPlay=true): Use plain HTTP data source without track parameters
+    val dataSourceFactory = remember(headers, useDirectPlay) {
         val httpDataSourceFactory = DefaultHttpDataSource.Factory()
             .setDefaultRequestProperties(headers)
         
-        TrackParametersDataSourceFactory(
-            upstreamFactory = httpDataSourceFactory,
-            getAudioStreamIndex = getAudioStreamIndex,
-            getSubtitleStreamIndex = getSubtitleStreamIndex
-        )
+        if (useDirectPlay) {
+            // Direct play: no track parameters needed, ExoPlayer handles track selection natively
+            httpDataSourceFactory
+        } else {
+            // HLS mode: add track parameters to URL for Jellyfin transcoding
+            TrackParametersDataSourceFactory(
+                upstreamFactory = httpDataSourceFactory,
+                getAudioStreamIndex = getAudioStreamIndex,
+                getSubtitleStreamIndex = getSubtitleStreamIndex
+            )
+        }
     }
     
     val mediaFactory = remember(dataSourceFactory) {
@@ -122,19 +127,66 @@ fun VideoPlayerWithPreview(
         loadMedia("Loading media URL: $streamUrl")
     }
     
-    // Reload media when track selection changes to get new transcoded HLS manifest
-    // Jellyfin server-side transcoding means only selected tracks are in the HLS stream,
-    // so we need to reload to get a new manifest with the newly selected tracks.
+    // Handle track selection changes based on mode
     val currentAudioIndex = getAudioStreamIndex()
     val currentSubtitleIndex = getSubtitleStreamIndex()
-    LaunchedEffect(currentAudioIndex, currentSubtitleIndex) {
-        // Skip reload on initial composition (when exoPlayer is not prepared yet)
+    
+    LaunchedEffect(currentAudioIndex, currentSubtitleIndex, useDirectPlay) {
+        // Skip on initial composition (when exoPlayer is not prepared yet)
         if (exoPlayer.playbackState == Player.STATE_IDLE) {
-            android.util.Log.d("VideoPlayerWithPreview", "Skipping track change reload - player not ready")
+            android.util.Log.d("VideoPlayerWithPreview", "Skipping track change - player not ready")
             return@LaunchedEffect
         }
         
-        loadMedia("Track selection changed - reloading media (Audio: $currentAudioIndex, Subtitle: $currentSubtitleIndex)")
+        if (useDirectPlay) {
+            // Direct play mode: Use ExoPlayer's native track selection API
+            android.util.Log.d("VideoPlayerWithPreview", "Direct play mode - using ExoPlayer track selection (Audio: $currentAudioIndex, Subtitle: $currentSubtitleIndex)")
+            
+            val parametersBuilder = trackSelector.parameters.buildUpon()
+            
+            // Handle audio track selection
+            if (currentAudioIndex != null) {
+                // Find the audio track group and select the specific track
+                val currentTracks = exoPlayer.currentTracks
+                currentTracks.groups.forEachIndexed { groupIndex, group ->
+                    if (group.type == C.TRACK_TYPE_AUDIO && group.length > currentAudioIndex) {
+                        parametersBuilder.setOverrideForType(
+                            androidx.media3.common.TrackSelectionOverride(
+                                group.mediaTrackGroup,
+                                listOf(currentAudioIndex)
+                            )
+                        )
+                        android.util.Log.d("VideoPlayerWithPreview", "Selected audio track: $currentAudioIndex")
+                    }
+                }
+            }
+            
+            // Handle subtitle track selection
+            if (currentSubtitleIndex != null) {
+                // Find the subtitle track group and select the specific track
+                val currentTracks = exoPlayer.currentTracks
+                currentTracks.groups.forEachIndexed { groupIndex, group ->
+                    if (group.type == C.TRACK_TYPE_TEXT && group.length > currentSubtitleIndex) {
+                        parametersBuilder.setOverrideForType(
+                            androidx.media3.common.TrackSelectionOverride(
+                                group.mediaTrackGroup,
+                                listOf(currentSubtitleIndex)
+                            )
+                        )
+                        android.util.Log.d("VideoPlayerWithPreview", "Selected subtitle track: $currentSubtitleIndex")
+                    }
+                }
+            } else {
+                // Disable subtitles if null
+                parametersBuilder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                android.util.Log.d("VideoPlayerWithPreview", "Disabled subtitles")
+            }
+            
+            trackSelector.setParameters(parametersBuilder)
+        } else {
+            // HLS mode: Reload media to get new transcoded manifest from Jellyfin
+            loadMedia("HLS mode - reloading media for track change (Audio: $currentAudioIndex, Subtitle: $currentSubtitleIndex)")
+        }
     }
     
     // Player event listeners for playback state and track changes

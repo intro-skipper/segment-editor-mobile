@@ -14,6 +14,7 @@ import javax.inject.Inject
 
 data class SettingsUiState(
     val theme: AppTheme = AppTheme.SYSTEM,
+    val preferDirectPlay: Boolean = true,
     val autoPlayNextEpisode: Boolean = true,
     val skipIntroAutomatically: Boolean = true,
     val skipCreditsAutomatically: Boolean = false,
@@ -38,6 +39,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = SettingsUiState(
                 theme = securePreferences.getTheme(),
+                preferDirectPlay = securePreferences.getPreferDirectPlay(),
                 autoPlayNextEpisode = securePreferences.getAutoPlayNextEpisode(),
                 skipIntroAutomatically = securePreferences.getSkipIntroAutomatically(),
                 skipCreditsAutomatically = securePreferences.getSkipCreditsAutomatically(),
@@ -51,6 +53,11 @@ class SettingsViewModel @Inject constructor(
     fun setTheme(theme: AppTheme) {
         securePreferences.setTheme(theme)
         _uiState.value = _uiState.value.copy(theme = theme)
+    }
+
+    fun setPreferDirectPlay(enabled: Boolean) {
+        securePreferences.setPreferDirectPlay(enabled)
+        _uiState.value = _uiState.value.copy(preferDirectPlay = enabled)
     }
 
     fun setAutoPlayNextEpisode(enabled: Boolean) {

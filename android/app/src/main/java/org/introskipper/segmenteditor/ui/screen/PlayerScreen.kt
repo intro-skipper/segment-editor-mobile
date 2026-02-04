@@ -83,13 +83,16 @@ fun PlayerScreen(
     val context = LocalContext.current
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     
+    // Determine if we should use direct play (no HLS transcoding)
+    val useDirectPlay = remember { viewModel.shouldUseDirectPlay() }
+    
     // Keep updated references to track selections for ResolvingDataSource
     val audioTrackState = rememberUpdatedState(uiState.selectedAudioTrack)
     val subtitleTrackState = rememberUpdatedState(uiState.selectedSubtitleTrack)
     
-    // Base stream URL (without track parameters - those will be added dynamically by ResolvingDataSource)
+    // Base stream URL (without track parameters when using HLS - those will be added dynamically by ResolvingDataSource)
     val streamUrl = remember(uiState.mediaItem) {
-        viewModel.getBaseStreamUrl(useHls = true)
+        viewModel.getBaseStreamUrl(useHls = !useDirectPlay)
     }
     
     // Preview loader
@@ -220,6 +223,7 @@ fun PlayerScreen(
                 streamUrl = streamUrl,
                 previewLoader = previewLoader,
                 activeSegmentIndex = activeSegmentIndex,
+                useDirectPlay = useDirectPlay,
                 getAudioStreamIndex = { audioTrackState.value },
                 getSubtitleStreamIndex = { subtitleTrackState.value },
                 onPlayerReady = { player = it },
@@ -353,6 +357,7 @@ private fun PlayerContent(
     streamUrl: String?,
     previewLoader: PreviewLoader?,
     activeSegmentIndex: Int,
+    useDirectPlay: Boolean,
     getAudioStreamIndex: () -> Int?,
     getSubtitleStreamIndex: () -> Int?,
     onPlayerReady: (ExoPlayer) -> Unit,
@@ -380,6 +385,8 @@ private fun PlayerContent(
                     headers = viewModel.getStreamHeaders(),
                     useController = true,
                     previewLoader = previewLoader,
+                    useDirectPlay = useDirectPlay,
+                    exoPlayer = player,
                     getAudioStreamIndex = getAudioStreamIndex,
                     getSubtitleStreamIndex = getSubtitleStreamIndex,
                     onPlayerReady = onPlayerReady,
