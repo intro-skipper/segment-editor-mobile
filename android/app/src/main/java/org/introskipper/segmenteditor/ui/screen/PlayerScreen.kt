@@ -398,7 +398,6 @@ private fun PlayerContent(
                     useController = true,
                     previewLoader = previewLoader,
                     useDirectPlay = useDirectPlay,
-                    exoPlayer = player,
                     getAudioStreamIndex = getAudioStreamIndex,
                     getSubtitleStreamIndex = getSubtitleStreamIndex,
                     onPlayerReady = onPlayerReady,
