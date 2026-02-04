@@ -2,20 +2,14 @@ package org.introskipper.segmenteditor.ui.component
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.media3.common.C
 import androidx.media3.common.C.TRACK_TYPE_AUDIO
 import androidx.media3.common.C.TRACK_TYPE_TEXT
@@ -24,7 +18,9 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.compose.ContentFrame
 import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory
@@ -32,7 +28,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
-import org.introskipper.segmenteditor.ui.preview.ScrubPreviewOverlay
 
 // Minimum position to restore when reloading stream (avoids restoring during initial load)
 private const val MIN_POSITION_TO_RESTORE_MS = 1000L
@@ -46,6 +41,7 @@ private const val MIN_POSITION_TO_RESTORE_MS = 1000L
 @Composable
 fun VideoPlayerWithPreview(
     streamUrl: String,
+    headers: Map<String, String>,
     modifier: Modifier = Modifier,
     useController: Boolean = true,
     previewLoader: PreviewLoader? = null,
@@ -57,6 +53,11 @@ fun VideoPlayerWithPreview(
     
     // Create ExoPlayer instance once - don't recreate on track changes
     val trackSelector = remember { DefaultTrackSelector(context) }
+    val mediaFactory = remember {
+        DefaultMediaSourceFactory(context).setDataSourceFactory(
+            DefaultHttpDataSource.Factory().setDefaultRequestProperties(headers)
+        )
+    }
     val exoPlayer = remember {
         android.util.Log.d("VideoPlayerWithPreview", "Creating ExoPlayer instance")
         
@@ -73,6 +74,7 @@ fun VideoPlayerWithPreview(
                     .setRendererDisabled(TRACK_TYPE_TEXT, false)
                     .setExceedRendererCapabilitiesIfNecessary(true))
             })
+            .setMediaSourceFactory(mediaFactory)
             .build()
     }
     
@@ -82,7 +84,7 @@ fun VideoPlayerWithPreview(
         val currentPosition = exoPlayer.currentPosition
         val wasPlaying = exoPlayer.playWhenReady
         
-        exoPlayer.setMediaItem(MediaItem.fromUri(streamUrl))
+        exoPlayer.setMediaSource(mediaFactory.createMediaSource(MediaItem.fromUri(streamUrl)))
         exoPlayer.prepare()
         
         // Restore position and play state if this is a track switch (position > threshold)

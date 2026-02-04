@@ -45,6 +45,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -82,7 +83,6 @@ fun PlayerScreen(
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     
     // Stream URL that updates when audio or subtitle track changes (for HLS transcoding)
-    // Both audio and subtitle selection require URL parameters for Jellyfin HLS
     val streamUrl = remember(uiState.selectedAudioTrack, uiState.selectedSubtitleTrack, uiState.mediaItem) {
         viewModel.getStreamUrl(
             useHls = true,
@@ -110,7 +110,7 @@ fun PlayerScreen(
     // Segment editor state - keyed by itemId to reset when navigating
     var showSegmentEditor by remember(itemId) { mutableStateOf(false) }
     var editingSegment by remember(itemId) { mutableStateOf<Segment?>(null) }
-    var activeSegmentIndex by remember(itemId) { mutableStateOf(0) }
+    var activeSegmentIndex by remember(itemId) { mutableIntStateOf(0) }
     
     // Delete confirmation state
     var showDeleteConfirmation by remember(itemId) { mutableStateOf(false) }
@@ -372,6 +372,7 @@ private fun PlayerContent(
             if (streamUrl != null) {
                 VideoPlayerWithPreview(
                     streamUrl = streamUrl,
+                    headers = viewModel.getStreamHeaders(),
                     useController = true,
                     previewLoader = previewLoader,
                     onPlayerReady = onPlayerReady,

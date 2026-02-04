@@ -259,6 +259,13 @@ class PlayerViewModel @Inject constructor(
             )
         }
     }
+
+    fun getStreamHeaders(): Map<String, String> {
+        val apiKey = securePreferences.getApiKey() ?: return mapOf()
+        return mapOf(
+            "ApiKey" to apiKey
+        )
+    }
     
     fun getStreamUrl(useHls: Boolean = true, audioStreamIndex: Int? = null, subtitleStreamIndex: Int? = null): String? {
         val mediaItem = _uiState.value.mediaItem ?: return null
@@ -277,7 +284,7 @@ class PlayerViewModel @Inject constructor(
                 append("&RequireAvc=false")
                 append("&Tag=${mediaItem.imageTags?.get("Primary") ?: ""}")
                 append("&SegmentContainer=ts")
-                append("&MinSegments=2")
+                append("&MinSegments=1")
                 append("&BreakOnNonKeyFrames=true")
                 
                 // Add audio stream index if specified
