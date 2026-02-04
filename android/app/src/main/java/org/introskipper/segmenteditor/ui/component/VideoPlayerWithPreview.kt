@@ -6,7 +6,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -132,12 +135,26 @@ fun VideoPlayerWithPreview(
     val currentAudioIndex = getAudioStreamIndex()
     val currentSubtitleIndex = getSubtitleStreamIndex()
     
+    // Track previous values to detect actual changes vs mode switches
+    var previousAudioIndex by remember { mutableStateOf<Int?>(null) }
+    var previousSubtitleIndex by remember { mutableStateOf<Int?>(null) }
+    var previousUseDirectPlay by remember { mutableStateOf(useDirectPlay) }
+    
     LaunchedEffect(currentAudioIndex, currentSubtitleIndex, useDirectPlay) {
         // Skip on initial composition (when exoPlayer is not prepared yet)
         if (exoPlayer.playbackState == Player.STATE_IDLE) {
             android.util.Log.d("VideoPlayerWithPreview", "Skipping track change - player not ready")
             return@LaunchedEffect
         }
+        
+        // Detect if only the mode changed (fallback scenario) without track changes
+        val modeChanged = useDirectPlay != previousUseDirectPlay
+        val tracksChanged = currentAudioIndex != previousAudioIndex || currentSubtitleIndex != previousSubtitleIndex
+        
+        // Update previous values for next comparison
+        previousAudioIndex = currentAudioIndex
+        previousSubtitleIndex = currentSubtitleIndex
+        previousUseDirectPlay = useDirectPlay
         
         if (useDirectPlay) {
             // Direct play mode: Use ExoPlayer's native track selection API
@@ -222,8 +239,13 @@ fun VideoPlayerWithPreview(
         } else {
             // HLS mode: Reload media to get new transcoded manifest from Jellyfin
             // In HLS mode, currentAudioIndex and currentSubtitleIndex are Jellyfin MediaStream indices
-            android.util.Log.d("VideoPlayerWithPreview", "HLS mode - reloading media for track change (AudioStreamIndex=$currentAudioIndex, SubtitleStreamIndex=$currentSubtitleIndex)")
-            loadMedia("HLS mode - reloading media for track change (AudioStreamIndex=$currentAudioIndex, SubtitleStreamIndex=$currentSubtitleIndex)")
+            // Only reload if tracks actually changed, not if we just switched from direct play to HLS
+            if (tracksChanged && !modeChanged) {
+                android.util.Log.d("VideoPlayerWithPreview", "HLS mode - reloading media for track change (AudioStreamIndex=$currentAudioIndex, SubtitleStreamIndex=$currentSubtitleIndex)")
+                loadMedia("HLS mode - reloading media for track change (AudioStreamIndex=$currentAudioIndex, SubtitleStreamIndex=$currentSubtitleIndex)")
+            } else if (modeChanged) {
+                android.util.Log.d("VideoPlayerWithPreview", "HLS mode - skipping reload due to mode change (already loaded by streamUrl change)")
+            }
         }
     }
     
