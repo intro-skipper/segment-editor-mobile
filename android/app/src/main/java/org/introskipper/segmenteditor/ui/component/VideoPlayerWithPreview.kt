@@ -330,18 +330,10 @@ fun VideoPlayerWithPreview(
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                 android.util.Log.e("VideoPlayerWithPreview", "Player error occurred", error)
                 
-                // Check if this is a codec capabilities error that should trigger HLS fallback
+                // Notify the error handler if in direct play mode
                 if (useDirectPlay) {
-                    val errorMessage = error.message ?: ""
-                    val causeMessage = error.cause?.message ?: ""
-                    
-                    // Check for NO_EXCEEDS_CAPABILITIES error
-                    if (errorMessage.contains("NO_EXCEEDS_CAPABILITIES") || 
-                        causeMessage.contains("NO_EXCEEDS_CAPABILITIES") ||
-                        errorMessage.contains("MediaCodecVideoRenderer error")) {
-                        android.util.Log.w("VideoPlayerWithPreview", "Device cannot decode format in direct play mode, triggering HLS fallback")
-                        onPlaybackError(error)
-                    }
+                    android.util.Log.w("VideoPlayerWithPreview", "Direct play error, notifying error handler")
+                    onPlaybackError(error)
                 }
             }
         }

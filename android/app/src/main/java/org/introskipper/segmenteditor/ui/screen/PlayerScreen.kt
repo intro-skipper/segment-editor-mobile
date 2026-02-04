@@ -87,7 +87,7 @@ fun PlayerScreen(
     // Allow fallback to HLS if direct play fails (but ask user first)
     var useDirectPlay by remember(itemId) { mutableStateOf(viewModel.shouldUseDirectPlay()) }
     var showDirectPlayFailedDialog by remember(itemId) { mutableStateOf(false) }
-    var lastPlaybackError by remember(itemId) { mutableStateOf<androidx.media3.common.PlaybackException?>(null) }
+    var hasShownCodecErrorDialog by remember(itemId) { mutableStateOf(false) }
     
     // Keep updated references to track selections for ResolvingDataSource
     val audioTrackState = rememberUpdatedState(uiState.selectedAudioTrack)
@@ -249,9 +249,9 @@ fun PlayerScreen(
                 },
                 onPlaybackError = { error ->
                     // Handle playback error - prompt user to switch to HLS if direct play fails
-                    if (useDirectPlay && lastPlaybackError == null) {
-                        android.util.Log.w("PlayerScreen", "Direct play failed, prompting user to switch to HLS")
-                        lastPlaybackError = error
+                    if (useDirectPlay && !hasShownCodecErrorDialog) {
+                        android.util.Log.w("PlayerScreen", "Direct play failed, prompting user to switch to HLS: ${error.message}")
+                        hasShownCodecErrorDialog = true
                         showDirectPlayFailedDialog = true
                     }
                 },
@@ -364,7 +364,6 @@ fun PlayerScreen(
         AlertDialog(
             onDismissRequest = { 
                 showDirectPlayFailedDialog = false
-                lastPlaybackError = null
             },
             title = { Text(stringResource(R.string.player_direct_play_failed_title)) },
             text = { 
@@ -376,7 +375,6 @@ fun PlayerScreen(
                         android.util.Log.i("PlayerScreen", "User chose to switch to HLS")
                         useDirectPlay = false
                         showDirectPlayFailedDialog = false
-                        lastPlaybackError = null
                     }
                 ) {
                     Text(stringResource(R.string.player_switch_to_hls))
@@ -385,7 +383,6 @@ fun PlayerScreen(
             dismissButton = {
                 TextButton(onClick = { 
                     showDirectPlayFailedDialog = false
-                    lastPlaybackError = null
                 }) {
                     Text(stringResource(R.string.cancel))
                 }
