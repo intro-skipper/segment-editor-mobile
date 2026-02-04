@@ -425,7 +425,6 @@ private fun PlayerContent(
             if (streamUrl != null) {
                 VideoPlayerWithPreview(
                     streamUrl = streamUrl,
-                    headers = viewModel.getStreamHeaders(),
                     useController = true,
                     previewLoader = previewLoader,
                     useDirectPlay = useDirectPlay,

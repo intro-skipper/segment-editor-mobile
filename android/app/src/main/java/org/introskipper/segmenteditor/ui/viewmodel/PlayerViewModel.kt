@@ -286,13 +286,6 @@ class PlayerViewModel @Inject constructor(
             }
         }
     }
-
-    fun getStreamHeaders(): Map<String, String> {
-        val apiKey = securePreferences.getApiKey() ?: return mapOf()
-        return mapOf(
-            "ApiKey" to apiKey
-        )
-    }
     
     /**
      * Get the base stream URL without track-specific parameters.

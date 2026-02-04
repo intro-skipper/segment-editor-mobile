@@ -45,7 +45,6 @@ private const val MIN_POSITION_TO_RESTORE_MS = 1000L
 @Composable
 fun VideoPlayerWithPreview(
     streamUrl: String,
-    headers: Map<String, String>,
     modifier: Modifier = Modifier,
     useController: Boolean = true,
     previewLoader: PreviewLoader? = null,
@@ -61,31 +60,28 @@ fun VideoPlayerWithPreview(
     
     // Create ExoPlayer instance once - don't recreate on track changes
     val trackSelector = remember { DefaultTrackSelector(context) }
-    
+
     // Create data source factory
     // When using HLS (useDirectPlay=false): Use ResolvingDataSource to add track parameters to URL
     // When using direct play (useDirectPlay=true): Use plain HTTP data source without track parameters
-    val dataSourceFactory = remember(headers, useDirectPlay) {
-        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
-            .setDefaultRequestProperties(headers)
-        
+    val dataSourceFactory = remember(useDirectPlay) {
         if (useDirectPlay) {
             // Direct play: no track parameters needed, ExoPlayer handles track selection natively
-            httpDataSourceFactory
+            DefaultHttpDataSource.Factory()
         } else {
             // HLS mode: add track parameters to URL for Jellyfin transcoding
             TrackParametersDataSourceFactory(
-                upstreamFactory = httpDataSourceFactory,
+                upstreamFactory =  DefaultHttpDataSource.Factory(),
                 getAudioStreamIndex = getAudioStreamIndex,
                 getSubtitleStreamIndex = getSubtitleStreamIndex
             )
         }
     }
-    
+
     val mediaFactory = remember(dataSourceFactory) {
         DefaultMediaSourceFactory(context).setDataSourceFactory(dataSourceFactory)
     }
-    val exoPlayer = remember {
+    val exoPlayer = remember(mediaFactory) {
         android.util.Log.d("VideoPlayerWithPreview", "Creating ExoPlayer instance")
         
         ExoPlayer.Builder(context)
@@ -110,7 +106,7 @@ fun VideoPlayerWithPreview(
         android.util.Log.d("VideoPlayerWithPreview", logMessage)
         val currentPosition = exoPlayer.currentPosition
         val wasPlaying = exoPlayer.playWhenReady
-        
+
         exoPlayer.setMediaSource(mediaFactory.createMediaSource(MediaItem.fromUri(streamUrl)))
         exoPlayer.prepare()
         
@@ -244,7 +240,7 @@ fun VideoPlayerWithPreview(
             if (tracksChanged) {
                 android.util.Log.d("VideoPlayerWithPreview", "HLS mode - reloading media for track change (AudioStreamIndex=$currentAudioIndex, SubtitleStreamIndex=$currentSubtitleIndex)")
                 loadMedia("HLS mode - reloading media for track change (AudioStreamIndex=$currentAudioIndex, SubtitleStreamIndex=$currentSubtitleIndex)")
-            } else if (modeChanged && !tracksChanged) {
+            } else if (modeChanged) {
                 android.util.Log.d("VideoPlayerWithPreview", "HLS mode - skipping reload due to mode change without track change (already loaded by streamUrl change)")
             }
         }
@@ -340,7 +336,7 @@ fun VideoPlayerWithPreview(
                     val isCodecError = error.errorCode in 4000..5000
                     
                     if (isCodecError) {
-                        android.util.Log.w("VideoPlayerWithPreview", "Codec capability/unsupported format error in direct play mode, notifying error handler")
+                        android.util.Log.w("VideoPlayerWithPreview", "Codec error in direct play mode, notifying error handler")
                         onPlaybackError(error)
                     }
                 }
