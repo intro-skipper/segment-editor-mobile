@@ -201,67 +201,89 @@ class PlayerViewModel @Inject constructor(
     }
     
     fun updateTracksFromPlayer(tracks: androidx.media3.common.Tracks) {
-        // Extract actual available tracks from ExoPlayer player
-        // Merge with Jellyfin tracks to cover all possible audio and subtitle types
-        val exoAudioCount = tracks.groups.count { it.type == C.TRACK_TYPE_AUDIO }
-        val exoSubtitleCount = tracks.groups.count { it.type == C.TRACK_TYPE_TEXT }
+        // For direct play: tracks are embedded in the media file, extract from ExoPlayer
+        // For HLS: tracks come from Jellyfin MediaStreams API, this is just for fallback
+        val useDirectPlay = shouldUseDirectPlay()
         
-        Log.d(TAG, "ExoPlayer tracks available: $exoAudioCount audio groups, $exoSubtitleCount subtitle groups")
+        Log.d(TAG, "ExoPlayer onTracksChanged called, useDirectPlay=$useDirectPlay")
         
-        // Extract audio tracks from ExoPlayer
+        // Extract audio tracks from ExoPlayer with proper indexing
         val exoAudioTracks = mutableListOf<TrackInfo>()
+        var audioRelativeIndex = 0
         tracks.groups.forEachIndexed { groupIndex, group ->
             if (group.type == C.TRACK_TYPE_AUDIO) {
                 for (trackIndex in 0 until group.length) {
                     val format = group.getTrackFormat(trackIndex)
                     val language = format.language
-                    val label = format.label ?: "Audio ${exoAudioTracks.size + 1}"
+                    // Use label from format (set by media container metadata)
+                    val label = format.label ?: "Audio ${audioRelativeIndex + 1}"
                     exoAudioTracks.add(TrackInfo(
-                        index = trackIndex,
+                        index = audioRelativeIndex,  // Use relativeIndex as index for direct play
+                        relativeIndex = audioRelativeIndex,
                         language = language,
                         displayTitle = label,
                         codec = format.sampleMimeType,
-                        isDefault = false,
+                        isDefault = group.isTrackSelected(trackIndex),
                         source = org.introskipper.segmenteditor.ui.state.TrackSource.EXOPLAYER
                     ))
-                    Log.d(TAG, "ExoPlayer audio track: index=$trackIndex, language=$language, label=$label")
+                    Log.d(TAG, "ExoPlayer audio track: groupIndex=$groupIndex, trackIndex=$trackIndex, relativeIndex=$audioRelativeIndex, language=$language, label=$label, selected=${group.isTrackSelected(trackIndex)}")
+                    audioRelativeIndex++
                 }
             }
         }
         
-        // Extract subtitle tracks from ExoPlayer
+        // Extract subtitle tracks from ExoPlayer with proper indexing
         val exoSubtitleTracks = mutableListOf<TrackInfo>()
+        var subtitleRelativeIndex = 0
         tracks.groups.forEachIndexed { groupIndex, group ->
             if (group.type == C.TRACK_TYPE_TEXT) {
                 for (trackIndex in 0 until group.length) {
                     val format = group.getTrackFormat(trackIndex)
                     val language = format.language
-                    val label = format.label ?: "Subtitle ${exoSubtitleTracks.size + 1}"
+                    val label = format.label ?: "Subtitle ${subtitleRelativeIndex + 1}"
                     exoSubtitleTracks.add(TrackInfo(
-                        index = trackIndex,
+                        index = subtitleRelativeIndex,  // Use relativeIndex as index for direct play
+                        relativeIndex = subtitleRelativeIndex,
                         language = language,
                         displayTitle = label,
                         codec = format.sampleMimeType,
-                        isDefault = false,
+                        isDefault = group.isTrackSelected(trackIndex),
                         source = org.introskipper.segmenteditor.ui.state.TrackSource.EXOPLAYER
                     ))
-                    Log.d(TAG, "ExoPlayer subtitle track: index=$trackIndex, language=$language, label=$label")
+                    Log.d(TAG, "ExoPlayer subtitle track: groupIndex=$groupIndex, trackIndex=$trackIndex, relativeIndex=$subtitleRelativeIndex, language=$language, label=$label, selected=${group.isTrackSelected(trackIndex)}")
+                    subtitleRelativeIndex++
                 }
             }
         }
         
-        // Log track counts from both sources
-        val jellyfinAudioCount = _uiState.value.audioTracks.size
-        val jellyfinSubtitleCount = _uiState.value.subtitleTracks.size
-        Log.d(TAG, "Jellyfin tracks: $jellyfinAudioCount audio, $jellyfinSubtitleCount subtitles")
-        Log.d(TAG, "ExoPlayer tracks: ${exoAudioTracks.size} audio, ${exoSubtitleTracks.size} subtitles")
+        Log.d(TAG, "ExoPlayer tracks extracted: ${exoAudioTracks.size} audio, ${exoSubtitleTracks.size} subtitles")
         
-        // Update UI state with merged tracks
-        _uiState.update { state ->
-            state.copy(
-                audioTracks = _uiState.value.audioTracks.ifEmpty { exoAudioTracks },
-                subtitleTracks = _uiState.value.subtitleTracks.ifEmpty { exoSubtitleTracks }
-            )
+        // For direct play: use ExoPlayer tracks (they're embedded in media)
+        // For HLS: keep Jellyfin tracks (they come from API), only use ExoPlayer as fallback
+        if (useDirectPlay) {
+            // Direct play: tracks are in the media file, use what ExoPlayer found
+            val defaultAudioIndex = exoAudioTracks.firstOrNull { it.isDefault }?.relativeIndex
+            val defaultSubtitleIndex = exoSubtitleTracks.firstOrNull { it.isDefault }?.relativeIndex
+            
+            Log.d(TAG, "Direct play mode: using ExoPlayer tracks, defaultAudio=$defaultAudioIndex, defaultSubtitle=$defaultSubtitleIndex")
+            
+            _uiState.update { state ->
+                state.copy(
+                    audioTracks = exoAudioTracks,
+                    subtitleTracks = exoSubtitleTracks,
+                    selectedAudioTrack = defaultAudioIndex,
+                    selectedSubtitleTrack = defaultSubtitleIndex
+                )
+            }
+        } else {
+            // HLS mode: keep existing Jellyfin tracks, only use ExoPlayer tracks if none exist
+            Log.d(TAG, "HLS mode: keeping Jellyfin tracks, ExoPlayer tracks as fallback")
+            _uiState.update { state ->
+                state.copy(
+                    audioTracks = state.audioTracks.ifEmpty { exoAudioTracks },
+                    subtitleTracks = state.subtitleTracks.ifEmpty { exoSubtitleTracks }
+                )
+            }
         }
     }
 

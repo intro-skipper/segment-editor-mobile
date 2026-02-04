@@ -140,52 +140,75 @@ fun VideoPlayerWithPreview(
         
         if (useDirectPlay) {
             // Direct play mode: Use ExoPlayer's native track selection API
-            android.util.Log.d("VideoPlayerWithPreview", "Direct play mode - using ExoPlayer track selection (Audio: $currentAudioIndex, Subtitle: $currentSubtitleIndex)")
+            // The index here is the relativeIndex (0-based position within tracks of same type)
+            android.util.Log.d("VideoPlayerWithPreview", "Direct play mode - using ExoPlayer track selection (Audio relativeIndex: $currentAudioIndex, Subtitle relativeIndex: $currentSubtitleIndex)")
             
+            val currentTracks = exoPlayer.currentTracks
             val parametersBuilder = trackSelector.parameters.buildUpon()
             
-            // Handle audio track selection
-            val currentTracks = exoPlayer.currentTracks
+            // Handle audio track selection using relativeIndex
             if (currentAudioIndex != null) {
-                // Find the audio track group and select the specific track
-                var audioTrackSet = false
-                for (group in currentTracks.groups) {
-                    if (group.type == C.TRACK_TYPE_AUDIO && !audioTrackSet && group.length > currentAudioIndex) {
-                        parametersBuilder.setOverrideForType(
-                            androidx.media3.common.TrackSelectionOverride(
-                                group.mediaTrackGroup,
-                                listOf(currentAudioIndex)
-                            )
-                        )
-                        android.util.Log.d("VideoPlayerWithPreview", "Selected audio track: $currentAudioIndex")
-                        audioTrackSet = true
-                        break
+                var foundAudio = false
+                var currentRelativeIndex = 0
+                
+                // Iterate through all track groups to find audio track at relativeIndex
+                for (trackGroup in currentTracks.groups) {
+                    if (trackGroup.type == C.TRACK_TYPE_AUDIO) {
+                        for (trackIndex in 0 until trackGroup.length) {
+                            if (currentRelativeIndex == currentAudioIndex) {
+                                // Found the track at the relative index
+                                // Use TrackSelectionOverride with the MediaTrackGroup
+                                parametersBuilder.setOverrideForType(
+                                    androidx.media3.common.TrackSelectionOverride(
+                                        trackGroup.mediaTrackGroup,
+                                        listOf(trackIndex)
+                                    )
+                                )
+                                android.util.Log.d("VideoPlayerWithPreview", "Selected audio track: relativeIndex=$currentAudioIndex, trackIndex=$trackIndex in group")
+                                foundAudio = true
+                                break
+                            }
+                            currentRelativeIndex++
+                        }
+                        if (foundAudio) break
                     }
                 }
-                if (!audioTrackSet) {
-                    android.util.Log.w("VideoPlayerWithPreview", "Audio track index $currentAudioIndex not found in available tracks")
+                
+                if (!foundAudio) {
+                    android.util.Log.w("VideoPlayerWithPreview", "Audio track with relativeIndex $currentAudioIndex not found")
                 }
             }
             
-            // Handle subtitle track selection
+            // Handle subtitle track selection using relativeIndex
             if (currentSubtitleIndex != null) {
-                // Find the subtitle track group and select the specific track
-                var subtitleTrackSet = false
-                for (group in currentTracks.groups) {
-                    if (group.type == C.TRACK_TYPE_TEXT && !subtitleTrackSet && group.length > currentSubtitleIndex) {
-                        parametersBuilder.setOverrideForType(
-                            androidx.media3.common.TrackSelectionOverride(
-                                group.mediaTrackGroup,
-                                listOf(currentSubtitleIndex)
-                            )
-                        )
-                        android.util.Log.d("VideoPlayerWithPreview", "Selected subtitle track: $currentSubtitleIndex")
-                        subtitleTrackSet = true
-                        break
+                var foundSubtitle = false
+                var currentRelativeIndex = 0
+                
+                // Iterate through all track groups to find subtitle track at relativeIndex
+                for (trackGroup in currentTracks.groups) {
+                    if (trackGroup.type == C.TRACK_TYPE_TEXT) {
+                        for (trackIndex in 0 until trackGroup.length) {
+                            if (currentRelativeIndex == currentSubtitleIndex) {
+                                // Found the track at the relative index
+                                // Use TrackSelectionOverride with the MediaTrackGroup
+                                parametersBuilder.setOverrideForType(
+                                    androidx.media3.common.TrackSelectionOverride(
+                                        trackGroup.mediaTrackGroup,
+                                        listOf(trackIndex)
+                                    )
+                                )
+                                android.util.Log.d("VideoPlayerWithPreview", "Selected subtitle track: relativeIndex=$currentSubtitleIndex, trackIndex=$trackIndex in group")
+                                foundSubtitle = true
+                                break
+                            }
+                            currentRelativeIndex++
+                        }
+                        if (foundSubtitle) break
                     }
                 }
-                if (!subtitleTrackSet) {
-                    android.util.Log.w("VideoPlayerWithPreview", "Subtitle track index $currentSubtitleIndex not found in available tracks")
+                
+                if (!foundSubtitle) {
+                    android.util.Log.w("VideoPlayerWithPreview", "Subtitle track with relativeIndex $currentSubtitleIndex not found")
                 }
             } else {
                 // Disable subtitles if null
@@ -193,10 +216,13 @@ fun VideoPlayerWithPreview(
                 android.util.Log.d("VideoPlayerWithPreview", "Disabled subtitles")
             }
             
+            // Apply the track selection parameters
             trackSelector.setParameters(parametersBuilder)
         } else {
             // HLS mode: Reload media to get new transcoded manifest from Jellyfin
-            loadMedia("HLS mode - reloading media for track change (Audio: $currentAudioIndex, Subtitle: $currentSubtitleIndex)")
+            // In HLS mode, currentAudioIndex and currentSubtitleIndex are Jellyfin MediaStream indices
+            android.util.Log.d("VideoPlayerWithPreview", "HLS mode - reloading media for track change (AudioStreamIndex=$currentAudioIndex, SubtitleStreamIndex=$currentSubtitleIndex)")
+            loadMedia("HLS mode - reloading media for track change (AudioStreamIndex=$currentAudioIndex, SubtitleStreamIndex=$currentSubtitleIndex)")
         }
     }
     
