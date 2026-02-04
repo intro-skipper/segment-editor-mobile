@@ -305,7 +305,8 @@ class PlayerViewModel @Inject constructor(
                 } else {
                     // Keep existing tracks and selections - do not update!
                     // This prevents reload loops when switching from Direct Play to HLS
-                    Log.d(TAG, "HLS mode: keeping existing tracks (source=${state.audioTracks.firstOrNull()?.source}) and selections (audio=${state.selectedAudioTrack}, subtitle=${state.selectedSubtitleTrack})")
+                    val trackSource = state.audioTracks.firstOrNull()?.source?.toString() ?: "unknown"
+                    Log.d(TAG, "HLS mode: keeping existing tracks (source=$trackSource, count=${state.audioTracks.size}) and selections (audio=${state.selectedAudioTrack}, subtitle=${state.selectedSubtitleTrack})")
                     state
                 }
             }
