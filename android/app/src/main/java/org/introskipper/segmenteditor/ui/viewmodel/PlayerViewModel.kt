@@ -288,8 +288,9 @@ class PlayerViewModel @Inject constructor(
             Log.d(TAG, "HLS mode: keeping Jellyfin tracks, ExoPlayer tracks as fallback")
             _uiState.update { state ->
                 // Check if existing tracks are from Jellyfin or ExoPlayer
+                // Check all tracks to ensure they're all from the same source
                 val hasJellyfinTracks = state.audioTracks.isNotEmpty() && 
-                    state.audioTracks.first().source == org.introskipper.segmenteditor.ui.state.TrackSource.JELLYFIN
+                    state.audioTracks.all { it.source == org.introskipper.segmenteditor.ui.state.TrackSource.JELLYFIN }
                 
                 // Only keep existing tracks if they're from Jellyfin
                 // If they're from ExoPlayer (e.g., after switching from Direct Play), replace them with new ExoPlayer tracks from HLS
@@ -348,6 +349,8 @@ class PlayerViewModel @Inject constructor(
                     val audioTrack = _uiState.value.audioTracks.firstOrNull { it.relativeIndex == audioRelativeIndex }
                     if (audioTrack != null) {
                         append("&AudioStreamIndex=${audioTrack.index}")
+                    } else {
+                        Log.w(TAG, "Failed to find audio track with relativeIndex $audioRelativeIndex")
                     }
                 }
                 
@@ -356,6 +359,8 @@ class PlayerViewModel @Inject constructor(
                     val subtitleTrack = _uiState.value.subtitleTracks.firstOrNull { it.relativeIndex == subtitleRelativeIndex }
                     if (subtitleTrack != null) {
                         append("&SubtitleStreamIndex=${subtitleTrack.index}")
+                    } else {
+                        Log.w(TAG, "Failed to find subtitle track with relativeIndex $subtitleRelativeIndex")
                     }
                 }
             }
