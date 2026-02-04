@@ -427,7 +427,7 @@ private fun PlayerContent(
                         viewModel.updatePlaybackState(isPlaying, currentPos, bufferedPos)
                     },
                     onTracksChanged = { tracks ->
-                        viewModel.updateTracksFromPlayer(tracks)
+                        viewModel.updateTracksFromPlayer(tracks, useDirectPlay)
                     },
                     onPlaybackError = onPlaybackError
                 )

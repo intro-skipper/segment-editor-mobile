@@ -208,10 +208,9 @@ class PlayerViewModel @Inject constructor(
         }
     }
     
-    fun updateTracksFromPlayer(tracks: androidx.media3.common.Tracks) {
+    fun updateTracksFromPlayer(tracks: androidx.media3.common.Tracks, useDirectPlay: Boolean) {
         // For direct play: tracks are embedded in the media file, extract from ExoPlayer
         // For HLS: tracks come from Jellyfin MediaStreams API, this is just for fallback
-        val useDirectPlay = shouldUseDirectPlay()
         
         Log.d(TAG, "ExoPlayer onTracksChanged called, useDirectPlay=$useDirectPlay")
         
@@ -284,34 +283,33 @@ class PlayerViewModel @Inject constructor(
                 )
             }
         } else {
-            // HLS mode: keep existing Jellyfin tracks, only use ExoPlayer tracks if none exist OR if existing tracks are from ExoPlayer
-            Log.d(TAG, "HLS mode: keeping Jellyfin tracks, ExoPlayer tracks as fallback")
+            // HLS mode: keep existing Jellyfin tracks, only use ExoPlayer tracks if none exist
+            // DO NOT update track selections in HLS mode to prevent reload loops
+            Log.d(TAG, "HLS mode: keeping Jellyfin tracks and current selections, ExoPlayer tracks as fallback")
             _uiState.update { state ->
-                // Check if existing tracks are from Jellyfin or ExoPlayer
-                // Check all tracks to ensure they're all from the same source
+                // Check if existing tracks are from Jellyfin
                 val hasJellyfinTracks = state.audioTracks.isNotEmpty() && 
                     state.audioTracks.all { it.source == org.introskipper.segmenteditor.ui.state.TrackSource.JELLYFIN }
                 
-                // Only keep existing tracks if they're from Jellyfin
-                // If they're from ExoPlayer (e.g., after switching from Direct Play), replace them with new ExoPlayer tracks from HLS
-                val shouldKeepExistingTracks = state.audioTracks.isNotEmpty() && hasJellyfinTracks
+                // Only update tracks if we have no tracks at all
+                // This handles the initial HLS load when tracks haven't been set yet
+                val shouldUpdateTracks = state.audioTracks.isEmpty()
                 
-                state.copy(
-                    audioTracks = if (shouldKeepExistingTracks) state.audioTracks else exoAudioTracks,
-                    subtitleTracks = if (shouldKeepExistingTracks) state.subtitleTracks else exoSubtitleTracks,
-                    // When replacing tracks, reset selections to defaults if current selection is out of bounds
-                    selectedAudioTrack = if (shouldKeepExistingTracks) {
-                        state.selectedAudioTrack
-                    } else {
-                        exoAudioTracks.firstOrNull { it.isDefault }?.relativeIndex 
-                            ?: exoAudioTracks.firstOrNull()?.relativeIndex
-                    },
-                    selectedSubtitleTrack = if (shouldKeepExistingTracks) {
-                        state.selectedSubtitleTrack
-                    } else {
-                        exoSubtitleTracks.firstOrNull { it.isDefault }?.relativeIndex
-                    }
-                )
+                if (shouldUpdateTracks) {
+                    Log.d(TAG, "HLS mode: no existing tracks, using ExoPlayer tracks as initial fallback")
+                    state.copy(
+                        audioTracks = exoAudioTracks,
+                        subtitleTracks = exoSubtitleTracks,
+                        selectedAudioTrack = exoAudioTracks.firstOrNull { it.isDefault }?.relativeIndex 
+                            ?: exoAudioTracks.firstOrNull()?.relativeIndex,
+                        selectedSubtitleTrack = exoSubtitleTracks.firstOrNull { it.isDefault }?.relativeIndex
+                    )
+                } else {
+                    // Keep existing tracks and selections - do not update!
+                    // This prevents reload loops when switching from Direct Play to HLS
+                    Log.d(TAG, "HLS mode: keeping existing tracks (source=${state.audioTracks.firstOrNull()?.source}) and selections (audio=${state.selectedAudioTrack}, subtitle=${state.selectedSubtitleTrack})")
+                    state
+                }
             }
         }
     }
