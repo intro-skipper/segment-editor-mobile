@@ -84,9 +84,10 @@ fun PlayerScreen(
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     
     // Determine if we should use direct play (no HLS transcoding)
-    // Allow fallback to HLS if direct play fails
+    // Allow fallback to HLS if direct play fails (but ask user first)
     var useDirectPlay by remember(itemId) { mutableStateOf(viewModel.shouldUseDirectPlay()) }
-    var hasTriedDirectPlay by remember(itemId) { mutableStateOf(false) }
+    var showDirectPlayFailedDialog by remember(itemId) { mutableStateOf(false) }
+    var hasShownErrorDialog by remember(itemId) { mutableStateOf(false) }
     
     // Keep updated references to track selections for ResolvingDataSource
     val audioTrackState = rememberUpdatedState(uiState.selectedAudioTrack)
@@ -247,12 +248,11 @@ fun PlayerScreen(
                     activeSegmentIndex = index
                 },
                 onPlaybackError = { error ->
-                    // Handle playback error - fallback to HLS if direct play fails
-                    if (useDirectPlay && !hasTriedDirectPlay) {
-                        android.util.Log.w("PlayerScreen", "Direct play failed, falling back to HLS transcoding")
-                        hasTriedDirectPlay = true
-                        useDirectPlay = false
-                        // streamUrl will be regenerated automatically via remember(useDirectPlay)
+                    // Handle playback error - prompt user to switch to HLS if direct play fails
+                    if (useDirectPlay && !hasShownErrorDialog) {
+                        android.util.Log.w("PlayerScreen", "Direct play decoder error, prompting user to switch to HLS: errorCode=${error.errorCode}")
+                        hasShownErrorDialog = true
+                        showDirectPlayFailedDialog = true
                     }
                 },
                 modifier = Modifier.padding(paddingValues)
@@ -352,6 +352,37 @@ fun PlayerScreen(
                 TextButton(onClick = { 
                     showDeleteConfirmation = false
                     segmentToDelete = null
+                }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+    
+    // Direct play failed dialog
+    if (showDirectPlayFailedDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                showDirectPlayFailedDialog = false
+            },
+            title = { Text(stringResource(R.string.player_direct_play_failed_title)) },
+            text = { 
+                Text(stringResource(R.string.player_direct_play_failed_message))
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        android.util.Log.i("PlayerScreen", "User chose to switch to HLS")
+                        useDirectPlay = false
+                        showDirectPlayFailedDialog = false
+                    }
+                ) {
+                    Text(stringResource(R.string.player_switch_to_hls))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { 
+                    showDirectPlayFailedDialog = false
                 }) {
                     Text(stringResource(R.string.cancel))
                 }

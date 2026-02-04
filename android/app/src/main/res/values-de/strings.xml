@@ -112,6 +112,9 @@
     <string name="player_error_load">Video kann nicht geladen werden</string>
     <string name="player_toggle_fullscreen">Vollbild umschalten</string>
     <string name="player_playback_speed">%1$.1fx</string>
+    <string name="player_direct_play_failed_title">Wiedergabe fehlgeschlagen</string>
+    <string name="player_direct_play_failed_message">Ihr Gerät kann dieses Video nicht im Direktwiedergabemodus abspielen. Möchten Sie stattdessen zu HLS-Streaming wechseln?</string>
+    <string name="player_switch_to_hls">Zu HLS wechseln</string>
 
     <!-- Library Screen -->
     <string name="library_select">Bibliothek auswählen</string>

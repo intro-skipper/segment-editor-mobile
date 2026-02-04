@@ -120,6 +120,9 @@
     <string name="player_error_load">Unable to load video</string>
     <string name="player_toggle_fullscreen">Toggle fullscreen</string>
     <string name="player_playback_speed">%1$.1fx</string>
+    <string name="player_direct_play_failed_title">Playback Failed</string>
+    <string name="player_direct_play_failed_message">Your device cannot play this video in direct play mode. Would you like to switch to HLS streaming instead?</string>
+    <string name="player_switch_to_hls">Switch to HLS</string>
 
     <!-- Library Screen -->
     <string name="library_select">Select Library</string>
