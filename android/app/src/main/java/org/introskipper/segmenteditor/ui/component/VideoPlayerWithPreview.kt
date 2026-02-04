@@ -97,11 +97,9 @@ fun VideoPlayerWithPreview(
             .build()
     }
     
-    // Load media when streamUrl changes (initial load or media item change)
-    // Note: Track changes (audio/subtitle) no longer trigger this because track parameters
-    // are now added dynamically by ResolvingDataSource, keeping the base URL constant
-    LaunchedEffect(streamUrl) {
-        android.util.Log.d("VideoPlayerWithPreview", "Loading media URL: $streamUrl")
+    // Helper function to load media and restore playback state
+    val loadMedia = { logMessage: String ->
+        android.util.Log.d("VideoPlayerWithPreview", logMessage)
         val currentPosition = exoPlayer.currentPosition
         val wasPlaying = exoPlayer.playWhenReady
         
@@ -112,10 +110,16 @@ fun VideoPlayerWithPreview(
         if (currentPosition > MIN_POSITION_TO_RESTORE_MS) {
             exoPlayer.seekTo(currentPosition)
             exoPlayer.playWhenReady = wasPlaying  // Preserve play state on reload
+            android.util.Log.d("VideoPlayerWithPreview", "Restored position: $currentPosition ms, playing: $wasPlaying")
         } else {
             // On initial load, start playback automatically
             exoPlayer.playWhenReady = true
         }
+    }
+    
+    // Load media when streamUrl changes (initial load or media item change)
+    LaunchedEffect(streamUrl) {
+        loadMedia("Loading media URL: $streamUrl")
     }
     
     // Reload media when track selection changes to get new transcoded HLS manifest
@@ -130,21 +134,7 @@ fun VideoPlayerWithPreview(
             return@LaunchedEffect
         }
         
-        android.util.Log.d("VideoPlayerWithPreview", "Track selection changed - reloading media (Audio: $currentAudioIndex, Subtitle: $currentSubtitleIndex)")
-        
-        val currentPosition = exoPlayer.currentPosition
-        val wasPlaying = exoPlayer.playWhenReady
-        
-        // Reload the media source with new track parameters (added by ResolvingDataSource)
-        exoPlayer.setMediaSource(mediaFactory.createMediaSource(MediaItem.fromUri(streamUrl)))
-        exoPlayer.prepare()
-        
-        // Restore position and play state
-        if (currentPosition > MIN_POSITION_TO_RESTORE_MS) {
-            exoPlayer.seekTo(currentPosition)
-            exoPlayer.playWhenReady = wasPlaying
-            android.util.Log.d("VideoPlayerWithPreview", "Restored position: $currentPosition ms, playing: $wasPlaying")
-        }
+        loadMedia("Track selection changed - reloading media (Audio: $currentAudioIndex, Subtitle: $currentSubtitleIndex)")
     }
     
     // Player event listeners for playback state and track changes

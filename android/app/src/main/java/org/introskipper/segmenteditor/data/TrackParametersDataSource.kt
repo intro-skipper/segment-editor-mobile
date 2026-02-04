@@ -8,7 +8,11 @@ import androidx.media3.datasource.ResolvingDataSource
 
 /**
  * Factory for creating ResolvingDataSource that dynamically adds audio and subtitle track
- * parameters to the stream URL at request time, avoiding the need to reload media when tracks change.
+ * parameters to HLS stream URLs. Works in conjunction with media reload on track changes
+ * to support Jellyfin's server-side transcoding.
+ * 
+ * Note: When tracks change, ExoPlayer must reload media to fetch a new HLS manifest with
+ * the newly selected tracks transcoded by the server.
  */
 @UnstableApi
 class TrackParametersDataSourceFactory(
@@ -54,21 +58,32 @@ class TrackParametersDataSourceFactory(
 
         override fun resolveReportedUri(uri: Uri): Uri {
             // Return the original URI for reporting purposes
-            // Strip the dynamic parameters we added
+            // Strip the dynamic track parameters we added, keeping all other parameters
             val builder = uri.buildUpon()
-            builder.clearQuery()
             
-            // Re-add all query parameters except the track-specific ones
+            // Rebuild query string without track parameters
+            // First, collect all non-track parameters
+            val paramsToKeep = mutableListOf<Pair<String, String>>()
             for (paramName in uri.queryParameterNames) {
                 if (paramName != "AudioStreamIndex" && paramName != "SubtitleStreamIndex") {
                     val values = uri.getQueryParameters(paramName)
                     for (value in values) {
-                        builder.appendQueryParameter(paramName, value)
+                        paramsToKeep.add(paramName to value)
                     }
                 }
             }
             
-            return builder.build()
+            // Clear and rebuild query
+            val baseUri = Uri.Builder()
+                .scheme(uri.scheme)
+                .authority(uri.authority)
+                .path(uri.path)
+            
+            for ((name, value) in paramsToKeep) {
+                baseUri.appendQueryParameter(name, value)
+            }
+            
+            return baseUri.build()
         }
     }
     
