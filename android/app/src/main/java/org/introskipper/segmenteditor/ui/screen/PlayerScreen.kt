@@ -84,14 +84,16 @@ fun PlayerScreen(
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     
     // Determine if we should use direct play (no HLS transcoding)
-    val useDirectPlay = remember { viewModel.shouldUseDirectPlay() }
+    // Allow fallback to HLS if direct play fails
+    var useDirectPlay by remember(itemId) { mutableStateOf(viewModel.shouldUseDirectPlay()) }
+    var hasTriedDirectPlay by remember(itemId) { mutableStateOf(false) }
     
     // Keep updated references to track selections for ResolvingDataSource
     val audioTrackState = rememberUpdatedState(uiState.selectedAudioTrack)
     val subtitleTrackState = rememberUpdatedState(uiState.selectedSubtitleTrack)
     
     // Base stream URL (without track parameters when using HLS - those will be added dynamically by ResolvingDataSource)
-    val streamUrl = remember(uiState.mediaItem) {
+    val streamUrl = remember(uiState.mediaItem, useDirectPlay) {
         viewModel.getBaseStreamUrl(useHls = !useDirectPlay)
     }
     
@@ -244,6 +246,15 @@ fun PlayerScreen(
                 onSetActiveSegment = { index ->
                     activeSegmentIndex = index
                 },
+                onPlaybackError = { error ->
+                    // Handle playback error - fallback to HLS if direct play fails
+                    if (useDirectPlay && !hasTriedDirectPlay) {
+                        android.util.Log.w("PlayerScreen", "Direct play failed, falling back to HLS transcoding")
+                        hasTriedDirectPlay = true
+                        useDirectPlay = false
+                        // streamUrl will be regenerated automatically via remember(useDirectPlay)
+                    }
+                },
                 modifier = Modifier.padding(paddingValues)
             )
         }
@@ -367,6 +378,7 @@ private fun PlayerContent(
     onEditSegment: (Segment) -> Unit,
     onDeleteSegment: (Segment) -> Unit,
     onSetActiveSegment: (Int) -> Unit,
+    onPlaybackError: (androidx.media3.common.PlaybackException) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -395,7 +407,8 @@ private fun PlayerContent(
                     },
                     onTracksChanged = { tracks ->
                         viewModel.updateTracksFromPlayer(tracks)
-                    }
+                    },
+                    onPlaybackError = onPlaybackError
                 )
             } else {
                 Box(
