@@ -50,7 +50,6 @@ fun VideoPlayerWithPreview(
     useController: Boolean = true,
     previewLoader: PreviewLoader? = null,
     useDirectPlay: Boolean = false,
-    exoPlayer: ExoPlayer? = null,
     getAudioStreamIndex: () -> Int? = { null },
     getSubtitleStreamIndex: () -> Int? = { null },
     onPlayerReady: (ExoPlayer) -> Unit = {},
