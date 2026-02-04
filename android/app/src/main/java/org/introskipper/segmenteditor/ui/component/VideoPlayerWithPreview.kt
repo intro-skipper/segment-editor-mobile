@@ -27,6 +27,7 @@ import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.introskipper.segmenteditor.data.TrackParametersDataSourceFactory
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 
 // Minimum position to restore when reloading stream (avoids restoring during initial load)
@@ -45,6 +46,8 @@ fun VideoPlayerWithPreview(
     modifier: Modifier = Modifier,
     useController: Boolean = true,
     previewLoader: PreviewLoader? = null,
+    getAudioStreamIndex: () -> Int? = { null },
+    getSubtitleStreamIndex: () -> Int? = { null },
     onPlayerReady: (ExoPlayer) -> Unit = {},
     onPlaybackStateChanged: (isPlaying: Boolean, currentPosition: Long, bufferedPosition: Long) -> Unit = { _, _, _ -> },
     onTracksChanged: (Tracks) -> Unit = {}
@@ -53,10 +56,26 @@ fun VideoPlayerWithPreview(
     
     // Create ExoPlayer instance once - don't recreate on track changes
     val trackSelector = remember { DefaultTrackSelector(context) }
-    val mediaFactory = remember {
-        DefaultMediaSourceFactory(context).setDataSourceFactory(
-            DefaultHttpDataSource.Factory().setDefaultRequestProperties(headers)
+    
+    // Create data source factory with ResolvingDataSource that dynamically adds track parameters
+    // Note: We only key on headers, NOT the lambda functions. This is intentional because:
+    // 1. The lambdas are passed from PlayerScreen using rememberUpdatedState
+    // 2. They read from State objects that always contain current values
+    // 3. The lambdas are called at HTTP request time by the resolver, so they get current state
+    // 4. Keying on lambdas would cause recreation on every recomposition (lambda refs change)
+    val dataSourceFactory = remember(headers) {
+        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+            .setDefaultRequestProperties(headers)
+        
+        TrackParametersDataSourceFactory(
+            upstreamFactory = httpDataSourceFactory,
+            getAudioStreamIndex = getAudioStreamIndex,
+            getSubtitleStreamIndex = getSubtitleStreamIndex
         )
+    }
+    
+    val mediaFactory = remember(dataSourceFactory) {
+        DefaultMediaSourceFactory(context).setDataSourceFactory(dataSourceFactory)
     }
     val exoPlayer = remember {
         android.util.Log.d("VideoPlayerWithPreview", "Creating ExoPlayer instance")
@@ -78,23 +97,44 @@ fun VideoPlayerWithPreview(
             .build()
     }
     
-    // Update media item when streamUrl changes (without recreating player)
-    LaunchedEffect(streamUrl) {
-        android.util.Log.d("VideoPlayerWithPreview", "Stream URL changed: $streamUrl")
+    // Helper function to load media and restore playback state
+    val loadMedia = { logMessage: String ->
+        android.util.Log.d("VideoPlayerWithPreview", logMessage)
         val currentPosition = exoPlayer.currentPosition
         val wasPlaying = exoPlayer.playWhenReady
         
         exoPlayer.setMediaSource(mediaFactory.createMediaSource(MediaItem.fromUri(streamUrl)))
         exoPlayer.prepare()
         
-        // Restore position and play state if this is a track switch (position > threshold)
+        // Restore position and play state if this is a reload (position > threshold)
         if (currentPosition > MIN_POSITION_TO_RESTORE_MS) {
             exoPlayer.seekTo(currentPosition)
-            exoPlayer.playWhenReady = wasPlaying  // Preserve play state on track change
+            exoPlayer.playWhenReady = wasPlaying  // Preserve play state on reload
+            android.util.Log.d("VideoPlayerWithPreview", "Restored position: $currentPosition ms, playing: $wasPlaying")
         } else {
             // On initial load, start playback automatically
             exoPlayer.playWhenReady = true
         }
+    }
+    
+    // Load media when streamUrl changes (initial load or media item change)
+    LaunchedEffect(streamUrl) {
+        loadMedia("Loading media URL: $streamUrl")
+    }
+    
+    // Reload media when track selection changes to get new transcoded HLS manifest
+    // Jellyfin server-side transcoding means only selected tracks are in the HLS stream,
+    // so we need to reload to get a new manifest with the newly selected tracks.
+    val currentAudioIndex = getAudioStreamIndex()
+    val currentSubtitleIndex = getSubtitleStreamIndex()
+    LaunchedEffect(currentAudioIndex, currentSubtitleIndex) {
+        // Skip reload on initial composition (when exoPlayer is not prepared yet)
+        if (exoPlayer.playbackState == Player.STATE_IDLE) {
+            android.util.Log.d("VideoPlayerWithPreview", "Skipping track change reload - player not ready")
+            return@LaunchedEffect
+        }
+        
+        loadMedia("Track selection changed - reloading media (Audio: $currentAudioIndex, Subtitle: $currentSubtitleIndex)")
     }
     
     // Player event listeners for playback state and track changes

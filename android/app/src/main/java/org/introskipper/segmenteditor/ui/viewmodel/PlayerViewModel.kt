@@ -267,13 +267,18 @@ class PlayerViewModel @Inject constructor(
         )
     }
     
-    fun getStreamUrl(useHls: Boolean = true, audioStreamIndex: Int? = null, subtitleStreamIndex: Int? = null): String? {
+    /**
+     * Get the base stream URL without track-specific parameters.
+     * Track parameters (AudioStreamIndex, SubtitleStreamIndex) will be added
+     * dynamically by the ResolvingDataSource.
+     */
+    fun getBaseStreamUrl(useHls: Boolean = true): String? {
         val mediaItem = _uiState.value.mediaItem ?: return null
         val serverUrl = securePreferences.getServerUrl() ?: return null
         val apiKey = securePreferences.getApiKey() ?: return null
         
         return if (useHls) {
-            // HLS streaming (preferred)
+            // HLS streaming (preferred) - base URL without track parameters
             buildString {
                 append("$serverUrl/Videos/${mediaItem.id}/master.m3u8")
                 append("?MediaSourceId=${mediaItem.id}")
@@ -286,18 +291,7 @@ class PlayerViewModel @Inject constructor(
                 append("&SegmentContainer=ts")
                 append("&MinSegments=1")
                 append("&BreakOnNonKeyFrames=true")
-                
-                // Add audio stream index if specified
-                if (audioStreamIndex != null) {
-                    append("&AudioStreamIndex=$audioStreamIndex")
-                }
-                
-                // Add subtitle stream index if specified
-                if (subtitleStreamIndex != null) {
-                    append("&SubtitleStreamIndex=$subtitleStreamIndex")
-                    // For HLS, subtitles need to be encoded into the stream
-                    // append("&SubtitleMethod=Encode")
-                }
+                // Note: AudioStreamIndex and SubtitleStreamIndex will be added by ResolvingDataSource
             }
         } else {
             // Direct play fallback
