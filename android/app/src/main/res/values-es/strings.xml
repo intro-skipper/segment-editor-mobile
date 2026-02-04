@@ -112,6 +112,9 @@
     <string name="player_error_load">No se puede cargar el video</string>
     <string name="player_toggle_fullscreen">Alternar pantalla completa</string>
     <string name="player_playback_speed">%1$.1fx</string>
+    <string name="player_direct_play_failed_title">Reproducción fallida</string>
+    <string name="player_direct_play_failed_message">Su dispositivo no puede reproducir este video en modo de reproducción directa. ¿Desea cambiar a transmisión HLS en su lugar?</string>
+    <string name="player_switch_to_hls">Cambiar a HLS</string>
 
     <!-- Library Screen -->
     <string name="library_select">Seleccionar biblioteca</string>
