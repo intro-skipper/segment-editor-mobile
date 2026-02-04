@@ -299,44 +299,6 @@ class PlayerViewModel @Inject constructor(
         }
     }
     
-    fun getStreamUrl(useHls: Boolean = true, audioStreamIndex: Int? = null, subtitleStreamIndex: Int? = null): String? {
-        val mediaItem = _uiState.value.mediaItem ?: return null
-        val serverUrl = securePreferences.getServerUrl() ?: return null
-        val apiKey = securePreferences.getApiKey() ?: return null
-        
-        return if (useHls) {
-            // HLS streaming (preferred)
-            buildString {
-                append("$serverUrl/Videos/${mediaItem.id}/master.m3u8")
-                append("?MediaSourceId=${mediaItem.id}")
-                append("&VideoCodec=h264,hevc")
-                append("&AudioCodec=aac,mp3,ac3,eac3")
-                append("&api_key=$apiKey")
-                append("&TranscodingMaxAudioChannels=2")
-                append("&RequireAvc=false")
-                append("&Tag=${mediaItem.imageTags?.get("Primary") ?: ""}")
-                append("&SegmentContainer=ts")
-                append("&MinSegments=1")
-                append("&BreakOnNonKeyFrames=true")
-                
-                // Add audio stream index if specified
-                if (audioStreamIndex != null) {
-                    append("&AudioStreamIndex=$audioStreamIndex")
-                }
-                
-                // Add subtitle stream index if specified
-                if (subtitleStreamIndex != null) {
-                    append("&SubtitleStreamIndex=$subtitleStreamIndex")
-                    // For HLS, subtitles need to be encoded into the stream
-                    // append("&SubtitleMethod=Encode")
-                }
-            }
-        } else {
-            // Direct play fallback
-            "$serverUrl/Videos/${mediaItem.id}/stream?Static=true&api_key=$apiKey"
-        }
-    }
-    
     fun updatePlaybackState(isPlaying: Boolean, currentPosition: Long, bufferedPosition: Long) {
         _uiState.update {
             it.copy(

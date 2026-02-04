@@ -58,7 +58,11 @@ fun VideoPlayerWithPreview(
     val trackSelector = remember { DefaultTrackSelector(context) }
     
     // Create data source factory with ResolvingDataSource that dynamically adds track parameters
-    // Note: We only key on headers, not the lambda functions, since those capture current state
+    // Note: We only key on headers, NOT the lambda functions. This is intentional because:
+    // 1. The lambdas are passed from PlayerScreen using rememberUpdatedState
+    // 2. They read from State objects that always contain current values
+    // 3. The lambdas are called at HTTP request time by the resolver, so they get current state
+    // 4. Keying on lambdas would cause recreation on every recomposition (lambda refs change)
     val dataSourceFactory = remember(headers) {
         val httpDataSourceFactory = DefaultHttpDataSource.Factory()
             .setDefaultRequestProperties(headers)
@@ -93,23 +97,88 @@ fun VideoPlayerWithPreview(
             .build()
     }
     
-    // Update media item when streamUrl changes (without recreating player)
+    // Load media when streamUrl changes (initial load or media item change)
+    // Note: Track changes (audio/subtitle) no longer trigger this because track parameters
+    // are now added dynamically by ResolvingDataSource, keeping the base URL constant
     LaunchedEffect(streamUrl) {
-        android.util.Log.d("VideoPlayerWithPreview", "Stream URL changed: $streamUrl")
+        android.util.Log.d("VideoPlayerWithPreview", "Loading media URL: $streamUrl")
         val currentPosition = exoPlayer.currentPosition
         val wasPlaying = exoPlayer.playWhenReady
         
         exoPlayer.setMediaSource(mediaFactory.createMediaSource(MediaItem.fromUri(streamUrl)))
         exoPlayer.prepare()
         
-        // Restore position and play state if this is a track switch (position > threshold)
+        // Restore position and play state if this is a reload (position > threshold)
         if (currentPosition > MIN_POSITION_TO_RESTORE_MS) {
             exoPlayer.seekTo(currentPosition)
-            exoPlayer.playWhenReady = wasPlaying  // Preserve play state on track change
+            exoPlayer.playWhenReady = wasPlaying  // Preserve play state on reload
         } else {
             // On initial load, start playback automatically
             exoPlayer.playWhenReady = true
         }
+    }
+    
+    // Update ExoPlayer track selection when audio/subtitle tracks change
+    // This uses ExoPlayer's TrackSelector to override which tracks are played
+    LaunchedEffect(getAudioStreamIndex, getSubtitleStreamIndex) {
+        val audioIndex = getAudioStreamIndex()
+        val subtitleIndex = getSubtitleStreamIndex()
+        
+        android.util.Log.d("VideoPlayerWithPreview", "Track selection changed - Audio: $audioIndex, Subtitle: $subtitleIndex")
+        
+        // Build track selection overrides
+        val parametersBuilder = trackSelector.parameters.buildUpon()
+        
+        // Clear all overrides first
+        parametersBuilder.clearOverrides()
+        
+        // Override audio track selection if specified
+        if (audioIndex != null) {
+            exoPlayer.currentTracks.groups.forEachIndexed { groupIndex, trackGroup ->
+                if (trackGroup.type == TRACK_TYPE_AUDIO) {
+                    // Find the track with matching index
+                    for (trackIndex in 0 until trackGroup.length) {
+                        // Match based on the index from Jellyfin metadata
+                        // For now, we'll select the track at the specified index within the audio group
+                        if (trackIndex == audioIndex) {
+                            parametersBuilder.setOverrideForType(
+                                androidx.media3.common.TrackSelectionOverride(
+                                    trackGroup.mediaTrackGroup,
+                                    listOf(trackIndex)
+                                )
+                            )
+                            android.util.Log.d("VideoPlayerWithPreview", "Selected audio track $trackIndex in group $groupIndex")
+                            break
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Override subtitle track selection if specified
+        if (subtitleIndex != null) {
+            exoPlayer.currentTracks.groups.forEachIndexed { groupIndex, trackGroup ->
+                if (trackGroup.type == TRACK_TYPE_TEXT) {
+                    for (trackIndex in 0 until trackGroup.length) {
+                        if (trackIndex == subtitleIndex) {
+                            parametersBuilder.setOverrideForType(
+                                androidx.media3.common.TrackSelectionOverride(
+                                    trackGroup.mediaTrackGroup,
+                                    listOf(trackIndex)
+                                )
+                            )
+                            android.util.Log.d("VideoPlayerWithPreview", "Selected subtitle track $trackIndex in group $groupIndex")
+                            break
+                        }
+                    }
+                }
+            }
+        } else {
+            // Disable subtitles if null
+            parametersBuilder.setTrackTypeDisabled(TRACK_TYPE_TEXT, true)
+        }
+        
+        trackSelector.setParameters(parametersBuilder)
     }
     
     // Player event listeners for playback state and track changes
