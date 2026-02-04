@@ -295,7 +295,7 @@ class PlayerViewModel @Inject constructor(
             }
         } else {
             // Direct play fallback
-            "$serverUrl/Videos/${mediaItem.id}/stream?Static=true&api_key=$apiKey"
+            "$serverUrl/Videos/${mediaItem.id}/stream?Static=true&api_key=$apiKey&Container=mkv"
         }
     }
     
