@@ -67,7 +67,11 @@ fun VideoPlayerWithPreview(
     val dataSourceFactory = remember(useDirectPlay) {
         if (useDirectPlay) {
             // Direct play: no track parameters needed, ExoPlayer handles track selection natively
-            DefaultHttpDataSource.Factory()
+            TrackParametersDataSourceFactory(
+                upstreamFactory =  DefaultHttpDataSource.Factory(),
+                getAudioStreamIndex = { null },
+                getSubtitleStreamIndex = { null }
+            )
         } else {
             // HLS mode: add track parameters to URL for Jellyfin transcoding
             TrackParametersDataSourceFactory(
@@ -81,7 +85,7 @@ fun VideoPlayerWithPreview(
     val mediaFactory = remember(dataSourceFactory) {
         DefaultMediaSourceFactory(context).setDataSourceFactory(dataSourceFactory)
     }
-    val exoPlayer = remember(mediaFactory) {
+    val exoPlayer = remember {
         android.util.Log.d("VideoPlayerWithPreview", "Creating ExoPlayer instance")
         
         ExoPlayer.Builder(context)
