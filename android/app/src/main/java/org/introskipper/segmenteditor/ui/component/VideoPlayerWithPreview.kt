@@ -135,8 +135,9 @@ fun VideoPlayerWithPreview(
     val currentSubtitleIndex = getSubtitleStreamIndex()
     
     // Track previous values to detect actual changes vs mode switches
-    var previousAudioIndex by remember { mutableStateOf<Int?>(null) }
-    var previousSubtitleIndex by remember { mutableStateOf<Int?>(null) }
+    // Initialize with current values to avoid false positives on first real change
+    var previousAudioIndex by remember { mutableStateOf(currentAudioIndex) }
+    var previousSubtitleIndex by remember { mutableStateOf(currentSubtitleIndex) }
     var previousUseDirectPlay by remember { mutableStateOf(useDirectPlay) }
     
     LaunchedEffect(currentAudioIndex, currentSubtitleIndex, useDirectPlay) {
@@ -238,12 +239,13 @@ fun VideoPlayerWithPreview(
         } else {
             // HLS mode: Reload media to get new transcoded manifest from Jellyfin
             // In HLS mode, currentAudioIndex and currentSubtitleIndex are Jellyfin MediaStream indices
-            // Only reload if tracks actually changed, not if we just switched from direct play to HLS
-            if (tracksChanged && !modeChanged) {
+            // Only reload if tracks changed, but skip if ONLY mode changed (not tracks)
+            // This prevents double-loading during fallback while allowing track changes
+            if (tracksChanged) {
                 android.util.Log.d("VideoPlayerWithPreview", "HLS mode - reloading media for track change (AudioStreamIndex=$currentAudioIndex, SubtitleStreamIndex=$currentSubtitleIndex)")
                 loadMedia("HLS mode - reloading media for track change (AudioStreamIndex=$currentAudioIndex, SubtitleStreamIndex=$currentSubtitleIndex)")
-            } else if (modeChanged) {
-                android.util.Log.d("VideoPlayerWithPreview", "HLS mode - skipping reload due to mode change (already loaded by streamUrl change)")
+            } else if (modeChanged && !tracksChanged) {
+                android.util.Log.d("VideoPlayerWithPreview", "HLS mode - skipping reload due to mode change without track change (already loaded by streamUrl change)")
             }
         }
     }
