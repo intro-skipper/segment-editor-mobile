@@ -404,6 +404,10 @@ private fun PlayerContent(
     onPlaybackError: (androidx.media3.common.PlaybackException) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Use rememberUpdatedState to capture the current useDirectPlay value
+    // This ensures callbacks always use the latest value even if they were captured before a state change
+    val currentUseDirectPlay by rememberUpdatedState(useDirectPlay)
+    
     Column(
         modifier = modifier.fillMaxSize()
     ) {
@@ -427,7 +431,7 @@ private fun PlayerContent(
                         viewModel.updatePlaybackState(isPlaying, currentPos, bufferedPos)
                     },
                     onTracksChanged = { tracks ->
-                        viewModel.updateTracksFromPlayer(tracks, useDirectPlay)
+                        viewModel.updateTracksFromPlayer(tracks, currentUseDirectPlay)
                     },
                     onPlaybackError = onPlaybackError
                 )
