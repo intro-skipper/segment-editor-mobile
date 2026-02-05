@@ -2,7 +2,7 @@ package org.introskipper.segmenteditor.ui.screen
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
-import android.view.WindowManager
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -56,6 +57,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
@@ -71,6 +75,7 @@ import org.introskipper.segmenteditor.ui.component.segment.SegmentEditorDialog
 import org.introskipper.segmenteditor.ui.navigation.Screen
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.viewmodel.PlayerViewModel
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -137,24 +142,33 @@ fun PlayerScreen(
             }
         }
     }
-    
+
     // Handle fullscreen mode
     DisposableEffect(uiState.isFullscreen) {
         val activity = context as? Activity
-        if (uiState.isFullscreen) {
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-            activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-        } else {
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        activity?.window?.let { window ->
+            val windowInsetsController = WindowInsetsControllerCompat(window, window.decorView)
+            if (uiState.isFullscreen) {
+                WindowCompat.setDecorFitsSystemWindows(window, true)
+                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+            } else {
+                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
+                WindowCompat.setDecorFitsSystemWindows(window, false)
+            }
         }
-        
+
         onDispose {
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            activity?.window?.let { window ->
+                WindowInsetsControllerCompat(window, window.decorView)
+                    .show(WindowInsetsCompat.Type.systemBars())
+                WindowCompat.setDecorFitsSystemWindows(window, false)
+            }
         }
     }
-    
+
     // Apply playback speed
     LaunchedEffect(uiState.playbackSpeed) {
         player?.setPlaybackSpeed(uiState.playbackSpeed)
@@ -244,7 +258,7 @@ fun PlayerScreen(
                 onPlaybackError = { error ->
                     // Handle playback error - prompt user to switch to HLS if direct play fails
                     if (useDirectPlay && !hasShownErrorDialog) {
-                        android.util.Log.w("PlayerScreen", "Direct play decoder error, prompting user to switch to HLS: errorCode=${error.errorCode}")
+                        Log.w("PlayerScreen", "Direct play decoder error, prompting user to switch to HLS: errorCode=${error.errorCode}")
                         hasShownErrorDialog = true
                         showDirectPlayFailedDialog = true
                     }
@@ -303,8 +317,7 @@ fun PlayerScreen(
             initialStartTime = null,
             initialEndTime = null,
             editSegment = editingSegment,
-            currentPosition = uiState.currentPosition / 1000.0,
-            onDismiss = { 
+            onDismiss = {
                 showSegmentEditor = false
                 editingSegment = null
             },
@@ -366,7 +379,6 @@ fun PlayerScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        android.util.Log.i("PlayerScreen", "User chose to switch to HLS")
                         useDirectPlay = false
                         showDirectPlayFailedDialog = false
                     }

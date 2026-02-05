@@ -1,19 +1,16 @@
 package org.introskipper.segmenteditor.ui.component
 
+import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.media3.common.C
 import androidx.media3.common.C.TRACK_TYPE_AUDIO
 import androidx.media3.common.C.TRACK_TYPE_TEXT
 import androidx.media3.common.C.TRACK_TYPE_VIDEO
@@ -71,7 +68,7 @@ fun VideoPlayerWithPreview(
     }
     
     val exoPlayer = remember {
-        android.util.Log.d("VideoPlayerWithPreview", "Creating ExoPlayer instance")
+        Log.d("VideoPlayerWithPreview", "Creating ExoPlayer instance")
         
         ExoPlayer.Builder(context)
             .setRenderersFactory(NextRenderersFactory(context))
@@ -92,7 +89,7 @@ fun VideoPlayerWithPreview(
     
     // Helper function to load media and restore playback state
     val loadMedia = { logMessage: String ->
-        android.util.Log.d("VideoPlayerWithPreview", logMessage)
+        Log.d("VideoPlayerWithPreview", logMessage)
         val currentPosition = exoPlayer.currentPosition
         val wasPlaying = exoPlayer.playWhenReady
 
@@ -103,7 +100,7 @@ fun VideoPlayerWithPreview(
         if (currentPosition > MIN_POSITION_TO_RESTORE_MS) {
             exoPlayer.seekTo(currentPosition)
             exoPlayer.playWhenReady = wasPlaying  // Preserve play state on reload
-            android.util.Log.d("VideoPlayerWithPreview", "Restored position: $currentPosition ms, playing: $wasPlaying")
+            Log.d("VideoPlayerWithPreview", "Restored position: $currentPosition ms, playing: $wasPlaying")
         } else {
             // On initial load, start playback automatically
             exoPlayer.playWhenReady = true
@@ -121,18 +118,18 @@ fun VideoPlayerWithPreview(
     LaunchedEffect(selectedAudioTrack, selectedSubtitleTrack, useDirectPlay) {
         // Skip in HLS mode - track changes are handled via streamUrl changes
         if (!useDirectPlay) {
-            android.util.Log.d("VideoPlayerWithPreview", "Skipping track change in HLS mode - handled via streamUrl")
+            Log.d("VideoPlayerWithPreview", "Skipping track change in HLS mode - handled via streamUrl")
             return@LaunchedEffect
         }
         
         // Skip on initial composition (when exoPlayer is not prepared yet)
         if (exoPlayer.playbackState == Player.STATE_IDLE) {
-            android.util.Log.d("VideoPlayerWithPreview", "Skipping track change - player not ready")
+            Log.d("VideoPlayerWithPreview", "Skipping track change - player not ready")
             return@LaunchedEffect
         }
         // Direct play mode: Use ExoPlayer's native track selection API
         // The index here is the relativeIndex (0-based position within tracks of same type)
-        android.util.Log.d("VideoPlayerWithPreview", "Direct play mode - applying track selection (Audio relativeIndex: $selectedAudioTrack, Subtitle relativeIndex: $selectedSubtitleTrack)")
+        Log.d("VideoPlayerWithPreview", "Direct play mode - applying track selection (Audio relativeIndex: $selectedAudioTrack, Subtitle relativeIndex: $selectedSubtitleTrack)")
         
         val currentTracks = exoPlayer.currentTracks
         val parametersBuilder = trackSelector.parameters.buildUpon()
@@ -144,7 +141,7 @@ fun VideoPlayerWithPreview(
             
             // Iterate through all track groups to find audio track at relativeIndex
             for (trackGroup in currentTracks.groups) {
-                if (trackGroup.type == C.TRACK_TYPE_AUDIO) {
+                if (trackGroup.type == TRACK_TYPE_AUDIO) {
                     for (trackIndex in 0 until trackGroup.length) {
                         if (currentRelativeIndex == selectedAudioTrack) {
                             // Found the track at the relative index
@@ -154,7 +151,7 @@ fun VideoPlayerWithPreview(
                                     listOf(trackIndex)
                                 )
                             )
-                            android.util.Log.d("VideoPlayerWithPreview", "Selected audio track: relativeIndex=$selectedAudioTrack, trackIndex=$trackIndex in group")
+                            Log.d("VideoPlayerWithPreview", "Selected audio track: relativeIndex=$selectedAudioTrack, trackIndex=$trackIndex in group")
                             foundAudio = true
                             break
                         }
@@ -165,7 +162,7 @@ fun VideoPlayerWithPreview(
             }
             
             if (!foundAudio) {
-                android.util.Log.w("VideoPlayerWithPreview", "Audio track with relativeIndex $selectedAudioTrack not found")
+                Log.w("VideoPlayerWithPreview", "Audio track with relativeIndex $selectedAudioTrack not found")
             }
         }
         
@@ -176,7 +173,7 @@ fun VideoPlayerWithPreview(
             
             // Iterate through all track groups to find subtitle track at relativeIndex
             for (trackGroup in currentTracks.groups) {
-                if (trackGroup.type == C.TRACK_TYPE_TEXT) {
+                if (trackGroup.type == TRACK_TYPE_TEXT) {
                     for (trackIndex in 0 until trackGroup.length) {
                         if (currentRelativeIndex == selectedSubtitleTrack) {
                             // Found the track at the relative index
@@ -186,7 +183,7 @@ fun VideoPlayerWithPreview(
                                     listOf(trackIndex)
                                 )
                             )
-                            android.util.Log.d("VideoPlayerWithPreview", "Selected subtitle track: relativeIndex=$selectedSubtitleTrack, trackIndex=$trackIndex in group")
+                            Log.d("VideoPlayerWithPreview", "Selected subtitle track: relativeIndex=$selectedSubtitleTrack, trackIndex=$trackIndex in group")
                             foundSubtitle = true
                             break
                         }
@@ -197,12 +194,12 @@ fun VideoPlayerWithPreview(
             }
             
             if (!foundSubtitle) {
-                android.util.Log.w("VideoPlayerWithPreview", "Subtitle track with relativeIndex $selectedSubtitleTrack not found")
+                Log.w("VideoPlayerWithPreview", "Subtitle track with relativeIndex $selectedSubtitleTrack not found")
             }
         } else {
             // Disable subtitles if null
-            parametersBuilder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
-            android.util.Log.d("VideoPlayerWithPreview", "Disabled subtitles")
+            parametersBuilder.setTrackTypeDisabled(TRACK_TYPE_TEXT, true)
+            Log.d("VideoPlayerWithPreview", "Disabled subtitles")
         }
         
         // Apply the track selection parameters
@@ -213,20 +210,20 @@ fun VideoPlayerWithPreview(
     DisposableEffect(exoPlayer, previewLoader) {
         val tracksListener = object : Player.Listener {
             override fun onTracksChanged(tracks: Tracks) {
-                android.util.Log.d("VideoPlayerWithPreview", "onTracksChanged: ${tracks.groups.size} track groups")
+                Log.d("VideoPlayerWithPreview", "onTracksChanged: ${tracks.groups.size} track groups")
                 
                 // Extract available audio tracks from ExoPlayer
                 val availableAudioTracks = mutableListOf<Pair<Int, String>>()
                 tracks.groups.forEachIndexed { groupIndex, group ->
-                    if (group.type == C.TRACK_TYPE_AUDIO) {
-                        android.util.Log.d("VideoPlayerWithPreview", "  Audio Group $groupIndex: ${group.length} tracks")
+                    if (group.type == TRACK_TYPE_AUDIO) {
+                        Log.d("VideoPlayerWithPreview", "  Audio Group $groupIndex: ${group.length} tracks")
                         for (trackIndex in 0 until group.length) {
                             val format = group.getTrackFormat(trackIndex)
                             val language = format.language ?: "Unknown"
                             val label = format.label ?: "Audio ${trackIndex + 1}"
                             val info = "$label ($language)"
                             availableAudioTracks.add(Pair(trackIndex, info))
-                            android.util.Log.d("VideoPlayerWithPreview", "    Track $trackIndex: $info, codec=${format.sampleMimeType}")
+                            Log.d("VideoPlayerWithPreview", "    Track $trackIndex: $info, codec=${format.sampleMimeType}")
                         }
                     }
                 }
@@ -234,31 +231,31 @@ fun VideoPlayerWithPreview(
                 // Extract available subtitle tracks from ExoPlayer
                 val availableSubtitleTracks = mutableListOf<Pair<Int, String>>()
                 tracks.groups.forEachIndexed { groupIndex, group ->
-                    if (group.type == C.TRACK_TYPE_TEXT) {
-                        android.util.Log.d("VideoPlayerWithPreview", "  Subtitle Group $groupIndex: ${group.length} tracks")
+                    if (group.type == TRACK_TYPE_TEXT) {
+                        Log.d("VideoPlayerWithPreview", "  Subtitle Group $groupIndex: ${group.length} tracks")
                         for (trackIndex in 0 until group.length) {
                             val format = group.getTrackFormat(trackIndex)
                             val language = format.language ?: "Unknown"
                             val label = format.label ?: "Subtitle ${trackIndex + 1}"
                             val info = "$label ($language)"
                             availableSubtitleTracks.add(Pair(trackIndex, info))
-                            android.util.Log.d("VideoPlayerWithPreview", "    Track $trackIndex: $info, codec=${format.sampleMimeType}")
+                            Log.d("VideoPlayerWithPreview", "    Track $trackIndex: $info, codec=${format.sampleMimeType}")
                         }
                     }
                 }
                 
                 // Log video tracks for completeness
                 tracks.groups.forEachIndexed { groupIndex, group ->
-                    if (group.type == C.TRACK_TYPE_VIDEO) {
-                        android.util.Log.d("VideoPlayerWithPreview", "  Video Group $groupIndex: ${group.length} tracks")
+                    if (group.type == TRACK_TYPE_VIDEO) {
+                        Log.d("VideoPlayerWithPreview", "  Video Group $groupIndex: ${group.length} tracks")
                         for (trackIndex in 0 until group.length) {
                             val format = group.getTrackFormat(trackIndex)
-                            android.util.Log.d("VideoPlayerWithPreview", "    Track $trackIndex: ${format.width}x${format.height}, codec=${format.sampleMimeType}")
+                            Log.d("VideoPlayerWithPreview", "    Track $trackIndex: ${format.width}x${format.height}, codec=${format.sampleMimeType}")
                         }
                     }
                 }
                 
-                android.util.Log.d("VideoPlayerWithPreview", "Available tracks - Audio: ${availableAudioTracks.size}, Subtitles: ${availableSubtitleTracks.size}")
+                Log.d("VideoPlayerWithPreview", "Available tracks - Audio: ${availableAudioTracks.size}, Subtitles: ${availableSubtitleTracks.size}")
                 
                 // Notify callback with tracks
                 onTracksChanged(tracks)
@@ -287,7 +284,7 @@ fun VideoPlayerWithPreview(
             }
             
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                android.util.Log.e("VideoPlayerWithPreview", "Player error occurred: errorCode=${error.errorCode}", error)
+                Log.e("VideoPlayerWithPreview", "Player error occurred: errorCode=${error.errorCode}", error)
                 
                 // Notify the error handler if in direct play mode and error is codec capability related
                 if (useDirectPlay) {
@@ -299,7 +296,7 @@ fun VideoPlayerWithPreview(
                     val isCodecError = error.errorCode in 4000..5000
                     
                     if (isCodecError) {
-                        android.util.Log.w("VideoPlayerWithPreview", "Codec error in direct play mode, notifying error handler")
+                        Log.w("VideoPlayerWithPreview", "Codec error in direct play mode, notifying error handler")
                         onPlaybackError(error)
                     }
                 }

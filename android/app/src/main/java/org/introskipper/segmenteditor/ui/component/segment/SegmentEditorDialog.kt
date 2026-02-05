@@ -57,6 +57,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat.getString
 import androidx.hilt.navigation.compose.hiltViewModel
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.Segment
@@ -72,7 +73,6 @@ fun SegmentEditorDialog(
     initialStartTime: Double? = null,
     initialEndTime: Double? = null,
     editSegment: Segment? = null,
-    currentPosition: Double? = null,
     onDismiss: () -> Unit,
     onSaved: () -> Unit,
     viewModel: SegmentEditorViewModel = hiltViewModel()
@@ -110,9 +110,9 @@ fun SegmentEditorDialog(
     LaunchedEffect(state.saveSuccess) {
         if (state.saveSuccess) {
             val message = when {
-                state.isDeleting -> context.getString(R.string.segment_deleted)
-                state.mode == EditorMode.Create -> context.getString(R.string.segment_created)
-                else -> context.getString(R.string.segment_updated)
+                state.isDeleting -> getString(context, R.string.segment_deleted)
+                state.mode == EditorMode.Create -> getString(context, R.string.segment_created)
+                else -> getString(context, R.string.segment_updated)
             }
             snackbarHostState.showSnackbar(
                 message = message,
