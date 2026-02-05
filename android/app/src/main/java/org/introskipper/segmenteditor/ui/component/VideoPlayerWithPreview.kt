@@ -19,6 +19,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
@@ -71,7 +72,10 @@ fun VideoPlayerWithPreview(
         Log.d("VideoPlayerWithPreview", "Creating ExoPlayer instance")
         
         ExoPlayer.Builder(context)
-            .setRenderersFactory(NextRenderersFactory(context))
+            .setRenderersFactory(NextRenderersFactory(context).apply {
+                // Prefer FFmpeg decoder for formats like DTS that Android doesn't natively support
+                setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+            })
             .setTrackSelector(trackSelector.apply {
                 setParameters(buildUponParameters()
                     .setAllowVideoMixedMimeTypeAdaptiveness(true)
