@@ -410,18 +410,19 @@ class PlayerViewModel @Inject constructor(
         val serverUrl = securePreferences.getServerUrl() ?: return null
         val apiKey = securePreferences.getApiKey() ?: return null
 
+        // https://developer.android.com/media/platform/supported-formats
         return if (useHls) {
             // HLS streaming - build URL with track parameters upfront
             buildString {
                 append("$serverUrl/Videos/${mediaItem.id}/master.m3u8")
                 append("?MediaSourceId=${mediaItem.id}")
-                append("&VideoCodec=h264,hevc")
-                append("&AudioCodec=aac,mp3,ac3,eac3")
+                append("&VideoCodec=h264,hevc,h265,av1")
+                append("&AudioCodec=aac,mp3,opus,flac,ac3,eac3")
                 append("&api_key=$apiKey")
                 append("&TranscodingMaxAudioChannels=2")
                 append("&RequireAvc=false")
                 append("&Tag=${mediaItem.imageTags?.get("Primary") ?: ""}")
-                append("&SegmentContainer=ts")
+                append("&SegmentContainer=mkv,mp4,ts")
                 append("&MinSegments=1")
                 append("&BreakOnNonKeyFrames=true")
 
@@ -450,7 +451,7 @@ class PlayerViewModel @Inject constructor(
             }
         } else {
             // Direct play fallback
-            "$serverUrl/Videos/${mediaItem.id}/stream?Static=true&api_key=$apiKey&Container=mkv"
+            "$serverUrl/Videos/${mediaItem.id}/stream?Static=true&api_key=$apiKey&Container=mp4,mkv"
         }
     }
 
