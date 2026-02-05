@@ -148,13 +148,15 @@ fun PlayerScreen(
         activity?.window?.let { window ->
             val windowInsetsController = WindowInsetsControllerCompat(window, window.decorView)
             if (uiState.isFullscreen) {
+                window.decorView.keepScreenOn = true
                 WindowCompat.setDecorFitsSystemWindows(window, true)
-                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                 windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             } else {
                 activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                 windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
                 WindowCompat.setDecorFitsSystemWindows(window, false)
+                window.decorView.keepScreenOn = false
             }
         }
 
@@ -164,6 +166,7 @@ fun PlayerScreen(
                 WindowInsetsControllerCompat(window, window.decorView)
                     .show(WindowInsetsCompat.Type.systemBars())
                 WindowCompat.setDecorFitsSystemWindows(window, false)
+                window.decorView.keepScreenOn = false
             }
         }
     }
