@@ -1,5 +1,6 @@
 package org.introskipper.segmenteditor.ui.component
 
+import android.content.ClipData
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -43,7 +45,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
@@ -62,7 +64,6 @@ import kotlin.math.min
 @Composable
 fun SegmentSlider(
     segment: Segment,
-    index: Int,
     isActive: Boolean,
     runtimeSeconds: Double,
     onUpdate: (Segment) -> Unit,
@@ -71,12 +72,11 @@ fun SegmentSlider(
     onSetActive: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val clipboardManager = LocalClipboardManager.current
-    val density = LocalDensity.current
+    val clipboardManager = LocalClipboard.current.nativeClipboard
     val context = LocalContext.current
     
-    var localStartSeconds by remember(segment) { mutableStateOf(segment.getStartSeconds()) }
-    var localEndSeconds by remember(segment) { mutableStateOf(segment.getEndSeconds()) }
+    var localStartSeconds by remember(segment) { mutableDoubleStateOf(segment.getStartSeconds()) }
+    var localEndSeconds by remember(segment) { mutableDoubleStateOf(segment.getEndSeconds()) }
     var isDraggingStart by remember { mutableStateOf(false) }
     var isDraggingEnd by remember { mutableStateOf(false) }
     
@@ -173,7 +173,7 @@ fun SegmentSlider(
                     IconButton(
                         onClick = {
                             val segmentText = "${segment.type}: ${TimeUtils.formatDurationFromSeconds(localStartSeconds)} - ${TimeUtils.formatDurationFromSeconds(localEndSeconds)}"
-                            clipboardManager.setText(AnnotatedString(segmentText))
+                            clipboardManager.setPrimaryClip(ClipData.newPlainText(segment.type, AnnotatedString(segmentText)))
                         },
                         modifier = Modifier.size(36.dp)
                     ) {

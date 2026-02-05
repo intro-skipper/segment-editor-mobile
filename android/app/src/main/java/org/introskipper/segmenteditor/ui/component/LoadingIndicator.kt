@@ -16,8 +16,8 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun LoadingIndicator(
-    message: String = "Loading...",
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    message: String = "Loading..."
 ) {
     Column(
         modifier = modifier

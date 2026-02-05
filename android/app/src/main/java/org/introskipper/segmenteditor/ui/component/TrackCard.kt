@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.introskipper.segmenteditor.ui.state.TrackWithSegments
+import java.util.Locale
 
 @Composable
 fun TrackCard(
@@ -87,7 +88,7 @@ fun TrackCard(
                     val minutes = (seconds / 60).toInt()
                     val remainingSeconds = (seconds % 60).toInt()
                     Text(
-                        text = String.format("%d:%02d", minutes, remainingSeconds),
+                        text = String.format(Locale.ROOT, "%d:%02d", minutes, remainingSeconds),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

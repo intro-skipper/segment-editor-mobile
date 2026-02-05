@@ -62,7 +62,7 @@ fun MediaCard(
                 item.runTimeTicks?.let { ticks ->
                     val minutes = (ticks / 10000000L / 60).toInt()
                     Text(
-                        text = "${minutes} min",
+                        text = "$minutes min",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

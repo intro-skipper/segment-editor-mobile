@@ -28,12 +28,12 @@ private const val ELLIPSIS_PLACEHOLDER = -1
 
 @Composable
 fun PaginationControls(
+    modifier: Modifier = Modifier,
     currentPage: Int,
     totalPages: Int,
     onPreviousPage: () -> Unit,
     onNextPage: () -> Unit,
     onGoToPage: ((Int) -> Unit)? = null,
-    modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier,

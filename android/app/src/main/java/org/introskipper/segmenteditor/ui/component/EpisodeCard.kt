@@ -91,7 +91,7 @@ fun EpisodeCard(
                 episode.episode.getRuntimeSeconds()?.let { seconds ->
                     val minutes = (seconds / 60).toInt()
                     Text(
-                        text = "${minutes} min",
+                        text = "$minutes min",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

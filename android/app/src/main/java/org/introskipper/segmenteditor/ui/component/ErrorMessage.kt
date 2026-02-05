@@ -25,9 +25,9 @@ import org.introskipper.segmenteditor.R
 
 @Composable
 fun ErrorMessage(
+    modifier: Modifier = Modifier,
     message: String,
-    onRetry: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    onRetry: (() -> Unit)? = null
 ) {
     Card(
         modifier = modifier

@@ -24,11 +24,11 @@ import coil.compose.AsyncImage
 
 @Composable
 fun MediaHeader(
+    modifier: Modifier = Modifier,
     title: String,
     subtitle: String? = null,
     imageUrl: String?,
     backdropUrl: String? = null,
-    modifier: Modifier = Modifier,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     Surface(

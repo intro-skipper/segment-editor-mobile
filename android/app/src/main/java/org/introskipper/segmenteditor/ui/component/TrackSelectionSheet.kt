@@ -26,13 +26,13 @@ import org.introskipper.segmenteditor.ui.state.TrackInfo
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrackSelectionSheet(
+    modifier: Modifier = Modifier,
     title: String,
     tracks: List<TrackInfo>,
     selectedTrackIndex: Int?,
     onTrackSelected: (Int?) -> Unit,
     onDismiss: () -> Unit,
     allowDisable: Boolean = false,
-    modifier: Modifier = Modifier
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,

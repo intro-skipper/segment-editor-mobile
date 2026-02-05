@@ -11,14 +11,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -50,6 +47,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.preview.ScrubPreviewOverlay
+import java.util.Locale
 
 /**
  * Media controls overlay with scrubbing preview support
@@ -260,8 +258,8 @@ private fun formatTime(timeMs: Long): String {
     val seconds = totalSeconds % 60
     
     return if (hours > 0) {
-        String.format("%d:%02d:%02d", hours, minutes, seconds)
+        String.format(Locale.ROOT, "%d:%02d:%02d", hours, minutes, seconds)
     } else {
-        String.format("%d:%02d", minutes, seconds)
+        String.format(Locale.ROOT, "%d:%02d", minutes, seconds)
     }
 }
