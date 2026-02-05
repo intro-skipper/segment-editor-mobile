@@ -117,11 +117,10 @@ class PlayerViewModel @Inject constructor(
     private fun loadSegments(itemId: String) {
         viewModelScope.launch {
             try {
-                Log.d(TAG, "Loading segments for item: $itemId")
                 val result = segmentRepository.getSegmentsResult(itemId)
                 result.fold(
                     onSuccess = { segments ->
-                        Log.d(TAG, "Successfully loaded ${segments.size} segments")
+                        Log.d(TAG, "Successfully loaded ${segments.size} segments for $itemId")
                         segments.forEachIndexed { index, segment ->
                             Log.d(TAG, "Segment $index: type=${segment.type}, start=${segment.getStartSeconds()}s, end=${segment.getEndSeconds()}s")
                         }
@@ -129,12 +128,12 @@ class PlayerViewModel @Inject constructor(
                         _events.value = PlayerEvent.SegmentLoaded(segments)
                     },
                     onFailure = { error ->
-                        Log.w(TAG, "Failed to load segments (non-critical): ${error.message}", error)
+                        Log.w(TAG, "Failed to load segments for $itemId (non-critical): ${error.message}", error)
                         // Segments are optional, don't show error to user
                     }
                 )
             } catch (e: Exception) {
-                Log.w(TAG, "Exception loading segments (non-critical): ${e.message}", e)
+                Log.w(TAG, "Exception loading segments for $itemId (non-critical): ${e.message}", e)
             }
         }
     }
@@ -189,13 +188,12 @@ class PlayerViewModel @Inject constructor(
             audioTracks.firstOrNull { it.isDefault }?.relativeIndex ?: audioTracks.firstOrNull()?.relativeIndex
         }
         val defaultSubtitleIndex = subtitleTracks.firstOrNull { it.isDefault }?.relativeIndex
-
-        Log.d(TAG, "Extracted from Jellyfin: ${audioTracks.size} audio tracks, ${subtitleTracks.size} subtitle tracks")
+        
         audioTracks.forEach { track ->
-            Log.d(TAG, "Audio track: index=${track.index}, relativeIndex=${track.relativeIndex}, title=${track.displayTitle}, default=${track.isDefault}, source=${track.source}")
+            Log.d(TAG, " Jellyfin Audio track: index=${track.index}, relativeIndex=${track.relativeIndex}, title=${track.displayTitle}, default=${track.isDefault}, source=${track.source}")
         }
         subtitleTracks.forEach { track ->
-            Log.d(TAG, "Subtitle track: index=${track.index}, relativeIndex=${track.relativeIndex}, title=${track.displayTitle}, default=${track.isDefault}, source=${track.source}")
+            Log.d(TAG, " Jellyfin Subtitle track: index=${track.index}, relativeIndex=${track.relativeIndex}, title=${track.displayTitle}, default=${track.isDefault}, source=${track.source}")
         }
 
         _uiState.update {
@@ -300,7 +298,6 @@ class PlayerViewModel @Inject constructor(
                 when {
                     // Case 1: Switching from Direct Play to HLS - restore Jellyfin tracks
                     hasExoPlayerTracks -> {
-                        Log.d(TAG, "HLS mode: switching from Direct Play, restoring Jellyfin tracks while preserving selections")
                         val mediaStreams = state.mediaItem?.mediaStreams
 
                         if (mediaStreams != null) {
@@ -519,8 +516,6 @@ class PlayerViewModel @Inject constructor(
                     return@launch
                 }
 
-                Log.d(TAG, "Deleting segment: ${segment.type}")
-
                 val result = segmentRepository.deleteSegmentResult(
                     segmentId = segmentId,
                     itemId = segment.itemId,
@@ -529,16 +524,16 @@ class PlayerViewModel @Inject constructor(
 
                 result.fold(
                     onSuccess = {
-                        Log.d(TAG, "Segment deleted successfully")
+                        Log.d(TAG, "Deleted ${segment.type} segment successfully")
                         // Refresh segments to get the latest state
                         refreshSegments()
                     },
                     onFailure = { error ->
-                        Log.e(TAG, "Failed to delete segment", error)
+                        Log.e(TAG, "Failed to delete  ${segment.type} segment", error)
                     }
                 )
             } catch (e: Exception) {
-                Log.e(TAG, "Exception deleting segment", e)
+                Log.e(TAG, "Exception deleting  ${segment.type} segment", e)
             }
         }
     }
