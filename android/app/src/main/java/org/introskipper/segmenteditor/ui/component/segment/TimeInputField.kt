@@ -21,17 +21,17 @@ import org.introskipper.segmenteditor.ui.validation.SegmentValidator
 
 @Composable
 fun TimeInputField(
+    modifier: Modifier = Modifier,
     label: String,
     timeInSeconds: Double,
     onTimeChanged: (Double) -> Unit,
-    isError: Boolean = false,
-    modifier: Modifier = Modifier
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    isError: Boolean = false
 ) {
     var textValue by remember(timeInSeconds) {
         mutableStateOf(SegmentValidator.formatTimeString(timeInSeconds))
     }
     var localError by remember { mutableStateOf(false) }
-    val focusManager = LocalFocusManager.current
     
     OutlinedTextField(
         value = textValue,
@@ -56,11 +56,9 @@ fun TimeInputField(
         },
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Number,
-            imeAction = ImeAction.Next
+            imeAction = ImeAction.Done
         ),
-        keyboardActions = KeyboardActions(
-            onNext = { focusManager.moveFocus(FocusDirection.Down) }
-        ),
+        keyboardActions = keyboardActions,
         singleLine = true,
         modifier = modifier.fillMaxWidth()
     )

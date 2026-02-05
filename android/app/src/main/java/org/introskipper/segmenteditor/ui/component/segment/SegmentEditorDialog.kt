@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -55,6 +56,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat.getString
@@ -63,6 +65,7 @@ import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.ui.state.EditorMode
 import org.introskipper.segmenteditor.ui.viewmodel.SegmentEditorViewModel
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,6 +84,7 @@ fun SegmentEditorDialog(
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     
     // Store original values for restoration on dismiss
     val originalStartTime = remember { editSegment?.getStartSeconds() ?: initialStartTime }
@@ -244,6 +248,9 @@ fun SegmentEditorDialog(
                                 label = "Start Time",
                                 timeInSeconds = state.startTime,
                                 onTimeChanged = { viewModel.setStartTime(it) },
+                                keyboardActions = KeyboardActions(
+                                    onDone = { focusManager.clearFocus() }
+                                ),
                                 isError = state.validationError != null,
                                 modifier = Modifier.weight(1f)
                             )
@@ -252,6 +259,9 @@ fun SegmentEditorDialog(
                                 label = "End Time",
                                 timeInSeconds = state.endTime,
                                 onTimeChanged = { viewModel.setEndTime(it) },
+                                keyboardActions = KeyboardActions(
+                                    onDone = { focusManager.clearFocus() }
+                                ),
                                 isError = state.validationError != null,
                                 modifier = Modifier.weight(1f)
                             )
@@ -513,8 +523,8 @@ private fun formatTimeString(seconds: Double): String {
     val secs = totalSeconds % 60
     
     return if (hours > 0) {
-        String.format("%d:%02d:%02d", hours, minutes, secs)
+        String.format(Locale.ROOT, "%d:%02d:%02d", hours, minutes, secs)
     } else {
-        String.format("%d:%02d", minutes, secs)
+        String.format(Locale.ROOT, "%d:%02d", minutes, secs)
     }
 }

@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
@@ -48,6 +49,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import org.introskipper.segmenteditor.data.model.Segment
@@ -74,6 +76,7 @@ fun SegmentSlider(
 ) {
     val clipboardManager = LocalClipboard.current.nativeClipboard
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     
     var localStartSeconds by remember(segment) { mutableDoubleStateOf(segment.getStartSeconds()) }
     var localEndSeconds by remember(segment) { mutableDoubleStateOf(segment.getEndSeconds()) }
@@ -236,8 +239,16 @@ fun SegmentSlider(
                     label = "Start:",
                     timeSeconds = localStartSeconds,
                     onTimeChanged = { newTime ->
+                        isDraggingEnd = true
                         localStartSeconds = newTime.coerceIn(0.0, localEndSeconds - minGap)
                     },
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            focusManager.clearFocus()
+                            isDraggingStart = false
+                            isDraggingEnd = false
+                        }
+                    ),
                     onSeek = { onSeekTo(localStartSeconds) },
                     modifier = Modifier.weight(1f)
                 )
@@ -247,8 +258,16 @@ fun SegmentSlider(
                     label = "End:",
                     timeSeconds = localEndSeconds,
                     onTimeChanged = { newTime ->
+                        isDraggingEnd = true
                         localEndSeconds = newTime.coerceIn(localStartSeconds + minGap, runtimeSeconds)
                     },
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            focusManager.clearFocus()
+                            isDraggingStart = false
+                            isDraggingEnd = false
+                        }
+                    ),
                     onSeek = { onSeekTo(localEndSeconds) },
                     modifier = Modifier.weight(1f)
                 )
@@ -379,6 +398,7 @@ private fun TimeInputRow(
     label: String,
     timeSeconds: Double,
     onTimeChanged: (Double) -> Unit,
+    keyboardActions: KeyboardActions,
     onSeek: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -403,6 +423,7 @@ private fun TimeInputRow(
             label = label.removeSuffix(":"),
             timeInSeconds = timeSeconds,
             onTimeChanged = onTimeChanged,
+            keyboardActions = keyboardActions,
             modifier = Modifier.weight(1f)
         )
     }
