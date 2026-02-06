@@ -144,7 +144,7 @@ fun SeriesScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(8.dp)
+                            .padding(12.dp)
                     ) {
                         // Series header
                         val series = state.series
@@ -187,7 +187,7 @@ fun SeriesScreen(
                             ScrollableTabRow(
                                 selectedTabIndex = selectedSeasonIndex,
                                 modifier = Modifier.fillMaxWidth(),
-                                edgePadding = 16.dp
+                                edgePadding = 8.dp
                             ) {
                                 sortedSeasons.forEachIndexed { index, seasonNumber ->
                                     Tab(
