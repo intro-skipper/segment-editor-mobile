@@ -185,4 +185,12 @@
     <string name="validation_error_end_exceeds_duration">End time exceeds video duration</string>
     <string name="validation_error_start_exceeds_duration">Start time exceeds video duration</string>
     <string name="validation_error_overlaps">Overlaps with existing segment(s): %1$s</string>
+
+    <!-- Segment Editor Actions -->
+    <string name="segment_set_start_from_player">Set start from player</string>
+    <string name="segment_set_end_from_player">Set end from player</string>
+    <string name="segment_save">Save segment</string>
+    <string name="segment_save_all">Save All</string>
+    <string name="segment_saved">Segment saved successfully</string>
+    <string name="segment_all_saved">All segments saved successfully</string>
 </resources>

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Subtitles
@@ -60,7 +61,9 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
+import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.ui.component.PlaybackSpeedDialog
@@ -68,7 +71,6 @@ import org.introskipper.segmenteditor.ui.component.SegmentSlider
 import org.introskipper.segmenteditor.ui.component.SegmentTimeline
 import org.introskipper.segmenteditor.ui.component.TrackSelectionSheet
 import org.introskipper.segmenteditor.ui.component.VideoPlayerWithPreview
-import org.introskipper.segmenteditor.ui.component.segment.SegmentEditorDialog
 import org.introskipper.segmenteditor.ui.navigation.Screen
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.viewmodel.PlayerViewModel
@@ -83,6 +85,7 @@ fun PlayerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     
     // Determine if we should use direct play (no HLS transcoding)
@@ -113,13 +116,26 @@ fun PlayerScreen(
     var showSubtitleTracks by remember(itemId) { mutableStateOf(false) }
     
     // Segment editor state - keyed by itemId to reset when navigating
-    var showSegmentEditor by remember(itemId) { mutableStateOf(false) }
-    var editingSegment by remember(itemId) { mutableStateOf<Segment?>(null) }
     var activeSegmentIndex by remember(itemId) { mutableIntStateOf(0) }
+    
+    // Local editing state for segments (unsaved changes)
+    var editingSegments by remember(itemId) { mutableStateOf<List<Segment>>(emptyList()) }
+    var segmentHasChanges by remember(itemId) { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
+    
+    // Sync editing segments from server when data changes
+    LaunchedEffect(uiState.segments) {
+        if (editingSegments.isEmpty() || uiState.segments != editingSegments) {
+            editingSegments = uiState.segments
+            segmentHasChanges = emptyMap()
+        }
+    }
     
     // Delete confirmation state
     var showDeleteConfirmation by remember(itemId) { mutableStateOf(false) }
     var segmentToDelete by remember(itemId) { mutableStateOf<Segment?>(null) }
+    
+    // FAB segment type menu state
+    var showFabMenu by remember(itemId) { mutableStateOf(false) }
     
     // Load media item when itemId changes
     LaunchedEffect(itemId) {
@@ -196,6 +212,44 @@ fun PlayerScreen(
                     }
                 )
             }
+        },
+        floatingActionButton = {
+            if (!uiState.isFullscreen) {
+                Box {
+                    androidx.compose.material3.FloatingActionButton(
+                        onClick = { showFabMenu = true },
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.player_create_segment))
+                    }
+                    
+                    androidx.compose.material3.DropdownMenu(
+                        expanded = showFabMenu,
+                        onDismissRequest = { showFabMenu = false }
+                    ) {
+                        org.introskipper.segmenteditor.data.model.SegmentType.entries.forEach { type ->
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = { Text(type.value) },
+                                onClick = {
+                                    showFabMenu = false
+                                    val durationSeconds = uiState.duration / 1000.0
+                                    val newSegment = Segment(
+                                        id = null,
+                                        itemId = itemId,
+                                        type = type.value,
+                                        startTicks = 0L,
+                                        endTicks = Segment.secondsToTicks(durationSeconds)
+                                    )
+                                    editingSegments = editingSegments + newSegment
+                                    activeSegmentIndex = editingSegments.size - 1
+                                    segmentHasChanges = segmentHasChanges + (newSegment.toString() to true)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
         }
     ) { paddingValues ->
         if (uiState.isLoading) {
@@ -236,24 +290,131 @@ fun PlayerScreen(
                 streamUrl = streamUrl,
                 previewLoader = previewLoader,
                 activeSegmentIndex = activeSegmentIndex,
+                editingSegments = editingSegments,
+                segmentHasChanges = segmentHasChanges,
                 useDirectPlay = useDirectPlay,
                 onPlayerReady = { player = it },
                 onAudioTracksClick = { showAudioTracks = true },
                 onSubtitleTracksClick = { showSubtitleTracks = true },
-                onCreateSegment = { 
-                    editingSegment = null
-                    showSegmentEditor = true 
+                onUpdateSegment = { segment ->
+                    val index = editingSegments.indexOfFirst { 
+                        it.id == segment.id || (it.id == null && it === editingSegments[activeSegmentIndex])
+                    }
+                    if (index != -1) {
+                        editingSegments = editingSegments.toMutableList().apply {
+                            set(index, segment)
+                        }
+                        // Mark as having changes
+                        val key = segment.id ?: segment.toString()
+                        segmentHasChanges = segmentHasChanges + (key to true)
+                    }
                 },
-                onEditSegment = { segment ->
-                    editingSegment = segment
-                    showSegmentEditor = true
+                onSaveSegment = { segment ->
+                    // Save individual segment
+                    coroutineScope.launch {
+                        try {
+                            val result = viewModel.saveSegment(segment)
+                            
+                            result.fold(
+                                onSuccess = { savedSegment ->
+                                    // Update the local segment with the server ID
+                                    val index = editingSegments.indexOfFirst { 
+                                        it.id == segment.id || (it.id == null && it === segment) 
+                                    }
+                                    if (index != -1) {
+                                        editingSegments = editingSegments.toMutableList().apply {
+                                            set(index, savedSegment)
+                                        }
+                                    }
+                                    // Clear change flag
+                                    val key = segment.id ?: segment.toString()
+                                    segmentHasChanges = segmentHasChanges - key
+                                    
+                                    // Refresh from server
+                                    viewModel.refreshSegments()
+                                },
+                                onFailure = { error ->
+                                    Log.e("PlayerScreen", "Failed to save segment", error)
+                                }
+                            )
+                        } catch (e: Exception) {
+                            Log.e("PlayerScreen", "Exception saving segment", e)
+                        }
+                    }
+                },
+                onSaveAll = {
+                    // Save all segments with changes
+                    coroutineScope.launch {
+                        try {
+                            val result = viewModel.saveAllSegments(editingSegments, uiState.segments)
+                            
+                            result.fold(
+                                onSuccess = { savedSegments ->
+                                    // Clear all change flags
+                                    segmentHasChanges = emptyMap()
+                                    
+                                    // Refresh from server
+                                    viewModel.refreshSegments()
+                                },
+                                onFailure = { error ->
+                                    Log.e("PlayerScreen", "Failed to save all segments", error)
+                                }
+                            )
+                        } catch (e: Exception) {
+                            Log.e("PlayerScreen", "Exception saving all segments", e)
+                        }
+                    }
                 },
                 onDeleteSegment = { segment ->
-                    segmentToDelete = segment
-                    showDeleteConfirmation = true
+                    // If segment has no ID (unsaved), remove it directly from the list
+                    if (segment.id == null) {
+                        editingSegments = editingSegments.filter { it !== segment }
+                        // Clear change flag
+                        segmentHasChanges = segmentHasChanges - segment.toString()
+                        // Adjust active index if needed
+                        if (activeSegmentIndex >= editingSegments.size) {
+                            activeSegmentIndex = (editingSegments.size - 1).coerceAtLeast(0)
+                        }
+                    } else {
+                        // For saved segments, show confirmation dialog
+                        segmentToDelete = segment
+                        showDeleteConfirmation = true
+                    }
                 },
                 onSetActiveSegment = { index ->
                     activeSegmentIndex = index
+                },
+                onSetStartFromPlayer = { index ->
+                    player?.currentPosition?.let { positionMs ->
+                        val segment = editingSegments.getOrNull(index)
+                        if (segment != null) {
+                            val updatedSegment = segment.copy(
+                                startTicks = Segment.secondsToTicks(positionMs / 1000.0)
+                            )
+                            editingSegments = editingSegments.toMutableList().apply {
+                                set(index, updatedSegment)
+                            }
+                            // Mark as having changes
+                            val key = segment.id ?: segment.toString()
+                            segmentHasChanges = segmentHasChanges + (key to true)
+                        }
+                    }
+                },
+                onSetEndFromPlayer = { index ->
+                    player?.currentPosition?.let { positionMs ->
+                        val segment = editingSegments.getOrNull(index)
+                        if (segment != null) {
+                            val updatedSegment = segment.copy(
+                                endTicks = Segment.secondsToTicks(positionMs / 1000.0)
+                            )
+                            editingSegments = editingSegments.toMutableList().apply {
+                                set(index, updatedSegment)
+                            }
+                            // Mark as having changes
+                            val key = segment.id ?: segment.toString()
+                            segmentHasChanges = segmentHasChanges + (key to true)
+                        }
+                    }
                 },
                 onPlaybackError = { error ->
                     // Handle playback error - prompt user to switch to HLS if direct play fails
@@ -302,28 +463,6 @@ fun PlayerScreen(
             currentSpeed = uiState.playbackSpeed,
             onSpeedSelected = { viewModel.setPlaybackSpeed(it) },
             onDismiss = { viewModel.showSpeedSelection(false) }
-        )
-    }
-    
-    // Segment editor dialog
-    if (showSegmentEditor) {
-        // uiState.duration is already in milliseconds, convert to seconds
-        val durationSeconds = uiState.duration / 1000.0
-        
-        SegmentEditorDialog(
-            itemId = itemId,
-            duration = durationSeconds,
-            existingSegments = uiState.segments,
-            initialStartTime = null,
-            initialEndTime = null,
-            editSegment = editingSegment,
-            onDismiss = {
-                showSegmentEditor = false
-                editingSegment = null
-            },
-            onSaved = {
-                viewModel.refreshSegments()
-            }
         )
     }
     
@@ -405,14 +544,19 @@ private fun PlayerContent(
     streamUrl: String?,
     previewLoader: PreviewLoader?,
     activeSegmentIndex: Int,
+    editingSegments: List<Segment>,
+    segmentHasChanges: Map<String, Boolean>,
     useDirectPlay: Boolean,
     onPlayerReady: (ExoPlayer) -> Unit,
     onAudioTracksClick: () -> Unit,
     onSubtitleTracksClick: () -> Unit,
-    onCreateSegment: () -> Unit,
-    onEditSegment: (Segment) -> Unit,
+    onUpdateSegment: (Segment) -> Unit,
+    onSaveSegment: (Segment) -> Unit,
+    onSaveAll: () -> Unit,
     onDeleteSegment: (Segment) -> Unit,
     onSetActiveSegment: (Int) -> Unit,
+    onSetStartFromPlayer: (Int) -> Unit,
+    onSetEndFromPlayer: (Int) -> Unit,
     onPlaybackError: (androidx.media3.common.PlaybackException) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -492,20 +636,22 @@ private fun PlayerContent(
                 }
                 
                 // Segments list or empty message
-                if (uiState.segments.isNotEmpty()) {
+                if (editingSegments.isNotEmpty()) {
                     // uiState.duration is already in milliseconds, convert to seconds
                     val runtimeSeconds = uiState.duration / 1000.0
                     
-                    items(uiState.segments.size) { index ->
-                        val segment = uiState.segments[index]
+                    items(editingSegments.size) { index ->
+                        val segment = editingSegments[index]
+                        val segmentKey = segment.id ?: segment.toString()
+                        val hasChanges = segmentHasChanges[segmentKey] ?: false
                         
                         SegmentSlider(
                             segment = segment,
                             isActive = index == activeSegmentIndex,
                             runtimeSeconds = runtimeSeconds,
                             onUpdate = { updatedSegment ->
-                                // Trigger the edit dialog for persistence
-                                onEditSegment(updatedSegment)
+                                // Update local state only
+                                onUpdateSegment(updatedSegment)
                             },
                             onDelete = {
                                 // Trigger delete confirmation directly
@@ -517,13 +663,23 @@ private fun PlayerContent(
                             onSetActive = {
                                 onSetActiveSegment(index)
                             },
+                            onSetStartFromPlayer = {
+                                onSetStartFromPlayer(index)
+                            },
+                            onSetEndFromPlayer = {
+                                onSetEndFromPlayer(index)
+                            },
+                            onSave = {
+                                onSaveSegment(segment)
+                            },
+                            hasUnsavedChanges = hasChanges,
                             modifier = Modifier.padding(vertical = 4.dp)
                         )
                     }
                 } else {
                     item {
                         Text(
-                            text = "No segments found for this media item. Create one below.",
+                            text = "No segments found for this media item. Use the + button to create one.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 8.dp)
@@ -531,15 +687,20 @@ private fun PlayerContent(
                     }
                 }
                 
-                // Create segment button - now appears after segments
-                item {
-                    Button(
-                        onClick = onCreateSegment,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.player_create_segment))
+                // Save All button - only show if there are unsaved changes
+                if (segmentHasChanges.values.any { it }) {
+                    item {
+                        Button(
+                            onClick = onSaveAll,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.segment_save_all))
+                        }
                     }
                 }
             }
