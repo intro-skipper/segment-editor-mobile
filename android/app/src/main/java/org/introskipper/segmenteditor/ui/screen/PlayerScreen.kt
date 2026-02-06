@@ -134,6 +134,9 @@ fun PlayerScreen(
     var showDeleteConfirmation by remember(itemId) { mutableStateOf(false) }
     var segmentToDelete by remember(itemId) { mutableStateOf<Segment?>(null) }
     
+    // FAB segment type menu state
+    var showFabMenu by remember(itemId) { mutableStateOf(false) }
+    
     // Load media item when itemId changes
     LaunchedEffect(itemId) {
         viewModel.loadMediaItem(itemId)
@@ -209,6 +212,44 @@ fun PlayerScreen(
                     }
                 )
             }
+        },
+        floatingActionButton = {
+            if (!uiState.isFullscreen) {
+                Box {
+                    androidx.compose.material3.FloatingActionButton(
+                        onClick = { showFabMenu = true },
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.player_create_segment))
+                    }
+                    
+                    androidx.compose.material3.DropdownMenu(
+                        expanded = showFabMenu,
+                        onDismissRequest = { showFabMenu = false }
+                    ) {
+                        org.introskipper.segmenteditor.data.model.SegmentType.entries.forEach { type ->
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = { Text(type.value) },
+                                onClick = {
+                                    showFabMenu = false
+                                    val durationSeconds = uiState.duration / 1000.0
+                                    val newSegment = Segment(
+                                        id = null,
+                                        itemId = itemId,
+                                        type = type.value,
+                                        startTicks = 0L,
+                                        endTicks = Segment.secondsToTicks(durationSeconds)
+                                    )
+                                    editingSegments = editingSegments + newSegment
+                                    activeSegmentIndex = editingSegments.size - 1
+                                    segmentHasChanges = segmentHasChanges + (newSegment.toString() to true)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
         }
     ) { paddingValues ->
         if (uiState.isLoading) {
@@ -255,21 +296,6 @@ fun PlayerScreen(
                 onPlayerReady = { player = it },
                 onAudioTracksClick = { showAudioTracks = true },
                 onSubtitleTracksClick = { showSubtitleTracks = true },
-                onCreateSegment = {
-                    // Create a new segment directly in the list
-                    val durationSeconds = uiState.duration / 1000.0
-                    val newSegment = Segment(
-                        id = null, // Will be assigned by server on save
-                        itemId = itemId,
-                        type = "Intro",
-                        startTicks = 0L,
-                        endTicks = Segment.secondsToTicks(durationSeconds)
-                    )
-                    editingSegments = editingSegments + newSegment
-                    activeSegmentIndex = editingSegments.size - 1
-                    // Mark as having changes
-                    segmentHasChanges = segmentHasChanges + (newSegment.toString() to true)
-                },
                 onUpdateSegment = { segment ->
                     val index = editingSegments.indexOfFirst { 
                         it.id == segment.id || (it.id == null && it === editingSegments[activeSegmentIndex])
@@ -340,8 +366,20 @@ fun PlayerScreen(
                     }
                 },
                 onDeleteSegment = { segment ->
-                    segmentToDelete = segment
-                    showDeleteConfirmation = true
+                    // If segment has no ID (unsaved), remove it directly from the list
+                    if (segment.id == null) {
+                        editingSegments = editingSegments.filter { it !== segment }
+                        // Clear change flag
+                        segmentHasChanges = segmentHasChanges - segment.toString()
+                        // Adjust active index if needed
+                        if (activeSegmentIndex >= editingSegments.size) {
+                            activeSegmentIndex = (editingSegments.size - 1).coerceAtLeast(0)
+                        }
+                    } else {
+                        // For saved segments, show confirmation dialog
+                        segmentToDelete = segment
+                        showDeleteConfirmation = true
+                    }
                 },
                 onSetActiveSegment = { index ->
                     activeSegmentIndex = index
@@ -512,7 +550,6 @@ private fun PlayerContent(
     onPlayerReady: (ExoPlayer) -> Unit,
     onAudioTracksClick: () -> Unit,
     onSubtitleTracksClick: () -> Unit,
-    onCreateSegment: () -> Unit,
     onUpdateSegment: (Segment) -> Unit,
     onSaveSegment: (Segment) -> Unit,
     onSaveAll: () -> Unit,
@@ -642,23 +679,11 @@ private fun PlayerContent(
                 } else {
                     item {
                         Text(
-                            text = "No segments found for this media item. Create one below.",
+                            text = "No segments found for this media item. Use the + button to create one.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 8.dp)
                         )
-                    }
-                }
-                
-                // Create segment button - now appears after segments
-                item {
-                    Button(
-                        onClick = onCreateSegment,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.player_create_segment))
                     }
                 }
                 
