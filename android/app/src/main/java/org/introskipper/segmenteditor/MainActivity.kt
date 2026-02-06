@@ -8,12 +8,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import dagger.hilt.android.AndroidEntryPoint
 import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.storage.SecurePreferences
@@ -63,7 +65,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            SideEffect {
+            LaunchedEffect(LocalLifecycleOwner.current) {
                 updateManager?.setUpdateListener(object : UpdateManager.UpdateListener {
                     override fun onUpdateFound() {
                         openDialogCustom.value = true
