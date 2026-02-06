@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Subtitles
@@ -315,6 +316,29 @@ fun PlayerScreen(
                         }
                     }
                 },
+                onSaveAll = {
+                    // Save all segments with changes
+                    coroutineScope.launch {
+                        try {
+                            val result = viewModel.saveAllSegments(editingSegments, uiState.segments)
+                            
+                            result.fold(
+                                onSuccess = { savedSegments ->
+                                    // Clear all change flags
+                                    segmentHasChanges = emptyMap()
+                                    
+                                    // Refresh from server
+                                    viewModel.refreshSegments()
+                                },
+                                onFailure = { error ->
+                                    Log.e("PlayerScreen", "Failed to save all segments", error)
+                                }
+                            )
+                        } catch (e: Exception) {
+                            Log.e("PlayerScreen", "Exception saving all segments", e)
+                        }
+                    }
+                },
                 onDeleteSegment = { segment ->
                     segmentToDelete = segment
                     showDeleteConfirmation = true
@@ -491,6 +515,7 @@ private fun PlayerContent(
     onCreateSegment: () -> Unit,
     onUpdateSegment: (Segment) -> Unit,
     onSaveSegment: (Segment) -> Unit,
+    onSaveAll: () -> Unit,
     onDeleteSegment: (Segment) -> Unit,
     onSetActiveSegment: (Int) -> Unit,
     onSetStartFromPlayer: (Int) -> Unit,
@@ -634,6 +659,23 @@ private fun PlayerContent(
                         Icon(Icons.Default.Add, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(stringResource(R.string.player_create_segment))
+                    }
+                }
+                
+                // Save All button - only show if there are unsaved changes
+                if (segmentHasChanges.values.any { it }) {
+                    item {
+                        Button(
+                            onClick = onSaveAll,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.segment_save_all))
+                        }
                     }
                 }
             }
