@@ -89,7 +89,7 @@ fun PlayerScreen(
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     
     // Determine if we should use direct play (no HLS transcoding)
-    // Allow fallback to HLS if direct play fails (but ask user first)
+    // Allow fallback to HLS if direct play fails (with confirmation)
     var useDirectPlay by remember(itemId) { mutableStateOf(viewModel.shouldUseDirectPlay()) }
     var showDirectPlayFailedDialog by remember(itemId) { mutableStateOf(false) }
     var hasShownErrorDialog by remember(itemId) { mutableStateOf(false) }
@@ -163,13 +163,11 @@ fun PlayerScreen(
             val windowInsetsController = WindowInsetsControllerCompat(window, window.decorView)
             if (uiState.isFullscreen) {
                 window.decorView.keepScreenOn = true
-                WindowCompat.setDecorFitsSystemWindows(window, true)
                 windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
                 activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             } else {
                 activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                 windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
-                WindowCompat.setDecorFitsSystemWindows(window, false)
                 window.decorView.keepScreenOn = false
             }
         }
@@ -179,7 +177,6 @@ fun PlayerScreen(
             activity?.window?.let { window ->
                 WindowInsetsControllerCompat(window, window.decorView)
                     .show(WindowInsetsCompat.Type.systemBars())
-                WindowCompat.setDecorFitsSystemWindows(window, false)
                 window.decorView.keepScreenOn = false
             }
         }

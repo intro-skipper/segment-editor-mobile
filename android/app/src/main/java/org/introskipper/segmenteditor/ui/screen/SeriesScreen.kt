@@ -187,7 +187,7 @@ fun SeriesScreen(
                             ScrollableTabRow(
                                 selectedTabIndex = selectedSeasonIndex,
                                 modifier = Modifier.fillMaxWidth(),
-                                edgePadding = 8.dp
+                                edgePadding = 16.dp
                             ) {
                                 sortedSeasons.forEachIndexed { index, seasonNumber ->
                                     Tab(
