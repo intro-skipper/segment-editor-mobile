@@ -47,6 +47,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -61,7 +62,6 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
-import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.R
@@ -565,14 +565,25 @@ private fun PlayerContent(
     val currentUseDirectPlay by rememberUpdatedState(useDirectPlay)
     
     Column(
-        modifier = modifier.fillMaxSize()
+        modifier = modifier.then(
+            if (uiState.isFullscreen) {
+                Modifier.fillMaxSize()
+            } else {
+                Modifier.fillMaxWidth()
+            }
+        )
     ) {
         // Video player
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(16f / 9f)
-                .background(Color.Black)
+                .background(Color.Black).then(
+                    if (uiState.isFullscreen) {
+                        Modifier
+                    } else {
+                        Modifier.aspectRatio(16f / 9f)
+                    }
+                )
         ) {
             if (streamUrl != null) {
                 VideoPlayerWithPreview(

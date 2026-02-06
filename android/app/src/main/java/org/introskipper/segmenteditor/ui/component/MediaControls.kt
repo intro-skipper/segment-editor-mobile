@@ -105,7 +105,6 @@ fun MediaControls(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .fitInside(SafeContent.current)
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() }
