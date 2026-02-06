@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.introskipper.segmenteditor.data.repository.JellyfinRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.state.AppTheme
 import org.introskipper.segmenteditor.ui.state.ExportFormat
@@ -18,12 +19,21 @@ data class SettingsUiState(
     val autoPlayNextEpisode: Boolean = true,
     val exportFormat: ExportFormat = ExportFormat.JSON,
     val prettyPrintJson: Boolean = true,
-    val itemsPerPage: Int = 20
+    val itemsPerPage: Int = 20,
+    val hiddenLibraryIds: Set<String> = emptySet(),
+    val availableLibraries: List<LibraryInfo> = emptyList(),
+    val isLoadingLibraries: Boolean = false
+)
+
+data class LibraryInfo(
+    val id: String,
+    val name: String
 )
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val securePreferences: SecurePreferences
+    private val securePreferences: SecurePreferences,
+    private val jellyfinRepository: JellyfinRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -31,18 +41,42 @@ class SettingsViewModel @Inject constructor(
 
     init {
         loadPreferences()
+        loadAvailableLibraries()
     }
 
     private fun loadPreferences() {
         viewModelScope.launch {
-            _uiState.value = SettingsUiState(
+            _uiState.value = _uiState.value.copy(
                 theme = securePreferences.getTheme(),
                 preferDirectPlay = securePreferences.getPreferDirectPlay(),
                 autoPlayNextEpisode = securePreferences.getAutoPlayNextEpisode(),
                 exportFormat = securePreferences.getExportFormat(),
                 prettyPrintJson = securePreferences.getPrettyPrintJson(),
-                itemsPerPage = securePreferences.getItemsPerPage()
+                itemsPerPage = securePreferences.getItemsPerPage(),
+                hiddenLibraryIds = securePreferences.getHiddenLibraryIds()
             )
+        }
+    }
+
+    private fun loadAvailableLibraries() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoadingLibraries = true)
+            try {
+                val libraries = jellyfinRepository.getLibraries()
+                val libraryInfos = libraries.map { mediaItem ->
+                    LibraryInfo(
+                        id = mediaItem.id,
+                        name = mediaItem.name ?: "Unknown Library"
+                    )
+                }
+                _uiState.value = _uiState.value.copy(
+                    availableLibraries = libraryInfos,
+                    isLoadingLibraries = false
+                )
+            } catch (e: Exception) {
+                // If loading libraries fails, just keep the empty list
+                _uiState.value = _uiState.value.copy(isLoadingLibraries = false)
+            }
         }
     }
 
@@ -74,6 +108,17 @@ class SettingsViewModel @Inject constructor(
     fun setItemsPerPage(count: Int) {
         securePreferences.setItemsPerPage(count)
         _uiState.value = _uiState.value.copy(itemsPerPage = count)
+    }
+
+    fun toggleLibraryVisibility(libraryId: String) {
+        val currentHiddenIds = _uiState.value.hiddenLibraryIds.toMutableSet()
+        if (currentHiddenIds.contains(libraryId)) {
+            currentHiddenIds.remove(libraryId)
+        } else {
+            currentHiddenIds.add(libraryId)
+        }
+        securePreferences.setHiddenLibraryIds(currentHiddenIds)
+        _uiState.value = _uiState.value.copy(hiddenLibraryIds = currentHiddenIds)
     }
 
     fun clearAuthenticationAndRestart() {

@@ -178,6 +178,14 @@ class SecurePreferences(context: Context) {
         return sharedPreferences.getInt(KEY_ITEMS_PER_PAGE, 20)
     }
     
+    fun setHiddenLibraryIds(libraryIds: Set<String>) {
+        sharedPreferences.edit { putStringSet(KEY_HIDDEN_LIBRARY_IDS, libraryIds) }
+    }
+    
+    fun getHiddenLibraryIds(): Set<String> {
+        return sharedPreferences.getStringSet(KEY_HIDDEN_LIBRARY_IDS, emptySet()) ?: emptySet()
+    }
+    
     // ========== Video Player Settings ==========
     
     fun setPreferredVideoQuality(quality: VideoQuality) {
@@ -311,6 +319,7 @@ class SecurePreferences(context: Context) {
         private const val KEY_SHOW_CONTINUE_WATCHING = "show_continue_watching"
         private const val KEY_SHOW_NEXT_UP = "show_next_up"
         private const val KEY_ITEMS_PER_PAGE = "items_per_page"
+        private const val KEY_HIDDEN_LIBRARY_IDS = "hidden_library_ids"
         
         // Video player keys
         private const val KEY_VIDEO_QUALITY = "video_quality"

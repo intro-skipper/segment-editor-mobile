@@ -11,6 +11,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.component.settings.ClickableSettingItem
+import org.introskipper.segmenteditor.ui.component.settings.DropdownSettingsItem
 import org.introskipper.segmenteditor.ui.component.settings.RadioGroupSettingItem
 import org.introskipper.segmenteditor.ui.component.settings.SettingsSection
 import org.introskipper.segmenteditor.ui.component.settings.SwitchSettingItem
@@ -100,7 +102,7 @@ fun SettingsScreen(
             // Pagination Section
             item {
                 SettingsSection(title = stringResource(R.string.settings_section_browsing)) {
-                    RadioGroupSettingItem(
+                    DropdownSettingsItem(
                         title = stringResource(R.string.settings_items_per_page),
                         subtitle = stringResource(R.string.settings_items_per_page_subtitle),
                         options = listOf(
@@ -114,6 +116,28 @@ fun SettingsScreen(
                         selectedOption = uiState.itemsPerPage,
                         onOptionSelected = viewModel::setItemsPerPage
                     )
+                }
+            }
+            
+            // Hidden Libraries Section
+            item {
+                if (uiState.availableLibraries.isNotEmpty()) {
+                    SettingsSection(title = stringResource(R.string.settings_hidden_libraries)) {
+                        Text(
+                            text = stringResource(R.string.settings_hidden_libraries_subtitle),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                        uiState.availableLibraries.forEach { library ->
+                            SwitchSettingItem(
+                                title = library.name,
+                                subtitle = null,
+                                checked = !uiState.hiddenLibraryIds.contains(library.id),
+                                onCheckedChange = { viewModel.toggleLibraryVisibility(library.id) }
+                            )
+                        }
+                    }
                 }
             }
             
