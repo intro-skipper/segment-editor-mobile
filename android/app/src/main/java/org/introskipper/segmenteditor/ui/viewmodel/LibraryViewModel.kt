@@ -8,12 +8,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.data.repository.JellyfinRepository
+import org.introskipper.segmenteditor.storage.SecurePreferences
 import javax.inject.Inject
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val jellyfinRepository: JellyfinRepository,
-    private val jellyfinApiService: JellyfinApiService
+    private val jellyfinApiService: JellyfinApiService,
+    private val securePreferences: SecurePreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<LibraryUiState>(LibraryUiState.Loading)
@@ -49,14 +51,18 @@ class LibraryViewModel @Inject constructor(
             _uiState.value = LibraryUiState.Loading
             try {
                 val libraries = jellyfinRepository.getLibraries()
-                val libraryList = libraries.map { mediaItem ->
-                    Library(
-                        id = mediaItem.id,
-                        name = mediaItem.name ?: "Unknown Library",
-                        collectionType = mediaItem.collectionType,
-                        primaryImageTag = mediaItem.imageTags?.get("Primary")
-                    )
-                }
+                val hiddenLibraryIds = securePreferences.getHiddenLibraryIds()
+                
+                val libraryList = libraries
+                    .filter { !hiddenLibraryIds.contains(it.id) }
+                    .map { mediaItem ->
+                        Library(
+                            id = mediaItem.id,
+                            name = mediaItem.name ?: "Unknown Library",
+                            collectionType = mediaItem.collectionType,
+                            primaryImageTag = mediaItem.imageTags?.get("Primary")
+                        )
+                    }
                 
                 _uiState.value = if (libraryList.isEmpty()) {
                     LibraryUiState.Empty

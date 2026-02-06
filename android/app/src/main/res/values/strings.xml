@@ -60,6 +60,8 @@
     <string name="settings_items_per_page">Items Per Page</string>
     <string name="settings_items_per_page_subtitle">Number of items to show per page</string>
     <string name="settings_show_all">Show All</string>
+    <string name="settings_hidden_libraries">Hidden Libraries</string>
+    <string name="settings_hidden_libraries_subtitle">Select libraries to hide from the library selection screen</string>
     
     <string name="settings_section_connection">Connection</string>
     <string name="settings_change_server">Change Server</string>
