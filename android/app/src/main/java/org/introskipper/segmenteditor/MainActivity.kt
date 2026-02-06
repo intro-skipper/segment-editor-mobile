@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -65,12 +66,13 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            LaunchedEffect(LocalLifecycleOwner.current) {
+            DisposableEffect(LocalLifecycleOwner.current) {
                 updateManager?.setUpdateListener(object : UpdateManager.UpdateListener {
                     override fun onUpdateFound() {
                         openDialogCustom.value = true
                     }
                 })
+                onDispose {  }
             }
 
             if (openDialogCustom.value) {
