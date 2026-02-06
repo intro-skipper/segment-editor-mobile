@@ -13,10 +13,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
@@ -145,7 +143,7 @@ fun MediaControls(
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.TopEnd).then(
                 if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-                    Modifier.padding(32.dp).systemBarsPadding()
+                    Modifier.padding(32.dp)
                 } else {
                     Modifier.padding(8.dp)
                 }
@@ -201,13 +199,7 @@ fun MediaControls(
             visible = showControls,
             enter = fadeIn(),
             exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter).then(
-                if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-                    Modifier.navigationBarsPadding()
-                } else {
-                    Modifier
-                }
-            )
+            modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             Column(
                 modifier = Modifier

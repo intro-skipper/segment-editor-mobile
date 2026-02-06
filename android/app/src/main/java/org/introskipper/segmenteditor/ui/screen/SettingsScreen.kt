@@ -82,7 +82,7 @@ fun SettingsScreen(
             // Theme Section
             item {
                 SettingsSection(title = stringResource(R.string.settings_section_appearance)) {
-                    RadioGroupSettingItem(
+                    DropdownSettingsItem(
                         title = stringResource(R.string.settings_theme),
                         subtitle = stringResource(R.string.settings_theme_subtitle),
                         options = listOf(
@@ -163,7 +163,7 @@ fun SettingsScreen(
             // Export Section
             item {
                 SettingsSection(title = stringResource(R.string.settings_section_export)) {
-                    RadioGroupSettingItem(
+                    DropdownSettingsItem(
                         title = stringResource(R.string.settings_export_format),
                         subtitle = stringResource(R.string.settings_export_format_subtitle),
                         options = listOf(
