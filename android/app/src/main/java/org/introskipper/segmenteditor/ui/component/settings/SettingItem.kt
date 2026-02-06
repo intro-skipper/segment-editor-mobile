@@ -15,9 +15,9 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun SettingItem(
+    modifier: Modifier = Modifier,
     title: String,
     subtitle: String? = null,
-    modifier: Modifier = Modifier,
     trailingContent: @Composable () -> Unit = {}
 ) {
     Row(

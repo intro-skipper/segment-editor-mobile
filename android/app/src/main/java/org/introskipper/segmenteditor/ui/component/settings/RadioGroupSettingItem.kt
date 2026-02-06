@@ -20,12 +20,12 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun <T> RadioGroupSettingItem(
+    modifier: Modifier = Modifier,
     title: String,
     subtitle: String? = null,
     options: List<Pair<T, String>>,
     selectedOption: T,
     onOptionSelected: (T) -> Unit,
-    modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         SettingItem(

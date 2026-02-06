@@ -12,8 +12,8 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun SettingsSection(
-    title: String,
     modifier: Modifier = Modifier,
+    title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(modifier = modifier) {

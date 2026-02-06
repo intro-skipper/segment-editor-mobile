@@ -9,10 +9,10 @@ import androidx.compose.ui.Modifier
 
 @Composable
 fun ClickableSettingItem(
+    modifier: Modifier = Modifier,
     title: String,
     subtitle: String? = null,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
     showArrow: Boolean = true
 ) {
     SettingItem(

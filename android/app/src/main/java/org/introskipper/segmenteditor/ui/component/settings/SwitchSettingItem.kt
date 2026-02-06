@@ -6,11 +6,11 @@ import androidx.compose.ui.Modifier
 
 @Composable
 fun SwitchSettingItem(
+    modifier: Modifier = Modifier,
     title: String,
     subtitle: String? = null,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    onCheckedChange: (Boolean) -> Unit
 ) {
     SettingItem(
         title = title,
