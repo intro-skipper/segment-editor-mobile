@@ -1,6 +1,5 @@
 package org.introskipper.segmenteditor.ui.component
 
-import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -13,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fitInside
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.WindowInsetsRulers.Companion.SafeContent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -104,6 +105,7 @@ fun MediaControls(
     Box(
         modifier = modifier
             .fillMaxSize()
+            .fitInside(SafeContent.current)
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() }
@@ -141,13 +143,7 @@ fun MediaControls(
             visible = showControls,
             enter = fadeIn(),
             exit = fadeOut(),
-            modifier = Modifier.align(Alignment.TopEnd).then(
-                if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-                    Modifier.padding(32.dp)
-                } else {
-                    Modifier.padding(8.dp)
-                }
-            )
+            modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
         ) {
             IconButton(
                 onClick = { viewModel.toggleFullscreen() },
