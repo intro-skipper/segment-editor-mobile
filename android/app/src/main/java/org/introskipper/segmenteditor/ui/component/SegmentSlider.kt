@@ -25,6 +25,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -72,6 +74,10 @@ fun SegmentSlider(
     onDelete: () -> Unit,
     onSeekTo: (Double) -> Unit,
     onSetActive: () -> Unit,
+    onSetStartFromPlayer: (() -> Unit)? = null,
+    onSetEndFromPlayer: (() -> Unit)? = null,
+    onSave: (() -> Unit)? = null,
+    hasUnsavedChanges: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val clipboardManager = LocalClipboard.current.nativeClipboard
@@ -188,6 +194,22 @@ fun SegmentSlider(
                         )
                     }
                     
+                    // Save button (if callback provided)
+                    if (onSave != null) {
+                        IconButton(
+                            onClick = onSave,
+                            modifier = Modifier.size(36.dp),
+                            enabled = hasUnsavedChanges
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Save,
+                                contentDescription = "Save segment",
+                                tint = if (hasUnsavedChanges) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                    
                     // Delete button
                     IconButton(
                         onClick = onDelete,
@@ -250,6 +272,7 @@ fun SegmentSlider(
                         }
                     ),
                     onSeek = { onSeekTo(localStartSeconds) },
+                    onSetFromPlayer = onSetStartFromPlayer,
                     modifier = Modifier.weight(1f)
                 )
                 
@@ -269,6 +292,7 @@ fun SegmentSlider(
                         }
                     ),
                     onSeek = { onSeekTo(localEndSeconds) },
+                    onSetFromPlayer = onSetEndFromPlayer,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -400,6 +424,7 @@ private fun TimeInputRow(
     onTimeChanged: (Double) -> Unit,
     keyboardActions: KeyboardActions,
     onSeek: () -> Unit,
+    onSetFromPlayer: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -417,6 +442,21 @@ private fun TimeInputRow(
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(16.dp)
             )
+        }
+        
+        // Capture from player button (if callback provided)
+        if (onSetFromPlayer != null) {
+            IconButton(
+                onClick = onSetFromPlayer,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MyLocation,
+                    contentDescription = "Set $label from player",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
         }
         
         TimeInputField(

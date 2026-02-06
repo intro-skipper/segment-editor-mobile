@@ -538,6 +538,42 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Saves a segment (creates new or updates existing)
+     */
+    suspend fun saveSegment(segment: Segment): Result<Segment> {
+        return try {
+            val segmentRequest = org.introskipper.segmenteditor.data.model.SegmentCreateRequest(
+                itemId = segment.itemId,
+                type = segment.type,
+                startTicks = segment.startTicks,
+                endTicks = segment.endTicks
+            )
+            
+            // If segment has an ID, delete it first then create new
+            if (segment.id != null) {
+                val deleteResult = segmentRepository.deleteSegmentResult(
+                    segmentId = segment.id,
+                    itemId = segment.itemId,
+                    segmentType = segment.type
+                )
+                
+                if (deleteResult.isFailure) {
+                    return deleteResult.map { segment } // Return failure
+                }
+            }
+            
+            // Create the segment
+            segmentRepository.createSegmentResult(
+                itemId = segment.itemId,
+                segment = segmentRequest
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception saving segment", e)
+            Result.failure(e)
+        }
+    }
+
     fun refreshSegments() {
         val itemId = _uiState.value.mediaItem?.id ?: return
         loadSegments(itemId)
