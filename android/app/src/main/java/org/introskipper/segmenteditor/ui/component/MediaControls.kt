@@ -145,7 +145,7 @@ fun MediaControls(
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.TopEnd).then(
                 if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-                    Modifier.padding(24.dp).systemBarsPadding()
+                    Modifier.padding(32.dp).systemBarsPadding()
                 } else {
                     Modifier.padding(8.dp)
                 }
