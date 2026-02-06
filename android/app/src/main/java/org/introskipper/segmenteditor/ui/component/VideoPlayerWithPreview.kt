@@ -29,6 +29,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
+import org.introskipper.segmenteditor.ui.viewmodel.PlayerViewModel
 
 // Minimum position to restore when reloading stream (avoids restoring during initial load)
 private const val MIN_POSITION_TO_RESTORE_MS = 1000L
@@ -43,6 +44,8 @@ private const val MIN_POSITION_TO_RESTORE_MS = 1000L
 fun VideoPlayerWithPreview(
     streamUrl: String,
     modifier: Modifier = Modifier,
+    uiState: org.introskipper.segmenteditor.ui.state.PlayerUiState,
+    viewModel: PlayerViewModel,
     useController: Boolean = true,
     previewLoader: PreviewLoader? = null,
     useDirectPlay: Boolean = false,
@@ -330,6 +333,8 @@ fun VideoPlayerWithPreview(
         // Media controls overlay with scrubbing preview support
         if (useController) {
             MediaControls(
+                uiState = uiState,
+                viewModel = viewModel,
                 player = exoPlayer,
                 modifier = Modifier.fillMaxSize(),
                 previewLoader = previewLoader

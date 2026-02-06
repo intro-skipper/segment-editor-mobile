@@ -1,7 +1,9 @@
 package org.introskipper.segmenteditor.ui.screen
 
+import android.R.attr.orientation
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -436,6 +439,8 @@ private fun PlayerContent(
                 VideoPlayerWithPreview(
                     streamUrl = streamUrl,
                     useController = true,
+                    uiState = uiState,
+                    viewModel = viewModel,
                     previewLoader = previewLoader,
                     useDirectPlay = useDirectPlay,
                     selectedAudioTrack = uiState.selectedAudioTrack,
@@ -459,24 +464,6 @@ private fun PlayerContent(
                         color = Color.White
                     )
                 }
-            }
-            
-            // Fullscreen toggle
-            IconButton(
-                onClick = { viewModel.toggleFullscreen() },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp)
-            ) {
-                Icon(
-                    imageVector = if (uiState.isFullscreen) {
-                        Icons.Default.FullscreenExit
-                    } else {
-                        Icons.Default.Fullscreen
-                    },
-                    contentDescription = stringResource(R.string.player_toggle_fullscreen),
-                    tint = Color.White
-                )
             }
         }
         

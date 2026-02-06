@@ -16,7 +16,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
@@ -47,6 +50,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.preview.ScrubPreviewOverlay
+import org.introskipper.segmenteditor.ui.viewmodel.PlayerViewModel
 import java.util.Locale
 
 /**
@@ -55,6 +59,8 @@ import java.util.Locale
  */
 @Composable
 fun MediaControls(
+    uiState: org.introskipper.segmenteditor.ui.state.PlayerUiState,
+    viewModel: PlayerViewModel,
     player: Player?,
     modifier: Modifier = Modifier,
     previewLoader: PreviewLoader? = null,
@@ -132,6 +138,33 @@ fun MediaControls(
                 )
             }
         }
+
+        AnimatedVisibility(
+            visible = showControls,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopEnd).then(
+                if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                    Modifier.padding(24.dp).systemBarsPadding()
+                } else {
+                    Modifier.padding(8.dp)
+                }
+            )
+        ) {
+            IconButton(
+                onClick = { viewModel.toggleFullscreen() },
+            ) {
+                Icon(
+                    imageVector = if (uiState.isFullscreen) {
+                        Icons.Default.FullscreenExit
+                    } else {
+                        Icons.Default.Fullscreen
+                    },
+                    contentDescription = "Toggle fullscreen",
+                    tint = Color.White
+                )
+            }
+        }
         
         // Play/Pause button centered in the player
         AnimatedVisibility(
@@ -168,11 +201,11 @@ fun MediaControls(
             visible = showControls,
             enter = fadeIn(),
             exit = fadeOut(),
-            modifier = Modifier.then(
+            modifier = Modifier.align(Alignment.BottomCenter).then(
                 if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-                    Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
+                    Modifier.navigationBarsPadding()
                 } else {
-                    Modifier.align(Alignment.BottomCenter)
+                    Modifier
                 }
             )
         ) {
