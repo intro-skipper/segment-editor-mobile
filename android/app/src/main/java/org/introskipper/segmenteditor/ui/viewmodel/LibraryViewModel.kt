@@ -21,6 +21,11 @@ class LibraryViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<LibraryUiState>(LibraryUiState.Loading)
     val uiState: StateFlow<LibraryUiState> = _uiState
 
+    private var lastHiddenLibraryIds: Set<String> = emptySet()
+
+    private val hiddenLibraryIds: Set<String>
+        get() = securePreferences.getHiddenLibraryIds()
+
     init {
         loadLibraries()
     }
@@ -74,6 +79,14 @@ class LibraryViewModel @Inject constructor(
             }
         }
     }
+
+    fun refreshIfLibrariesChanged() {
+        val currentLibraries = hiddenLibraryIds
+        if (lastHiddenLibraryIds != currentLibraries) {
+            loadLibraries()
+        }
+    }
+
 }
 
 sealed class LibraryUiState {
