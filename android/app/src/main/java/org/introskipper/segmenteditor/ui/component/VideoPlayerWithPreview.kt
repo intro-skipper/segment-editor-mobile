@@ -30,6 +30,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.viewmodel.PlayerViewModel
+import kotlin.time.Duration.Companion.seconds
 
 // Minimum position to restore when reloading stream (avoids restoring during initial load)
 private const val MIN_POSITION_TO_RESTORE_MS = 1000L
@@ -75,6 +76,8 @@ fun VideoPlayerWithPreview(
         Log.d("VideoPlayerWithPreview", "Creating ExoPlayer instance")
         
         ExoPlayer.Builder(context)
+            .setSeekBackIncrementMs(10.seconds.inWholeMilliseconds)
+            .setSeekForwardIncrementMs(10.seconds.inWholeMilliseconds)
             .setRenderersFactory(NextRenderersFactory(context).apply {
                 // Prefer FFmpeg decoder for formats like DTS that Android doesn't natively support
                 setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)

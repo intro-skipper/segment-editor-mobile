@@ -76,6 +76,9 @@ import org.introskipper.segmenteditor.ui.component.VideoPlayerWithPreview
 import org.introskipper.segmenteditor.ui.navigation.Screen
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.viewmodel.PlayerViewModel
+import kotlin.time.Duration
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -684,7 +687,7 @@ private fun PlayerContent(
                                 onDeleteSegment(segment)
                             },
                             onSeekTo = { timeSeconds ->
-                                player?.seekTo((timeSeconds * 1000).toLong())
+                                player?.seekTo(timeSeconds.toDuration(DurationUnit.SECONDS).inWholeMilliseconds)
                             },
                             onSetActive = {
                                 onSetActiveSegment(index)

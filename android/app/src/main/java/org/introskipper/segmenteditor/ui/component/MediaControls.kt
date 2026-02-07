@@ -1,10 +1,17 @@
 package org.introskipper.segmenteditor.ui.component
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Easing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.FloatAnimationSpec
+import androidx.compose.animation.core.FloatTweenSpec
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,10 +19,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.fitInside
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Pause
@@ -37,9 +45,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.WindowInsetsRulers.Companion.SafeContent
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.media3.common.Player
@@ -51,6 +59,9 @@ import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.preview.ScrubPreviewOverlay
 import org.introskipper.segmenteditor.ui.viewmodel.PlayerViewModel
 import java.util.Locale
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Media controls overlay with scrubbing preview support
@@ -164,26 +175,67 @@ fun MediaControls(
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.Center)
         ) {
-            IconButton(
-                onClick = {
-                    player?.let {
-                        if (it.isPlaying) {
-                            it.pause()
-                        } else {
-                            it.play()
-                        }
-                    }
-                },
-                modifier = Modifier
-                    .size(80.dp)
-                    .background(Color.Black.copy(alpha = 0.5f), shape = androidx.compose.foundation.shape.CircleShape)
+            Row(
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = Color.White,
-                    modifier = Modifier.size(48.dp)
-                )
+                IconButton(
+                    onClick = {  },
+                    modifier = Modifier.size(60.dp)
+                        .background(
+                            Color.Black.copy(alpha = 0.5f),
+                            shape = androidx.compose.foundation.shape.CircleShape
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FastRewind,
+                        contentDescription = "Rewind",
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp).onTouchHeldAnimated(
+                            onTouchHeld = { player?.seekBack() }
+                        )
+                    )
+                }
+                IconButton(
+                    onClick = {
+                        player?.let {
+                            if (it.isPlaying) {
+                                it.pause()
+                            } else {
+                                it.play()
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .size(80.dp)
+                        .background(
+                            Color.Black.copy(alpha = 0.5f),
+                            shape = androidx.compose.foundation.shape.CircleShape
+                        )
+                ) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (isPlaying) "Pause" else "Play",
+                        tint = Color.White,
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
+                IconButton(
+                    onClick = {  },
+                    modifier = Modifier.size(60.dp)
+                        .background(
+                            Color.Black.copy(alpha = 0.5f),
+                            shape = androidx.compose.foundation.shape.CircleShape
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FastForward,
+                        contentDescription = "Fast-forward",
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp).onTouchHeldAnimated(
+                            onTouchHeld = { player?.seekForward() }
+                        )
+                    )
+                }
             }
         }
         
@@ -279,5 +331,42 @@ private fun formatTime(timeMs: Long): String {
         String.format(Locale.ROOT, "%d:%02d:%02d", hours, minutes, seconds)
     } else {
         String.format(Locale.ROOT, "%d:%02d", minutes, seconds)
+    }
+}
+
+fun Modifier.onTouchHeldAnimated(
+    easing: Easing = FastOutSlowInEasing,
+    pollDelay: Duration = 1.seconds,
+    targetPollDelay: Duration = 1.milliseconds,
+    animationDuration: Duration = 5.seconds,
+    onTouchHeld: () -> Unit
+) = composed {
+    val scope = rememberCoroutineScope()
+    pointerInput(onTouchHeld) {
+        val animationSpec: FloatAnimationSpec = FloatTweenSpec(
+            animationDuration.inWholeMilliseconds.toInt(),
+            0,
+            easing
+        )
+        awaitEachGesture {
+            val initialDown = awaitFirstDown(requireUnconsumed = false)
+            val initialTouchHeldJob = scope.launch {
+                var currentPlayTime = 0.milliseconds
+                var delay = pollDelay
+                while (initialDown.pressed) {
+                    onTouchHeld()
+                    delay(delay.inWholeMilliseconds)
+                    currentPlayTime += delay
+                    delay = animationSpec.getValueFromNanos(
+                        currentPlayTime.inWholeNanoseconds,
+                        pollDelay.inWholeMilliseconds.toFloat(),
+                        targetPollDelay.inWholeMilliseconds.toFloat(),
+                        0F
+                    ).toInt().milliseconds
+                }
+            }
+            waitForUpOrCancellation()
+            initialTouchHeldJob.cancel()
+        }
     }
 }
