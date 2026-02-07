@@ -338,7 +338,7 @@ fun Modifier.onTouchHeldAnimated(
     easing: Easing = FastOutSlowInEasing,
     pollDelay: Duration = 1.seconds,
     targetPollDelay: Duration = 1.milliseconds,
-    animationDuration: Duration = 5.seconds,
+    animationDuration: Duration = 10.seconds,
     onTouchHeld: () -> Unit
 ) = composed {
     val scope = rememberCoroutineScope()
