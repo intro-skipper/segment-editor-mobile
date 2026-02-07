@@ -19,6 +19,7 @@ import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
+import androidx.core.net.toUri
 
 class JellyfinApiService {
     private var api: JellyfinApi? = null
@@ -208,7 +209,7 @@ class JellyfinApiService {
      */
     fun getPrimaryImageUrl(itemId: String, imageTag: String, maxWidth: Int? = null, maxHeight: Int? = null): String {
         val baseUrl = currentBaseUrl ?: throw IllegalStateException("Base URL not set")
-        val uri = Uri.parse(baseUrl)
+        val uri = baseUrl.toUri()
             .buildUpon()
             .appendPath("Items")
             .appendPath(itemId)

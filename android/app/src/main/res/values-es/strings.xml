@@ -52,7 +52,9 @@
     <string name="settings_items_per_page">Elementos por página</string>
     <string name="settings_items_per_page_subtitle">Número de elementos a mostrar por página</string>
     <string name="settings_show_all">Mostrar todo</string>
-    
+
+    <string name="settings_hidden_libraries">Bibliotecas ocultas</string>
+    <string name="settings_hidden_libraries_subtitle">Las bibliotecas deshabilitadas se ocultarán de la pantalla de inicio</string>
     <string name="settings_section_connection">Conexión</string>
     <string name="settings_change_server">Cambiar servidor</string>
     <string name="settings_change_server_subtitle">Conectar a un servidor Jellyfin diferente</string>
@@ -140,7 +142,9 @@
 
     <!-- About Dialog -->
     <string name="about_title">Segment Editor</string>
+    <string name="about_body">Una potente aplicación móvil para crear y editar segmentos de introducción/finalización para contenido multimedia de Jellyfin.</string>
     <string name="about_credits">Créditos</string>
+    <string name="about_coding">Vibe codificado con ❤️ para la comunidad de Jellyfin</string>
     <string name="about_view_github">Ver en GitHub</string>
     <string name="about_licenses">Licencias de código abierto</string>
 
@@ -161,6 +165,7 @@
     <string name="segment_delete_message">¿Está seguro de que desea eliminar este segmento %1$s? Esta acción no se puede deshacer.</string>
     <string name="segment_created">Segmento creado exitosamente</string>
     <string name="segment_updated">Segmento actualizado exitosamente</string>
+    <string name="segment_deleted">Segmento eliminado correctamente</string>
     <string name="segment_create_title">Crear segmento</string>
     <string name="segment_edit_title">Editar segmento</string>
 

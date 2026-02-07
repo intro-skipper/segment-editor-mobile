@@ -52,7 +52,9 @@
     <string name="settings_items_per_page">Elemente pro Seite</string>
     <string name="settings_items_per_page_subtitle">Anzahl der Elemente pro Seite</string>
     <string name="settings_show_all">Alle anzeigen</string>
-    
+
+    <string name="settings_hidden_libraries">Versteckte Bibliotheken</string>
+    <string name="settings_hidden_libraries_subtitle">Deaktivierte Bibliotheken werden auf dem Startbildschirm ausgeblendet</string>
     <string name="settings_section_connection">Verbindung</string>
     <string name="settings_change_server">Server wechseln</string>
     <string name="settings_change_server_subtitle">Mit einem anderen Jellyfin-Server verbinden</string>
@@ -140,7 +142,9 @@
 
     <!-- About Dialog -->
     <string name="about_title">Segment Editor</string>
+    <string name="about_body">Eine leistungsstarke mobile App zum Erstellen und Bearbeiten von Intro-/Outro-Segmenten für Jellyfin-Medien.</string>
     <string name="about_credits">Credits</string>
+    <string name="about_coding">Mit ❤️ für die Jellyfin-Community entwickelte Vibe Coded-Technologie</string>
     <string name="about_view_github">Auf GitHub anzeigen</string>
     <string name="about_licenses">Open-Source-Lizenzen</string>
 
@@ -161,6 +165,7 @@
     <string name="segment_delete_message">Möchten Sie dieses %1$s-Segment wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.</string>
     <string name="segment_created">Segment erfolgreich erstellt</string>
     <string name="segment_updated">Segment erfolgreich aktualisiert</string>
+    <string name="segment_deleted">Segment erfolgreich gelöscht</string>
     <string name="segment_create_title">Segment erstellen</string>
     <string name="segment_edit_title">Segment bearbeiten</string>
 

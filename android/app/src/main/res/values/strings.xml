@@ -61,7 +61,7 @@
     <string name="settings_items_per_page_subtitle">Number of items to show per page</string>
     <string name="settings_show_all">Show All</string>
     <string name="settings_hidden_libraries">Hidden Libraries</string>
-    <string name="settings_hidden_libraries_subtitle">Select libraries to hide from the library selection screen</string>
+    <string name="settings_hidden_libraries_subtitle">Disabled libraries will be hidden from the home screen</string>
     
     <string name="settings_section_connection">Connection</string>
     <string name="settings_change_server">Change Server</string>
@@ -150,7 +150,9 @@
 
     <!-- About Dialog -->
     <string name="about_title">Segment Editor</string>
+    <string name="about_body">A powerful mobile app for creating and editing intro/outro segments for Jellyfin media.</string>
     <string name="about_credits">Credits</string>
+    <string name="about_coding">Vibe Coded with ❤️ for the Jellyfin community</string>
     <string name="about_view_github">View on GitHub</string>
     <string name="about_licenses">Open Source Licenses</string>
 

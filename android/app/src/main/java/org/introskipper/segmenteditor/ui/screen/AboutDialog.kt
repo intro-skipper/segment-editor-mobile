@@ -79,7 +79,7 @@ fun AboutDialog(
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 Text(
-                    text = "A powerful mobile app for creating and editing intro/outro segments for Jellyfin media.",
+                    text = stringResource(R.string.about_body),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
                 )
@@ -95,7 +95,7 @@ fun AboutDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 Text(
-                    text = "Developed with ❤️ for the Jellyfin community",
+                    text = stringResource(R.string.about_coding),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
