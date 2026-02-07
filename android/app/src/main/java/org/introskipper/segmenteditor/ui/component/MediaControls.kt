@@ -79,8 +79,6 @@ fun MediaControls(
     // Coroutine scope for preview loading, tied to composable lifecycle
     val coroutineScope = rememberCoroutineScope()
     var preloadJob by remember { mutableStateOf<Job?>(null) }
-
-    val orientation = LocalConfiguration.current.orientation
     
     // Update playback state
     LaunchedEffect(player) {

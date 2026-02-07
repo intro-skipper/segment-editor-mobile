@@ -187,7 +187,7 @@ fun SeriesScreen(
                             ScrollableTabRow(
                                 selectedTabIndex = selectedSeasonIndex,
                                 modifier = Modifier.fillMaxWidth(),
-                                edgePadding = 16.dp
+                                edgePadding = 8.dp
                             ) {
                                 sortedSeasons.forEachIndexed { index, seasonNumber ->
                                     Tab(
@@ -215,7 +215,7 @@ fun SeriesScreen(
                                         onClick = {
                                             navController.navigate("player/${episode.episode.id}")
                                         },
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                     )
                                 }
                                 
@@ -234,7 +234,7 @@ fun SeriesScreen(
                                     Surface(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                                            .padding(vertical = 8.dp),
                                         color = MaterialTheme.colorScheme.secondaryContainer
                                     ) {
                                         Text(
@@ -253,7 +253,7 @@ fun SeriesScreen(
                                         onClick = {
                                             navController.navigate("player/${episode.episode.id}")
                                         },
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                     )
                                 }
                                 
