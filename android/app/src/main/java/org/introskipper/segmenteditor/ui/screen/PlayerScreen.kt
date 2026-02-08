@@ -187,6 +187,7 @@ fun PlayerScreen(
         }
     }
 
+    // Handle orientation change
     when (LocalConfiguration.current.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> {
             viewModel.setUserLandscape()
@@ -195,7 +196,7 @@ fun PlayerScreen(
                 activity?.window?.let { window ->
                     WindowInsetsControllerCompat(window, window.decorView)
                         .hide(WindowInsetsCompat.Type.systemBars())
-                    window.decorView.keepScreenOn = false
+                    window.decorView.keepScreenOn = true
                 }
             }
         }
