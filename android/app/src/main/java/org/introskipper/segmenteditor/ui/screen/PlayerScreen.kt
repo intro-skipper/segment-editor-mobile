@@ -171,7 +171,7 @@ fun PlayerScreen(
             if (uiState.isFullscreen) {
                 window.decorView.keepScreenOn = true
                 windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
-                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
             } else {
                 activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                 windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
@@ -197,7 +197,7 @@ fun PlayerScreen(
             }
         }
         else -> {
-            if (uiState.isFullscreen && isUserFullscreen) {
+            if (uiState.isFullscreen && !isUserFullscreen) {
                 viewModel.toggleFullscreen()
             }
         }
