@@ -14,6 +14,7 @@ import org.introskipper.segmenteditor.data.repository.SegmentRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.state.EpisodeWithSegments
 import org.introskipper.segmenteditor.ui.state.SeriesUiState
+import org.introskipper.segmenteditor.ui.util.SeasonSortUtil
 import javax.inject.Inject
 
 @HiltViewModel
@@ -76,7 +77,7 @@ class SeriesViewModel @Inject constructor(
                             EpisodeWithSegments(episode = episode)
                         }
                     }
-                    .toSortedMap()
+                    .toSortedMap(SeasonSortUtil.seasonComparator)
 
                 // Create season name mapping from the first episode of each season
                 // Use null if season name is not available to allow UI layer to handle fallback
