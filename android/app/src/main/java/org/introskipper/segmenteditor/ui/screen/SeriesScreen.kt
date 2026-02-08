@@ -127,8 +127,9 @@ fun SeriesScreen(
                     }
                     
                     // Get sorted season numbers
+                    // The episodesBySeason map is already sorted with season 0 at the end
                     val sortedSeasons = remember(state.episodesBySeason) {
-                        state.episodesBySeason.keys.sorted()
+                        state.episodesBySeason.keys.toList()
                     }
                     
                     // Get episodes for selected season - handle empty case
