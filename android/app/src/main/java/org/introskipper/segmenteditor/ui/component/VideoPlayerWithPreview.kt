@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.media3.common.C
 import androidx.media3.common.C.TRACK_TYPE_AUDIO
 import androidx.media3.common.C.TRACK_TYPE_TEXT
 import androidx.media3.common.C.TRACK_TYPE_VIDEO
@@ -187,6 +188,7 @@ fun VideoPlayerWithPreview(
                     for (trackIndex in 0 until trackGroup.length) {
                         if (currentRelativeIndex == selectedSubtitleTrack) {
                             // Found the track at the relative index
+                            parametersBuilder.setTrackTypeDisabled(TRACK_TYPE_TEXT, false)
                             parametersBuilder.setOverrideForType(
                                 androidx.media3.common.TrackSelectionOverride(
                                     trackGroup.mediaTrackGroup,

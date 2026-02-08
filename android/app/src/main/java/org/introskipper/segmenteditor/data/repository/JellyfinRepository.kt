@@ -13,7 +13,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class JellyfinRepository @Inject constructor(
-    private val apiService: JellyfinApiService,
+    apiService: JellyfinApiService,
     private val securePreferences: SecurePreferences
 ) {
     private val mediaRepository = MediaRepository(apiService)
