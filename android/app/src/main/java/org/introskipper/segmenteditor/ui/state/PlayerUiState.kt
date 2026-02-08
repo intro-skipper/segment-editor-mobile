@@ -28,6 +28,7 @@ data class PlayerUiState(
     val showTrackSelection: Boolean = false,
     val showSpeedSelection: Boolean = false,
     val isFullscreen: Boolean = false,
+    val isUserLandscape: Boolean = false,
     
     // Segment editing (timestamp capture)
     val capturedStartTime: Long? = null,

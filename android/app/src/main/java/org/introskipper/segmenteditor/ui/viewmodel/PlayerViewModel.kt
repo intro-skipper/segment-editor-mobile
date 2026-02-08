@@ -486,6 +486,14 @@ class PlayerViewModel @Inject constructor(
         _uiState.update { it.copy(isFullscreen = !it.isFullscreen) }
     }
 
+    fun setUserLandscape() {
+        _uiState.update { it.copy(isUserLandscape = true) }
+    }
+
+    fun setUserPortrait() {
+        _uiState.update { it.copy(isUserLandscape = false) }
+    }
+
     fun captureStartTime() {
         _uiState.update {
             it.copy(capturedStartTime = it.currentPosition)

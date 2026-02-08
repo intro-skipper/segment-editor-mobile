@@ -58,7 +58,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -76,7 +75,6 @@ import org.introskipper.segmenteditor.ui.component.VideoPlayerWithPreview
 import org.introskipper.segmenteditor.ui.navigation.Screen
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.viewmodel.PlayerViewModel
-import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
@@ -191,14 +189,25 @@ fun PlayerScreen(
 
     when (LocalConfiguration.current.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> {
-            isUserFullscreen = uiState.isFullscreen
-            if (!isUserFullscreen) {
-                viewModel.toggleFullscreen()
+            viewModel.setUserLandscape()
+            if (!uiState.isFullscreen) {
+                val activity = context as? Activity
+                activity?.window?.let { window ->
+                    WindowInsetsControllerCompat(window, window.decorView)
+                        .hide(WindowInsetsCompat.Type.systemBars())
+                    window.decorView.keepScreenOn = false
+                }
             }
         }
         else -> {
-            if (uiState.isFullscreen && !isUserFullscreen) {
-                viewModel.toggleFullscreen()
+            viewModel.setUserPortrait()
+            if (!uiState.isFullscreen) {
+                val activity = context as? Activity
+                activity?.window?.let { window ->
+                    WindowInsetsControllerCompat(window, window.decorView)
+                        .show(WindowInsetsCompat.Type.systemBars())
+                    window.decorView.keepScreenOn = false
+                }
             }
         }
     }
@@ -210,7 +219,7 @@ fun PlayerScreen(
     
     Scaffold(
         topBar = {
-            if (!uiState.isFullscreen) {
+            if (!uiState.isFullscreen && !uiState.isUserLandscape) {
                 TopAppBar(
                     title = { Text(uiState.mediaItem?.name ?: stringResource(R.string.player_title)) },
                     navigationIcon = {
@@ -232,7 +241,7 @@ fun PlayerScreen(
             }
         },
         floatingActionButton = {
-            if (!uiState.isFullscreen) {
+            if (!uiState.isFullscreen && !uiState.isUserLandscape) {
                 Box {
                     androidx.compose.material3.FloatingActionButton(
                         onClick = { showFabMenu = true },
@@ -584,7 +593,7 @@ private fun PlayerContent(
     
     Column(
         modifier = modifier.then(
-            if (uiState.isFullscreen) {
+            if (uiState.isFullscreen || uiState.isUserLandscape) {
                 Modifier.fillMaxSize()
             } else {
                 Modifier.fillMaxWidth()
@@ -596,7 +605,7 @@ private fun PlayerContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color.Black).then(
-                    if (uiState.isFullscreen) {
+                    if (uiState.isFullscreen || uiState.isUserLandscape) {
                         Modifier
                     } else {
                         Modifier.aspectRatio(16f / 9f)
@@ -645,7 +654,7 @@ private fun PlayerContent(
             )
         }
         
-        if (!uiState.isFullscreen) {
+        if (!uiState.isFullscreen && !uiState.isUserLandscape) {
             // Controls and content
             LazyColumn(
                 modifier = Modifier
