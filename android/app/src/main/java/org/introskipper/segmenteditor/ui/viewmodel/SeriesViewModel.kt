@@ -69,6 +69,16 @@ class SeriesViewModel @Inject constructor(
                 val episodes = episodesResult.getOrThrow().items
 
                 // Group episodes by season
+                // Custom comparator to sort seasons ascending with season 0 (specials) at the end
+                val seasonComparator = Comparator<Int> { season1, season2 ->
+                    when {
+                        season1 == 0 && season2 == 0 -> 0
+                        season1 == 0 -> 1  // season1 is 0, so it comes after season2
+                        season2 == 0 -> -1 // season2 is 0, so season1 comes before it
+                        else -> season1.compareTo(season2) // Normal ascending order
+                    }
+                }
+                
                 val episodesBySeason = episodes
                     .groupBy { it.parentIndexNumber ?: 0 }
                     .mapValues { (_, episodeList) ->
@@ -76,7 +86,7 @@ class SeriesViewModel @Inject constructor(
                             EpisodeWithSegments(episode = episode)
                         }
                     }
-                    .toSortedMap()
+                    .toSortedMap(seasonComparator)
 
                 // Create season name mapping from the first episode of each season
                 // Use null if season name is not available to allow UI layer to handle fallback
