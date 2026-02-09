@@ -16,6 +16,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import dagger.hilt.android.AndroidEntryPoint
 import org.introskipper.segmenteditor.api.JellyfinApiService
@@ -66,13 +68,21 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            DisposableEffect(LocalLifecycleOwner.current) {
-                updateManager?.setUpdateListener(object : UpdateManager.UpdateListener {
-                    override fun onUpdateFound() {
-                        openDialogCustom.value = true
+            val lifecycleOwner = LocalLifecycleOwner.current
+            DisposableEffect(lifecycleOwner) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_START) {
+                        updateManager?.setUpdateListener(object : UpdateManager.UpdateListener {
+                            override fun onUpdateFound() {
+                                openDialogCustom.value = true
+                            }
+                        })
                     }
-                })
-                onDispose {  }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose {
+                    lifecycleOwner.lifecycle.removeObserver(observer)
+                }
             }
 
             if (openDialogCustom.value) {

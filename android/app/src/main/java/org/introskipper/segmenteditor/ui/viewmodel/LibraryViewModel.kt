@@ -84,6 +84,7 @@ class LibraryViewModel @Inject constructor(
         val currentLibraries = hiddenLibraryIds
         if (lastHiddenLibraryIds != currentLibraries) {
             loadLibraries()
+            lastHiddenLibraryIds = currentLibraries
         }
     }
 

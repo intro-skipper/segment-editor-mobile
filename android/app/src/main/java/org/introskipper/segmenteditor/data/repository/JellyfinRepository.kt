@@ -93,7 +93,7 @@ class JellyfinRepository @Inject constructor(
         val response = mediaRepository.getLibraries(userId)
         
         if (response.isSuccessful) {
-            return response.body()?.items ?: emptyList()
+            return response.body()?.items?.filter { it.collectionType != "homevideos" } ?: emptyList()
         } else {
             throw Exception("Failed to fetch libraries: ${response.code()} ${response.message()}")
         }
