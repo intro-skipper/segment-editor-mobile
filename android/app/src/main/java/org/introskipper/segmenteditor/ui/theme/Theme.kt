@@ -17,15 +17,15 @@ import androidx.core.view.WindowCompat
 import org.introskipper.segmenteditor.ui.state.AppTheme
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = PrimaryDark,
+    secondary = SecondaryDark,
+    tertiary = SegmentRecapDark
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    primary = PrimaryLight,
+    secondary = SecondaryLight,
+    tertiary = SegmentRecapLight
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),

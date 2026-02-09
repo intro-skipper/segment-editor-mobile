@@ -505,15 +505,9 @@ private fun SegmentEditorSlider(
     }
 }
 
+@Composable
 private fun getSegmentColor(type: String): Color {
-    return when (type.lowercase()) {
-        "intro" -> Color(0xFF4CAF50) // Green
-        "credits" -> Color(0xFF2196F3) // Blue
-        "commercial" -> Color(0xFFF44336) // Red
-        "recap" -> Color(0xFFFF9800) // Orange
-        "preview" -> Color(0xFF9C27B0) // Purple
-        else -> Color(0xFFFFEB3B) // Yellow
-    }
+    return org.introskipper.segmenteditor.ui.theme.getSegmentColor(type)
 }
 
 private fun formatTimeString(seconds: Double): String {
