@@ -10,6 +10,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.introskipper.segmenteditor.data.model.Segment
+import org.introskipper.segmenteditor.ui.theme.getSegmentColor
 
 /**
  * Timeline component that displays segment markers over a video timeline.
@@ -28,7 +29,7 @@ fun SegmentTimeline(
 ) {
     // Pre-calculate segment colors in composable context
     val segmentColors = segments.map { segment ->
-        segment to org.introskipper.segmenteditor.ui.theme.getSegmentColor(segment.type)
+        segment to getSegmentColor(segment.type)
     }
     
     Canvas(modifier = modifier.fillMaxWidth().height(8.dp)) {

@@ -64,6 +64,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.ui.state.EditorMode
+import org.introskipper.segmenteditor.ui.theme.getSegmentColor
 import org.introskipper.segmenteditor.ui.viewmodel.SegmentEditorViewModel
 import java.util.Locale
 
@@ -503,11 +504,6 @@ private fun SegmentEditorSlider(
             }
         }
     }
-}
-
-@Composable
-private fun getSegmentColor(type: String): Color {
-    return org.introskipper.segmenteditor.ui.theme.getSegmentColor(type)
 }
 
 private fun formatTimeString(seconds: Double): String {
