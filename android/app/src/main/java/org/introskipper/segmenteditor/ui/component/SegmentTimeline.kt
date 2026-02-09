@@ -27,7 +27,8 @@ fun SegmentTimeline(
     currentPosition: Long,
     modifier: Modifier = Modifier
 ) {
-    // Pre-calculate segment colors in composable context
+    // Pre-calculate segment colors in composable context before entering Canvas
+    // Note: Colors are recalculated on each composition for theme changes
     val segmentColors = segments.map { segment ->
         segment to getSegmentColor(segment.type)
     }
