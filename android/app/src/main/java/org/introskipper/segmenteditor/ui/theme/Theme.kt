@@ -39,7 +39,7 @@ private val LightColorScheme = lightColorScheme(
 )
 
 @Composable
-fun ReactInMobileTheme(
+fun SegmentEditorTheme(
     appTheme: AppTheme = AppTheme.SYSTEM,
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,

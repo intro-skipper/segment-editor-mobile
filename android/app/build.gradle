@@ -98,7 +98,7 @@ dependencies {
     implementation 'androidx.compose.ui:ui-graphics'
     implementation 'androidx.compose.ui:ui-tooling-preview'
     implementation 'androidx.documentfile:documentfile:1.1.0'
-    
+
     // Navigation Compose
     implementation 'androidx.navigation:navigation-compose:2.9.7'
 
@@ -114,13 +114,14 @@ dependencies {
 
     // ExoPlayer for video playback
     ext.media3_version = '1.9.1'
+    implementation "androidx.media3:media3-common:$media3_version"
+    implementation "androidx.media3:media3-datasource-okhttp:$media3_version"
     implementation "androidx.media3:media3-exoplayer:$media3_version"
     implementation "androidx.media3:media3-exoplayer-hls:$media3_version"
-    implementation "androidx.media3:media3-datasource-okhttp:$media3_version"
     implementation "androidx.media3:media3-ui:$media3_version"
-    implementation "androidx.media3:media3-ui-compose-material3:$media3_version"
-    implementation "androidx.media3:media3-common:$media3_version"
-    implementation("io.github.anilbeesetti:nextlib-media3ext:1.9.1-0.11.0")
+    implementation "androidx.media3:media3-ui-compose:$media3_version"
+
+    implementation("io.github.anilbeesetti:nextlib-media3ext:$media3_version-0.11.0")
     
     // Security for encrypted preferences
     implementation 'androidx.security:security-crypto:1.1.0'

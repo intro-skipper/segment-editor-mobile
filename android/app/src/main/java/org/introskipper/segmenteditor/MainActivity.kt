@@ -22,7 +22,7 @@ import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.navigation.AppNavigation
 import org.introskipper.segmenteditor.ui.navigation.Screen
-import org.introskipper.segmenteditor.ui.theme.ReactInMobileTheme
+import org.introskipper.segmenteditor.ui.theme.SegmentEditorTheme
 import org.introskipper.segmenteditor.update.CustomDialog
 import org.introskipper.segmenteditor.update.UpdateManager
 import javax.inject.Inject
@@ -52,7 +52,7 @@ class MainActivity : ComponentActivity() {
             var currentTheme by remember { mutableStateOf(securePreferences.getTheme()) }
             val openDialogCustom = remember { mutableStateOf(false) }
 
-            ReactInMobileTheme(appTheme = currentTheme) {
+            SegmentEditorTheme(appTheme = currentTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
