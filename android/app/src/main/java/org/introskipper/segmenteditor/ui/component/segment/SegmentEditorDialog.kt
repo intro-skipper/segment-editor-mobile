@@ -64,6 +64,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.ui.state.EditorMode
+import org.introskipper.segmenteditor.ui.theme.getSegmentColor
 import org.introskipper.segmenteditor.ui.viewmodel.SegmentEditorViewModel
 import java.util.Locale
 
@@ -502,17 +503,6 @@ private fun SegmentEditorSlider(
                 )
             }
         }
-    }
-}
-
-private fun getSegmentColor(type: String): Color {
-    return when (type.lowercase()) {
-        "intro" -> Color(0xFF4CAF50) // Green
-        "credits" -> Color(0xFF2196F3) // Blue
-        "commercial" -> Color(0xFFF44336) // Red
-        "recap" -> Color(0xFFFF9800) // Orange
-        "preview" -> Color(0xFF9C27B0) // Purple
-        else -> Color(0xFFFFEB3B) // Yellow
     }
 }
 

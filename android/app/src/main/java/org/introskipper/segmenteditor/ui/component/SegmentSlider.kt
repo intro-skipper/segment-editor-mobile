@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.TimeUtils
 import org.introskipper.segmenteditor.ui.component.segment.TimeInputField
+import org.introskipper.segmenteditor.ui.theme.getSegmentColor
 import org.introskipper.segmenteditor.ui.validation.SegmentValidator
 import kotlin.math.max
 import kotlin.math.min
@@ -466,16 +467,5 @@ private fun TimeInputRow(
             keyboardActions = keyboardActions,
             modifier = Modifier.weight(1f)
         )
-    }
-}
-
-private fun getSegmentColor(type: String): Color {
-    return when (type.lowercase()) {
-        "intro" -> Color(0xFF4CAF50) // Green
-        "credits" -> Color(0xFF2196F3) // Blue
-        "commercial" -> Color(0xFFF44336) // Red
-        "recap" -> Color(0xFFFF9800) // Orange
-        "preview" -> Color(0xFF9C27B0) // Purple
-        else -> Color(0xFFFFEB3B) // Yellow
     }
 }
