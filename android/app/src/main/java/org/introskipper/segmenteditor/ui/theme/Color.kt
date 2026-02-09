@@ -33,6 +33,17 @@ val SegmentUnknownDark = Color(0xFF798090)     // Brighter Gray
 @Composable
 fun getSegmentColor(type: String): Color {
     val isDark = isSystemInDarkTheme()
+    return getSegmentColor(type, isDark)
+}
+
+/**
+ * Get the appropriate segment color based on segment type and theme state
+ * Non-composable version for performance optimization with remember
+ * 
+ * @param type The segment type (intro, outro, preview, recap, commercial, etc.)
+ * @param isDark Whether dark theme is active
+ */
+fun getSegmentColor(type: String, isDark: Boolean): Color {
     return when (type.lowercase()) {
         "intro" -> if (isDark) SegmentIntroDark else SegmentIntroLight
         "outro", "credits" -> if (isDark) SegmentOutroDark else SegmentOutroLight

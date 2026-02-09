@@ -1,9 +1,11 @@
 package org.introskipper.segmenteditor.ui.component
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -27,10 +29,13 @@ fun SegmentTimeline(
     currentPosition: Long,
     modifier: Modifier = Modifier
 ) {
-    // Pre-calculate segment colors in composable context before entering Canvas
-    // Note: Colors are recalculated on each composition for theme changes
-    val segmentColors = segments.map { segment ->
-        segment to getSegmentColor(segment.type)
+    // Cache theme state and segment colors for performance
+    // Only recalculates when segments list or theme changes
+    val isDark = isSystemInDarkTheme()
+    val segmentColors = remember(segments, isDark) {
+        segments.map { segment ->
+            segment to getSegmentColor(segment.type, isDark)
+        }
     }
     
     Canvas(modifier = modifier.fillMaxWidth().height(8.dp)) {
