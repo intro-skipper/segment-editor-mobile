@@ -1,6 +1,10 @@
+<p align="center">
+  <a href="https://play.google.com/store/apps/details?id=org.introskipper.segmenteditor"><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png'/></a>
+</p>
+
 # Jellyfin Segment Editor Mobile
 
-Manage Jellyfin Media Segment positions the simple way. This tool is in early stages of development.
+Jellyfin media segment management made simple.
 
 - Create/Edit/Delete all kind of Segments (Intro, Outro, ...)
 - Player to copy timestamps while you watch
