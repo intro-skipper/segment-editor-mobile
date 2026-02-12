@@ -39,6 +39,7 @@ class UpdateManager internal constructor(activity: MainActivity) {
     private var appUpdateManager: AppUpdateManager? = null
     private var isUpdateAvailable = false
     private var updateUrl: String? = null
+    private var appUpdate: AppUpdateInfo? = null
 
     init {
         if (BuildConfig.GOOGLE_PLAY) {
@@ -68,14 +69,8 @@ class UpdateManager internal constructor(activity: MainActivity) {
                     == UpdateAvailability.UPDATE_AVAILABLE
                     && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE))
             if (isUpdateAvailable) {
-                try {
-                    appUpdateManager?.startUpdateFlowForResult( // Pass the intent that is returned by 'getAppUpdateInfo()'.
-                        appUpdateInfo,
-                        browserActivity,
-                        AppUpdateOptions.defaultOptions(AppUpdateType.IMMEDIATE),
-                        Random.nextInt()
-                    )
-                } catch (_: IntentSender.SendIntentException) { }
+                appUpdate = appUpdateInfo
+                updateListener?.onUpdateFound()
             }
         }
     }
@@ -184,8 +179,25 @@ class UpdateManager internal constructor(activity: MainActivity) {
         }
     }
 
+    private fun startPlayUpdateFlow(appUpdateInfo: AppUpdateInfo?) {
+        try {
+            appUpdateManager?.startUpdateFlowForResult( // Pass the intent that is returned by 'getAppUpdateInfo()'.
+                appUpdateInfo!!,
+                browserActivity,
+                AppUpdateOptions.defaultOptions(AppUpdateType.IMMEDIATE),
+                Random.nextInt()
+            )
+        } catch (_: IntentSender.SendIntentException) {
+
+        }
+    }
+
     fun onUpdateRequested() {
-        updateUrl?.let { requestDownload(it) }
+        if (BuildConfig.GOOGLE_PLAY) {
+            appUpdate?.let { startPlayUpdateFlow(it) }
+        } else {
+            updateUrl?.let { requestDownload(it) }
+        }
     }
 
     fun setUpdateListener(listener: UpdateListener?) {
