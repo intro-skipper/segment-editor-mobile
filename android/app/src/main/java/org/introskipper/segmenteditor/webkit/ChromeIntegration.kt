@@ -14,6 +14,7 @@ import androidx.browser.customtabs.CustomTabsService
 import androidx.browser.customtabs.CustomTabsServiceConnection
 import androidx.browser.customtabs.CustomTabsSession
 import androidx.core.net.toUri
+import org.introskipper.segmenteditor.BuildConfig
 import org.introskipper.segmenteditor.SegmentEditorApplication
 import org.introskipper.segmenteditor.toPx
 import org.introskipper.segmenteditor.ui.state.AppTheme
@@ -50,7 +51,7 @@ object ChromeIntegration {
     }
 
     fun bindCustomTabService(context: Context) : Boolean {
-        if (mClient != null) return false
+        if (mClient != null || BuildConfig.GOOGLE_PLAY) return false
 
         val browserPackages: ArrayList<String> = arrayListOf()
         context.packageManager.queryIntentActivities(

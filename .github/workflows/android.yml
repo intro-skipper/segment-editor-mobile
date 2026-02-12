@@ -57,7 +57,7 @@ jobs:
         # Specifies arguments for Gradle execution
         arguments: |
           --configure-on-demand
-          assembleRelease
+          assembleGithubRelease
         # Gradle version to use for execution:
         #   wrapper (default), current, rc, nightly, release-nightly, or
         #   versions like 6.6 (see https://services.gradle.org/versions/all)
@@ -66,15 +66,12 @@ jobs:
         properties: |
           org.gradle.configuration-cache=true
 
-    - name: List directory contents
-      run: ls -R android/app/build/outputs/apk/release
-
     - uses: r0adkll/sign-android-release@v1
       name: Sign Release APK
       # ID used to access action output
       id: sign_main
       with:
-        releaseDirectory: android/app/build/outputs/apk/release
+        releaseDirectory: android/app/build/outputs/apk/github/release
         signingKeyBase64: ${{ secrets.KEYSTORE_FILE }}
         alias: "tagmo"
         keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}

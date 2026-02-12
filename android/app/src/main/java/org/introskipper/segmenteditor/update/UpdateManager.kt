@@ -3,12 +3,19 @@ package org.introskipper.segmenteditor.update
 import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Intent
+import android.content.IntentSender
 import android.content.pm.PackageInstaller
 import android.os.Build
 import android.provider.Settings
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
+import com.google.android.play.core.appupdate.AppUpdateInfo
+import com.google.android.play.core.appupdate.AppUpdateManager
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory
+import com.google.android.play.core.appupdate.AppUpdateOptions
+import com.google.android.play.core.install.model.AppUpdateType
+import com.google.android.play.core.install.model.UpdateAvailability
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -29,21 +36,48 @@ import kotlin.random.Random
 class UpdateManager internal constructor(activity: MainActivity) {
     private val browserActivity = activity
     private var updateListener: UpdateListener? = null
+    private var appUpdateManager: AppUpdateManager? = null
     private var isUpdateAvailable = false
     private var updateUrl: String? = null
 
     init {
-        with (activity.applicationContext.packageManager.packageInstaller) {
-            mySessions.forEach {
+        if (BuildConfig.GOOGLE_PLAY) {
+            configurePlay()
+        } else {
+            with(activity.applicationContext.packageManager.packageInstaller) {
+                mySessions.forEach {
+                    try {
+                        abandonSession(it.sessionId)
+                    } catch (_: Exception) {
+                    }
+                }
+            }
+            activity.externalCacheDir?.listFiles { _: File?, name: String ->
+                name.lowercase().endsWith(".apk")
+            }?.forEach { if (!it.isDirectory) it.delete() }
+            configureGit()
+        }
+    }
+
+    private fun configurePlay() {
+        if (null == appUpdateManager)
+            appUpdateManager = AppUpdateManagerFactory.create(browserActivity)
+        val appUpdateInfoTask = appUpdateManager?.appUpdateInfo
+        appUpdateInfoTask?.addOnSuccessListener { appUpdateInfo: AppUpdateInfo ->
+            isUpdateAvailable = (appUpdateInfo.updateAvailability()
+                    == UpdateAvailability.UPDATE_AVAILABLE
+                    && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE))
+            if (isUpdateAvailable) {
                 try {
-                    abandonSession(it.sessionId)
-                } catch (_: Exception) { }
+                    appUpdateManager?.startUpdateFlowForResult( // Pass the intent that is returned by 'getAppUpdateInfo()'.
+                        appUpdateInfo,
+                        browserActivity,
+                        AppUpdateOptions.defaultOptions(AppUpdateType.IMMEDIATE),
+                        Random.nextInt()
+                    )
+                } catch (_: IntentSender.SendIntentException) { }
             }
         }
-        activity.externalCacheDir?.listFiles {
-                _: File?, name: String -> name.lowercase().endsWith(".apk")
-        }?.forEach { if (!it.isDirectory) it.delete() }
-        configureGit()
     }
 
     private fun configureGit() {
@@ -70,7 +104,7 @@ class UpdateManager internal constructor(activity: MainActivity) {
                 URL(apkUrl).openStream().use { stream ->
                     FileOutputStream(apk).use { stream.copyTo(it) }
                 }
-            } catch (fnf: FileNotFoundException) {
+            } catch (_: FileNotFoundException) {
                 configureGit()
                 return@launch
             }
@@ -112,9 +146,9 @@ class UpdateManager internal constructor(activity: MainActivity) {
                         session.commit(pi.intentSender)
                     }
                 }
-            } catch (ex: SecurityException) {
+            } catch (_: SecurityException) {
 
-            } catch (ex: IOException) {
+            } catch (_: IOException) {
 
             }
         }
@@ -145,7 +179,7 @@ class UpdateManager internal constructor(activity: MainActivity) {
                 updateUrl = asset["browser_download_url"] as String
                 updateListener?.onUpdateFound()
             }
-        } catch (e: JSONException) {
+        } catch (_: JSONException) {
 
         }
     }
