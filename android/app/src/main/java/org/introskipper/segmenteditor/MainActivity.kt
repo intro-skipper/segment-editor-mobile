@@ -1,7 +1,9 @@
 package org.introskipper.segmenteditor
 
+import android.app.PictureInPictureParams
 import android.content.res.Configuration
 import android.os.Bundle
+import android.util.Rational
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -11,13 +13,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.core.pip.PictureInPictureDelegate
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -32,7 +33,7 @@ import org.introskipper.segmenteditor.update.UpdateManager
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), PictureInPictureDelegate.OnPictureInPictureEventListener {
     var updateManager: UpdateManager? = null
 
     @Inject
@@ -45,12 +46,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         updateManager = UpdateManager(this)
 
-        enableEdgeToEdge(
-            navigationBarStyle = SystemBarStyle.auto(
-                lightScrim = android.graphics.Color.TRANSPARENT,
-                darkScrim = android.graphics.Color.TRANSPARENT
-            )
-        )
+        setSystemBarTheme()
 
         // Determine start destination based on whether user is already logged in
         val startDestination = if (securePreferences.isLoggedIn()) {
@@ -74,12 +70,7 @@ class MainActivity : ComponentActivity() {
                         apiService = apiService,
                         onThemeChanged = { theme ->
                             currentTheme = theme
-                            enableEdgeToEdge(
-                                navigationBarStyle = SystemBarStyle.auto(
-                                    lightScrim = android.graphics.Color.TRANSPARENT,
-                                    darkScrim = android.graphics.Color.TRANSPARENT
-                                )
-                            )
+                            setSystemBarTheme()
                         }
                     )
                 }
@@ -114,7 +105,32 @@ class MainActivity : ComponentActivity() {
         if (packageManager.canRequestPackageInstalls()) updateManager?.onUpdateRequested()
     }
 
+    private fun setSystemBarTheme() {
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(
+                lightScrim = android.graphics.Color.TRANSPARENT,
+                darkScrim = android.graphics.Color.TRANSPARENT,
+            ),
+            navigationBarStyle = SystemBarStyle.auto(
+                lightScrim = android.graphics.Color.TRANSPARENT,
+                darkScrim = android.graphics.Color.TRANSPARENT
+            )
+        )
+    }
+
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+    }
+
+    override fun onPictureInPictureEvent(
+        event: PictureInPictureDelegate.Event,
+        config: Configuration?,
+    ) { }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        val params = PictureInPictureParams.Builder()
+            .setAspectRatio(Rational(16, 9)).build()
+        enterPictureInPictureMode(params)
     }
 }

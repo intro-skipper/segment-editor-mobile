@@ -139,8 +139,6 @@ fun PlayerScreen(
     
     // FAB segment type menu state
     var showFabMenu by remember(itemId) { mutableStateOf(false) }
-
-    var isUserFullscreen by remember { mutableStateOf(false) }
     
     // Load media item when itemId changes
     LaunchedEffect(itemId) {
