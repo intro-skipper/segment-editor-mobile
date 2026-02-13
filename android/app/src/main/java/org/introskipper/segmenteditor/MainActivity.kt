@@ -3,7 +3,9 @@ package org.introskipper.segmenteditor
 import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +45,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         updateManager = UpdateManager(this)
 
+        enableEdgeToEdge(
+            navigationBarStyle = SystemBarStyle.auto(
+                lightScrim = android.graphics.Color.TRANSPARENT,
+                darkScrim = android.graphics.Color.TRANSPARENT
+            )
+        )
+
         // Determine start destination based on whether user is already logged in
         val startDestination = if (securePreferences.isLoggedIn()) {
             Screen.Main.route
@@ -63,7 +72,15 @@ class MainActivity : ComponentActivity() {
                         startDestination = startDestination,
                         securePreferences = securePreferences,
                         apiService = apiService,
-                        onThemeChanged = { theme -> currentTheme = theme }
+                        onThemeChanged = { theme ->
+                            currentTheme = theme
+                            enableEdgeToEdge(
+                                navigationBarStyle = SystemBarStyle.auto(
+                                    lightScrim = android.graphics.Color.TRANSPARENT,
+                                    darkScrim = android.graphics.Color.TRANSPARENT
+                                )
+                            )
+                        }
                     )
                 }
             }
