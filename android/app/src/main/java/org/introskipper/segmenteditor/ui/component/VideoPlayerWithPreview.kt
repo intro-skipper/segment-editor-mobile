@@ -31,6 +31,7 @@ import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.introskipper.segmenteditor.SegmentEditorApplication
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.viewmodel.PlayerViewModel
 import kotlin.time.Duration.Companion.seconds
@@ -283,6 +284,7 @@ fun VideoPlayerWithPreview(
                     exoPlayer.currentPosition,
                     exoPlayer.bufferedPosition
                 )
+                SegmentEditorApplication.isExoPlayer = isPlaying
             }
             
             override fun onPositionDiscontinuity(

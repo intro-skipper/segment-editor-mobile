@@ -36,6 +36,8 @@ class SegmentEditorApplication : Application() {
         var isAndroidTV = false
 
         var preferences: SecurePreferences? = null
+
+        var isExoPlayer = false
     }
 }
 

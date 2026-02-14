@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,8 +47,6 @@ class MainActivity : ComponentActivity(), PictureInPictureDelegate.OnPictureInPi
         super.onCreate(savedInstanceState)
         updateManager = UpdateManager(this)
 
-        setSystemBarTheme()
-
         // Determine start destination based on whether user is already logged in
         val startDestination = if (securePreferences.isLoggedIn()) {
             Screen.Main.route
@@ -70,9 +69,12 @@ class MainActivity : ComponentActivity(), PictureInPictureDelegate.OnPictureInPi
                         apiService = apiService,
                         onThemeChanged = { theme ->
                             currentTheme = theme
-                            setSystemBarTheme()
                         }
                     )
+                }
+
+                SideEffect {
+                    setSystemBarTheme()
                 }
             }
 
@@ -129,6 +131,7 @@ class MainActivity : ComponentActivity(), PictureInPictureDelegate.OnPictureInPi
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
+        if (!SegmentEditorApplication.isExoPlayer) return
         val params = PictureInPictureParams.Builder()
             .setAspectRatio(Rational(16, 9)).build()
         enterPictureInPictureMode(params)
