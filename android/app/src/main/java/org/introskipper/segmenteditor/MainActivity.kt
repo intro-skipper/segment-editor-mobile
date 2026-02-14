@@ -45,7 +45,6 @@ class MainActivity : ComponentActivity(), PictureInPictureDelegate.OnPictureInPi
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        updateManager = UpdateManager(this)
 
         // Determine start destination based on whether user is already logged in
         val startDestination = if (securePreferences.isLoggedIn()) {
@@ -82,11 +81,13 @@ class MainActivity : ComponentActivity(), PictureInPictureDelegate.OnPictureInPi
             DisposableEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
                     if (event == Lifecycle.Event.ON_START) {
-                        updateManager?.setUpdateListener(object : UpdateManager.UpdateListener {
-                            override fun onUpdateFound() {
-                                openDialogCustom.value = true
-                            }
-                        })
+                        updateManager = UpdateManager(this@MainActivity).apply {
+                            setUpdateListener(object : UpdateManager.UpdateListener {
+                                override fun onUpdateFound() {
+                                    openDialogCustom.value = true
+                                }
+                            })
+                        }
                     }
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)
