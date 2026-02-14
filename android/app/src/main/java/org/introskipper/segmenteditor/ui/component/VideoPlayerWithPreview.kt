@@ -11,7 +11,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.media3.common.C
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.C.TRACK_TYPE_AUDIO
 import androidx.media3.common.C.TRACK_TYPE_TEXT
 import androidx.media3.common.C.TRACK_TYPE_VIDEO
@@ -324,6 +326,34 @@ fun VideoPlayerWithPreview(
             exoPlayer.removeListener(playbackListener)
             exoPlayer.release()
             // Note: previewLoader is released by PlayerScreen, not here
+        }
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> { }
+
+                Lifecycle.Event.ON_STOP -> {
+                    exoPlayer.playWhenReady = false
+                }
+
+                Lifecycle.Event.ON_START -> {
+                    exoPlayer.playWhenReady = true
+                }
+
+                Lifecycle.Event.ON_RESUME -> { }
+
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            // Release the player when the composable is removed from the composition
+            exoPlayer.release()
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
     
