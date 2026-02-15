@@ -88,8 +88,8 @@ fun AppNavigation(
         composable(Screen.Main.route) {
             // Main screen now shows library selection
             LibraryScreen(
-                onLibraryClick = { libraryId ->
-                    navController.navigate("${Screen.Home.route}/$libraryId")
+                onLibraryClick = { libraryId, collectionType ->
+                    navController.navigate("${Screen.Home.route}/$libraryId?type=$collectionType")
                 },
                 onSettingsClick = {
                     navController.navigate(Screen.Settings.route)
@@ -99,8 +99,8 @@ fun AppNavigation(
         
         composable(Screen.Library.route) {
             LibraryScreen(
-                onLibraryClick = { libraryId ->
-                    navController.navigate("${Screen.Home.route}/$libraryId")
+                onLibraryClick = { libraryId, collectionType ->
+                    navController.navigate("${Screen.Home.route}/$libraryId?type=$collectionType")
                 },
                 onSettingsClick = {
                     navController.navigate(Screen.Settings.route)
@@ -109,12 +109,21 @@ fun AppNavigation(
         }
         
         composable(
-            route = "${Screen.Home.route}/{libraryId}",
-            arguments = listOf(navArgument("libraryId") { type = NavType.StringType })
+            route = "${Screen.Home.route}/{libraryId}?type={collectionType}",
+            arguments = listOf(
+                navArgument("libraryId") { type = NavType.StringType },
+                navArgument("collectionType") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
         ) { backStackEntry ->
             val libraryId = backStackEntry.arguments?.getString("libraryId") ?: ""
+            val collectionType = backStackEntry.arguments?.getString("collectionType")
             HomeScreen(
                 libraryId = libraryId,
+                collectionType = collectionType,
                 onMediaItemClick = { route ->
                     // Route can be either "itemId" or "series/itemId", "album/itemId", "artist/itemId"
                     navController.navigate(route)

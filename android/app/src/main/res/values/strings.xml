@@ -109,6 +109,8 @@
 
     <!-- Home Screen -->
     <string name="home_tv_shows">TV Shows</string>
+    <string name="home_movies">Movies</string>
+    <string name="home_media">Media</string>
     <string name="home_settings">Settings</string>
     <string name="home_no_media">No media items found</string>
 

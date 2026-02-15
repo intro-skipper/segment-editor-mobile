@@ -45,6 +45,7 @@ import org.introskipper.segmenteditor.ui.viewmodel.HomeViewModel
 @Composable
 fun HomeScreen(
     libraryId: String,
+    collectionType: String? = null,
     onMediaItemClick: (String) -> Unit,
     onNavigateBack: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
@@ -70,13 +71,13 @@ fun HomeScreen(
     }
     
     // Load items for the selected library
-    LaunchedEffect(libraryId) {
-        viewModel.setLibraryId(libraryId)
+    LaunchedEffect(libraryId, collectionType) {
+        viewModel.setLibraryId(libraryId, collectionType)
     }
 
     // Smart navigation based on media type
     val navigateToMedia: (JellyfinMediaItem) -> Unit = { item ->
-        when (item.type) {
+        when(item.type) {
             "Series" -> onMediaItemClick("series/${item.id}")
             "MusicAlbum" -> onMediaItemClick("album/${item.id}")
             "MusicArtist" -> onMediaItemClick("artist/${item.id}")
@@ -87,7 +88,14 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.home_tv_shows)) },
+                title = { 
+                    val title = when (collectionType) {
+                        "movies" -> stringResource(R.string.home_movies)
+                        "tvshows" -> stringResource(R.string.home_tv_shows)
+                        else -> stringResource(R.string.home_media)
+                    }
+                    Text(title)
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(

@@ -34,7 +34,8 @@ class HomeViewModel @Inject constructor(
     val showAllItems: StateFlow<Boolean> = _showAllItems
 
     private var currentLibraryId: String? = null
-    
+    private var currentCollectionType: String? = null
+
     // Track the last known page size to detect changes
     private var lastPageSize: Int = 0
 
@@ -62,9 +63,10 @@ class HomeViewModel @Inject constructor(
         }
     }
     
-    fun setLibraryId(libraryId: String) {
-        if (currentLibraryId != libraryId) {
+    fun setLibraryId(libraryId: String, collectionType: String? = null) {
+        if (currentLibraryId != libraryId || currentCollectionType != collectionType) {
             currentLibraryId = libraryId
+            currentCollectionType = collectionType
             currentPage = 1
             _showAllItems.value = false
             loadMediaItems()
@@ -145,12 +147,18 @@ class HomeViewModel @Inject constructor(
                     (currentPage - 1) * currentPageSize
                 }
 
+                val includeItemTypes = when (currentCollectionType) {
+                    "movies" -> listOf("Movie")
+                    "tvshows" -> listOf("Series")
+                    else -> listOf("Series", "Movie")
+                }
+
                 val result = jellyfinRepository.getMediaItems(
                     searchTerm = _searchQuery.value.ifBlank { null },
                     parentIds = listOf(libraryId),
                     startIndex = startIndex,
                     limit = limit,
-                    includeItemTypes = listOf("Series") // Only show TV series in library view
+                    includeItemTypes = includeItemTypes
                 )
 
                 totalPages = if (_showAllItems.value || currentPageSize == Int.MAX_VALUE) {

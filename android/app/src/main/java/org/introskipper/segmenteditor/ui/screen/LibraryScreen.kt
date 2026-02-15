@@ -55,7 +55,7 @@ import org.introskipper.segmenteditor.ui.viewmodel.LibraryViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
-    onLibraryClick: (String) -> Unit,
+    onLibraryClick: (String, String?) -> Unit,
     onSettingsClick: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
@@ -127,7 +127,7 @@ fun LibraryScreen(
                             val library = state.libraries[item]
                             LibraryCard(
                                 library = library,
-                                onClick = { onLibraryClick(library.id) },
+                                onClick = { onLibraryClick(library.id, library.collectionType) },
                                 getPrimaryImageUrl = { itemId, imageTag -> viewModel.getPrimaryImageUrl(itemId, imageTag) }
                             )
                         }
