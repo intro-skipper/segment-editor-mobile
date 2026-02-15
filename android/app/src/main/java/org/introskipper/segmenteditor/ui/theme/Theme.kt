@@ -28,16 +28,6 @@ private val LightColorScheme = lightColorScheme(
     primary = PrimaryLight,
     secondary = SecondaryLight,
     tertiary = SegmentRecapLight
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
 )
 
 data class DynamicColorsOptions(
@@ -64,23 +54,50 @@ fun SegmentEditorTheme(
     val colorScheme = when {
         dynamicColorsOptions.seedColor != null -> {
             val color = Color(dynamicColorsOptions.seedColor)
+            val isDark = dynamicColorsOptions.isDark ?: darkTheme
+
+            // Calculate a surface color based on the seed
+            // For dark: very dark version of the color. For light: very light version.
+            val surfaceColor = if (isDark) {
+                // Mix with black for dark surface
+                Color.Black.copy(alpha = 0.9f).compositeOver(color.copy(alpha = 0.1f))
+            } else {
+                // Mix with white for light surface
+                Color.White.copy(alpha = 0.9f).compositeOver(color.copy(alpha = 0.1f))
+            }
+
+            val onSurfaceColor = if (surfaceColor.luminance() > 0.5f) Color.Black else Color.White
             val onColor = if (color.luminance() > 0.5f) Color.Black else Color.White
             
-            if (dynamicColorsOptions.isDark ?: darkTheme) {
+            if (isDark) {
                 darkColorScheme(
                     primary = color,
+                    onPrimary = onColor,
                     primaryContainer = color,
                     onPrimaryContainer = onColor,
                     secondaryContainer = color.copy(alpha = 0.2f),
-                    onSecondaryContainer = onColor
+                    onSecondaryContainer = onSurfaceColor,
+                    surface = surfaceColor,
+                    onSurface = onSurfaceColor,
+                    background = surfaceColor,
+                    onBackground = onSurfaceColor,
+                    surfaceVariant = surfaceColor.copy(alpha = 0.8f).compositeOver(onSurfaceColor.copy(alpha = 0.1f)),
+                    onSurfaceVariant = onSurfaceColor.copy(alpha = 0.7f)
                 )
             } else {
                 lightColorScheme(
                     primary = color,
+                    onPrimary = onColor,
                     primaryContainer = color,
                     onPrimaryContainer = onColor,
                     secondaryContainer = color.copy(alpha = 0.2f),
-                    onSecondaryContainer = onColor
+                    onSecondaryContainer = onSurfaceColor,
+                    surface = surfaceColor,
+                    onSurface = onSurfaceColor,
+                    background = surfaceColor,
+                    onBackground = onSurfaceColor,
+                    surfaceVariant = surfaceColor.copy(alpha = 0.8f).compositeOver(onSurfaceColor.copy(alpha = 0.1f)),
+                    onSurfaceVariant = onSurfaceColor.copy(alpha = 0.7f)
                 )
             }
         }
@@ -95,10 +112,13 @@ fun SegmentEditorTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            // Only update status bar if we're not using a per-item theme
             if (dynamicColorsOptions.seedColor == null) {
                 window.statusBarColor = colorScheme.primary.toArgb()
-                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            } else {
+                // When using dynamic colors, use surface color for status bar to blend in
+                window.statusBarColor = colorScheme.surface.toArgb()
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = colorScheme.surface.luminance() > 0.5f
             }
         }
     }
@@ -107,5 +127,17 @@ fun SegmentEditorTheme(
         colorScheme = colorScheme,
         typography = Typography,
         content = content
+    )
+}
+
+// Helper to composite colors since it's missing in basic Color class without extension
+private fun Color.compositeOver(background: Color): Color {
+    val alpha = this.alpha
+    val invAlpha = 1.0f - alpha
+    return Color(
+        red = (this.red * alpha) + (background.red * invAlpha),
+        green = (this.green * alpha) + (background.green * invAlpha),
+        blue = (this.blue * alpha) + (background.blue * invAlpha),
+        alpha = 1.0f
     )
 }
