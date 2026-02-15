@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import org.introskipper.segmenteditor.data.model.MediaItem
 import org.introskipper.segmenteditor.data.model.MediaStream
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.repository.MediaRepository
@@ -60,7 +61,8 @@ class PlayerViewModel @Inject constructor(
                     audioTracks = emptyList(),
                     subtitleTracks = emptyList(),
                     selectedAudioTrack = null,
-                    selectedSubtitleTrack = null
+                    selectedSubtitleTrack = null,
+                    nextItemId = null
                 )
             }
 
@@ -74,7 +76,7 @@ class PlayerViewModel @Inject constructor(
                 val mediaResult = mediaRepository.getItemResult(
                     userId = userId,
                     itemId = itemId,
-                    fields = listOf("MediaSources", "MediaStreams", "Path", "Container")
+                    fields = listOf("MediaSources", "MediaStreams", "Path", "Container", "SeriesId", "SeasonId", "IndexNumber")
                 )
 
                 mediaResult.fold(
@@ -92,6 +94,9 @@ class PlayerViewModel @Inject constructor(
 
                         // Load segments
                         loadSegments(itemId)
+
+                        // Find next episode for auto-play
+                        findNextEpisode(mediaItem)
                     },
                     onFailure = { error ->
                         Log.e(TAG, "Failed to load media item", error)
@@ -111,6 +116,43 @@ class PlayerViewModel @Inject constructor(
                         error = "Error: ${e.message}"
                     )
                 }
+            }
+        }
+    }
+
+    private fun findNextEpisode(mediaItem: MediaItem) {
+        // Only look for next episode if it's an episode and has season/series info
+        if (mediaItem.type != "Episode" || mediaItem.seriesId == null || mediaItem.seasonId == null) {
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                val userId = securePreferences.getUserId() ?: return@launch
+                
+                // Fetch episodes for the same season
+                val response = mediaRepository.getEpisodes(
+                    seriesId = mediaItem.seriesId,
+                    userId = userId,
+                    seasonId = mediaItem.seasonId,
+                    fields = listOf("IndexNumber")
+                )
+
+                if (response.isSuccessful && response.body() != null) {
+                    val episodes = response.body()!!.items.sortedBy { it.indexNumber }
+                    val currentIndex = episodes.indexOfFirst { it.id == mediaItem.id }
+                    
+                    if (currentIndex != -1 && currentIndex < episodes.size - 1) {
+                        val nextEpisode = episodes[currentIndex + 1]
+                        Log.d(TAG, "Found next episode: ${nextEpisode.name} (ID: ${nextEpisode.id})")
+                        _uiState.update { it.copy(nextItemId = nextEpisode.id) }
+                    } else {
+                        Log.d(TAG, "No more episodes in this season.")
+                        _uiState.update { it.copy(nextItemId = null) }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to find next episode", e)
             }
         }
     }
@@ -460,6 +502,19 @@ class PlayerViewModel @Inject constructor(
                 currentPosition = currentPosition,
                 bufferedPosition = bufferedPosition
             )
+        }
+    }
+
+    fun handlePlaybackEnded() {
+        val nextId = _uiState.value.nextItemId
+        val autoPlayEnabled = securePreferences.getAutoPlayNextEpisode()
+        
+        Log.d(TAG, "Playback ended. nextItemId=$nextId, autoPlayEnabled=$autoPlayEnabled")
+        
+        if (autoPlayEnabled && nextId != null) {
+            _events.value = PlayerEvent.NavigateToPlayer(nextId)
+        } else {
+            _events.value = PlayerEvent.PlaybackEnded
         }
     }
 

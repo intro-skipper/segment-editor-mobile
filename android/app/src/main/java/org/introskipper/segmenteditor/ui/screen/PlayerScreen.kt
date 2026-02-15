@@ -74,6 +74,7 @@ import org.introskipper.segmenteditor.ui.component.TrackSelectionSheet
 import org.introskipper.segmenteditor.ui.component.VideoPlayerWithPreview
 import org.introskipper.segmenteditor.ui.navigation.Screen
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
+import org.introskipper.segmenteditor.ui.state.PlayerEvent
 import org.introskipper.segmenteditor.ui.viewmodel.PlayerViewModel
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
@@ -87,6 +88,7 @@ fun PlayerScreen(
     viewModel: PlayerViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val events by viewModel.events.collectAsState()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
@@ -107,6 +109,24 @@ fun PlayerScreen(
         viewModel.createPreviewLoader(itemId)
     }
     
+    // Handle events from ViewModel
+    LaunchedEffect(events) {
+        when (val event = events) {
+            is PlayerEvent.NavigateToPlayer -> {
+                viewModel.clearEvent()
+                navController.navigate(Screen.Player.createRoute(event.itemId)) {
+                    // Pop current player from backstack to avoid loops
+                    popUpTo(Screen.Player.route) { inclusive = true }
+                }
+            }
+            is PlayerEvent.PlaybackEnded -> {
+                viewModel.clearEvent()
+                navigateBack(navController, uiState.mediaItem)
+            }
+            else -> {}
+        }
+    }
+
     // Clean up preview loader on dispose
     DisposableEffect(previewLoader) {
         onDispose {
@@ -222,7 +242,9 @@ fun PlayerScreen(
                 TopAppBar(
                     title = { Text(uiState.mediaItem?.name ?: stringResource(R.string.player_title)) },
                     navigationIcon = {
-                        IconButton(onClick = { navController.popBackStack() }) {
+                        IconButton(onClick = { 
+                            navigateBack(navController, uiState.mediaItem)
+                        }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                         }
                     },
@@ -344,8 +366,8 @@ fun PlayerScreen(
                             result.fold(
                                 onSuccess = { savedSegment ->
                                     // Update the local segment with the server ID
-                                    val index = editingSegments.indexOfFirst { 
-                                        it.id == segment.id || (it.id == null && it === segment) 
+                                    val index = editingSegments.indexOfFirst {
+                                        (it.id == null && it === segment) || it.id == segment.id
                                     }
                                     if (index != -1) {
                                         editingSegments = editingSegments.toMutableList().apply {
@@ -559,6 +581,24 @@ fun PlayerScreen(
                 }
             }
         )
+    }
+}
+
+private fun navigateBack(navController: NavController, mediaItem: org.introskipper.segmenteditor.data.model.MediaItem?) {
+    if (mediaItem?.seriesId != null) {
+        // If it's an episode, go back to the series screen
+        // We use popBackStack with the route template to find any existing SeriesScreen in the backstack
+        val seriesRouteTemplate = "${Screen.Series.route}/{seriesId}"
+        val popped = navController.popBackStack(seriesRouteTemplate, false)
+        
+        if (!popped) {
+            // If the series screen wasn't in the backstack, navigate to it explicitly
+            navController.navigate("${Screen.Series.route}/${mediaItem.seriesId}") {
+                popUpTo(Screen.Player.route) { inclusive = true }
+            }
+        }
+    } else {
+        navController.popBackStack()
     }
 }
 

@@ -285,6 +285,12 @@ fun VideoPlayerWithPreview(
                 )
                 SegmentEditorApplication.isExoPlayer = isPlaying
             }
+
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_ENDED) {
+                    viewModel.handlePlaybackEnded()
+                }
+            }
             
             override fun onPositionDiscontinuity(
                 oldPosition: Player.PositionInfo,

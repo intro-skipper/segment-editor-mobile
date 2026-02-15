@@ -9,7 +9,9 @@ sealed class Screen(val route: String) {
     object Library : Screen("library")
     object Main : Screen("main")
     object Home : Screen("home")
-    object Player : Screen("player")
+    object Player : Screen("player") {
+        fun createRoute(itemId: String) = "player/$itemId"
+    }
     object Series : Screen("series")
     object Album : Screen("album")
     object Artist : Screen("artist")

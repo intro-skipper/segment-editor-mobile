@@ -34,7 +34,10 @@ data class PlayerUiState(
     
     // Segment editing (timestamp capture)
     val capturedStartTime: Long? = null,
-    val capturedEndTime: Long? = null
+    val capturedEndTime: Long? = null,
+
+    // Auto Play
+    val nextItemId: String? = null
 )
 
 data class TrackInfo(
@@ -57,4 +60,5 @@ sealed class PlayerEvent {
     data class Error(val message: String) : PlayerEvent()
     data class SegmentLoaded(val segments: List<Segment>) : PlayerEvent()
     object PlaybackEnded : PlayerEvent()
+    data class NavigateToPlayer(val itemId: String) : PlayerEvent()
 }
