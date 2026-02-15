@@ -131,37 +131,23 @@ fun MediaControls(
                 color = Color.White
             )
         }
-        
-        // Scrub preview overlay (shown when scrubbing)
-        if (isScrubbing && previewLoader != null) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(bottom = 18.dp)
-                    .zIndex(10f)
-            ) {
-                ScrubPreviewOverlay(
-                    previewLoader = previewLoader,
-                    positionMs = scrubPosition,
-                    isVisible = true
-                )
-            }
-        }
 
-        AnimatedVisibility(
-            visible = showControls,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.TopStart).padding(8.dp)
-        ) {
-            IconButton(
-                onClick = { viewModel.nextContentScale() },
+        if (uiState.isFullscreen || uiState.isUserLandscape) {
+            AnimatedVisibility(
+                visible = showControls,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.TopStart).padding(8.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.AspectRatio,
-                    contentDescription = "Toggle content scale",
-                    tint = Color.White
-                )
+                IconButton(
+                    onClick = { viewModel.nextContentScale() },
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AspectRatio,
+                        contentDescription = "Toggle content scale",
+                        tint = Color.White
+                    )
+                }
             }
         }
 
@@ -254,6 +240,22 @@ fun MediaControls(
                         )
                     )
                 }
+            }
+        }
+
+        // Scrub preview overlay (shown when scrubbing)
+        if (isScrubbing && previewLoader != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 72.dp)
+                    .zIndex(10f)
+            ) {
+                ScrubPreviewOverlay(
+                    previewLoader = previewLoader,
+                    positionMs = scrubPosition,
+                    isVisible = true
+                )
             }
         }
         
