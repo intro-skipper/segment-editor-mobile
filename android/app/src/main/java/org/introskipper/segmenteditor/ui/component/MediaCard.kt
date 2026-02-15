@@ -10,12 +10,21 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import org.introskipper.segmenteditor.data.model.JellyfinMediaItem
+import org.introskipper.segmenteditor.ui.theme.DynamicColorsOptions
+import org.introskipper.segmenteditor.ui.theme.SegmentEditorTheme
+import org.introskipper.segmenteditor.ui.util.getDominantColor
 
 @Composable
 fun MediaCard(
@@ -23,57 +32,62 @@ fun MediaCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column {
-            AsyncImage(
-                model = item.imageUrl,
-                contentDescription = item.name,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(2f / 3f),
-                contentScale = ContentScale.Crop
-            )
+    val context = LocalContext.current
+    var dominantColor by remember(item.imageUrl) { mutableStateOf<Int?>(null) }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
-            ) {
-                Text(
-                    text = item.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+    LaunchedEffect(item.imageUrl) {
+        item.imageUrl?.let { url ->
+            dominantColor = getDominantColor(context, url)
+        }
+    }
+
+    SegmentEditorTheme(
+        dynamicColorsOptions = DynamicColorsOptions(seedColor = dominantColor)
+    ) {
+        Card(
+            modifier = modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = if (dominantColor != null) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                }
+            )
+        ) {
+            Column {
+                AsyncImage(
+                    model = item.imageUrl,
+                    contentDescription = item.name,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(2f / 3f),
+                    contentScale = ContentScale.Crop
                 )
 
-                item.productionYear?.let { year ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                ) {
                     Text(
-                        text = year.toString(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = item.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        minLines = 2,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
-                }
 
-                item.runTimeTicks?.let { ticks ->
-                    val minutes = (ticks / 10000000L / 60).toInt()
-                    Text(
-                        text = "$minutes min",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                item.officialRating?.let { rating ->
-                    Text(
-                        text = rating,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    item.productionYear?.let { year ->
+                        Text(
+                            text = year.toString(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
                 }
             }
         }

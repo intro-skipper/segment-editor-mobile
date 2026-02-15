@@ -33,7 +33,11 @@ fun EpisodeCard(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     ) {
         Row(
             modifier = Modifier
@@ -84,7 +88,8 @@ fun EpisodeCard(
                     text = episode.episode.name ?: "Unknown Episode",
                     style = MaterialTheme.typography.titleSmall,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 // Duration
@@ -109,7 +114,8 @@ fun EpisodeCard(
                 if (episode.isLoadingSegments) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }

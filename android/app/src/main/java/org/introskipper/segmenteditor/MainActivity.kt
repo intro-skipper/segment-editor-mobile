@@ -28,6 +28,8 @@ import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.navigation.AppNavigation
 import org.introskipper.segmenteditor.ui.navigation.Screen
+import org.introskipper.segmenteditor.ui.state.ThemeState
+import org.introskipper.segmenteditor.ui.theme.DynamicColorsOptions
 import org.introskipper.segmenteditor.ui.theme.SegmentEditorTheme
 import org.introskipper.segmenteditor.update.CustomDialog
 import org.introskipper.segmenteditor.update.UpdateManager
@@ -43,6 +45,9 @@ class MainActivity : ComponentActivity(), PictureInPictureDelegate.OnPictureInPi
     @Inject
     lateinit var apiService: JellyfinApiService
 
+    @Inject
+    lateinit var themeState: ThemeState
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -57,7 +62,10 @@ class MainActivity : ComponentActivity(), PictureInPictureDelegate.OnPictureInPi
             var currentTheme by remember { mutableStateOf(securePreferences.getTheme()) }
             val openDialogCustom = remember { mutableStateOf(false) }
 
-            SegmentEditorTheme(appTheme = currentTheme) {
+            SegmentEditorTheme(
+                appTheme = currentTheme,
+                dynamicColorsOptions = DynamicColorsOptions(seedColor = themeState.globalSeedColor)
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
