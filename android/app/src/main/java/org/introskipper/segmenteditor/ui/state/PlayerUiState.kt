@@ -1,5 +1,6 @@
 package org.introskipper.segmenteditor.ui.state
 
+import androidx.compose.ui.layout.ContentScale
 import org.introskipper.segmenteditor.data.model.MediaItem
 import org.introskipper.segmenteditor.data.model.Segment
 
@@ -29,6 +30,7 @@ data class PlayerUiState(
     val showSpeedSelection: Boolean = false,
     val isFullscreen: Boolean = false,
     val isUserLandscape: Boolean = false,
+    val playerContentScale: ContentScale = ContentScale.FillBounds,
     
     // Segment editing (timestamp capture)
     val capturedStartTime: Long? = null,

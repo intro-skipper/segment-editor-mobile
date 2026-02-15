@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Fullscreen
@@ -143,6 +144,23 @@ fun MediaControls(
                     previewLoader = previewLoader,
                     positionMs = scrubPosition,
                     isVisible = true
+                )
+            }
+        }
+
+        AnimatedVisibility(
+            visible = showControls,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopStart).padding(8.dp)
+        ) {
+            IconButton(
+                onClick = { viewModel.nextContentScale() },
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AspectRatio,
+                    contentDescription = "Toggle content scale",
+                    tint = Color.White
                 )
             }
         }

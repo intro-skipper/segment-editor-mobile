@@ -2,6 +2,7 @@ package org.introskipper.segmenteditor.ui.viewmodel
 
 import android.content.Context
 import android.util.Log
+import androidx.compose.ui.layout.ContentScale
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.C
@@ -492,6 +493,17 @@ class PlayerViewModel @Inject constructor(
 
     fun setUserPortrait() {
         _uiState.update { it.copy(isUserLandscape = false) }
+    }
+
+
+    fun nextContentScale() {
+        _uiState.update {
+            when (it.playerContentScale) {
+                ContentScale.FillBounds -> it.copy(playerContentScale = ContentScale.Crop)
+                ContentScale.Crop -> it.copy(playerContentScale = ContentScale.Fit)
+                else -> it.copy(playerContentScale = ContentScale.FillBounds)
+            }
+        }
     }
 
     fun captureStartTime() {

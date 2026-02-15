@@ -9,7 +9,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -363,7 +362,7 @@ fun VideoPlayerWithPreview(
         // Video player using Media3 Compose ContentFrame
         ContentFrame(
             player = exoPlayer,
-            contentScale = ContentScale.Fit,
+            contentScale = uiState.playerContentScale,
             modifier = Modifier.fillMaxSize()
         )
         
