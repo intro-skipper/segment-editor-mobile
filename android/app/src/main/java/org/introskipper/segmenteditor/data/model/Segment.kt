@@ -33,7 +33,7 @@ data class SegmentCreateRequest(
     val itemId: String,
     
     @SerializedName("Type")
-    val type: String,
+    val type: Int,  // API expects integer enum value
     
     @SerializedName("StartTicks")
     val startTicks: Long,

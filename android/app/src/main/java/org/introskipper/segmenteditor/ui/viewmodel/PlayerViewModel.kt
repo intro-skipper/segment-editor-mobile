@@ -614,13 +614,14 @@ class PlayerViewModel @Inject constructor(
     }
 
     /**
-     * Saves a segment (creates new or updates existing)
+     * Helper function to save a single segment (delete-then-create pattern)
+     * Returns the saved segment or null if save failed
      */
-    suspend fun saveSegment(segment: Segment): Result<Segment> {
+    private suspend fun saveSegmentInternal(segment: Segment): Segment? {
         return try {
             val segmentRequest = org.introskipper.segmenteditor.data.model.SegmentCreateRequest(
                 itemId = segment.itemId,
-                type = segment.type,
+                type = org.introskipper.segmenteditor.data.model.SegmentType.stringToApiValue(segment.type),
                 startTicks = segment.startTicks,
                 endTicks = segment.endTicks
             )
@@ -634,64 +635,86 @@ class PlayerViewModel @Inject constructor(
                 )
                 
                 if (deleteResult.isFailure) {
-                    return deleteResult.map { segment } // Return failure
+                    Log.e(TAG, "Failed to delete segment ${segment.type} during update", deleteResult.exceptionOrNull())
+                    return null
                 }
             }
             
             // Create the segment
-            segmentRepository.createSegmentResult(
+            val result = segmentRepository.createSegmentResult(
                 itemId = segment.itemId,
                 segment = segmentRequest
             )
+            
+            result.getOrNull()
         } catch (e: Exception) {
-            Log.e(TAG, "Exception saving segment", e)
-            Result.failure(e)
+            Log.e(TAG, "Exception saving segment ${segment.type}", e)
+            null
+        }
+    }
+
+    /**
+     * Saves a segment (creates new or updates existing)
+     */
+    fun saveSegment(segment: Segment, onComplete: (Result<Segment>) -> Unit) {
+        viewModelScope.launch {
+            val savedSegment = saveSegmentInternal(segment)
+            if (savedSegment != null) {
+                onComplete(Result.success(savedSegment))
+            } else {
+                onComplete(Result.failure(Exception("Failed to save segment")))
+            }
         }
     }
 
     /**
      * Saves all segments with changes (batch save)
      */
-    suspend fun saveAllSegments(
+    fun saveAllSegments(
         segments: List<Segment>,
-        existingSegments: List<Segment>
-    ): Result<List<Segment>> {
-        return try {
-            val results = mutableListOf<Segment>()
-            
-            // Save each segment
-            for (segment in segments) {
-                val result = saveSegment(segment)
-                result.fold(
-                    onSuccess = { savedSegment ->
+        existingSegments: List<Segment>,
+        onComplete: (Result<List<Segment>>) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val results = mutableListOf<Segment>()
+                var failedCount = 0
+                
+                // Save each segment
+                for (segment in segments) {
+                    val savedSegment = saveSegmentInternal(segment)
+                    if (savedSegment != null) {
                         results.add(savedSegment)
-                    },
-                    onFailure = { error ->
-                        Log.e(TAG, "Failed to save segment ${segment.type}", error)
-                        // Continue with other segments even if one fails
+                    } else {
+                        failedCount++
+                        Log.w(TAG, "Failed to save segment ${segment.type} (ID: ${segment.id})")
                     }
-                )
-            }
-            
-            // Delete segments that were removed (exist in existingSegments but not in segments)
-            val segmentsToDelete = existingSegments.filter { existing ->
-                existing.id != null && segments.none { it.id == existing.id }
-            }
-            
-            for (segment in segmentsToDelete) {
-                segment.id?.let { id ->
-                    segmentRepository.deleteSegmentResult(
-                        segmentId = id,
-                        itemId = segment.itemId,
-                        segmentType = segment.type
-                    )
                 }
+                
+                // Delete segments that were removed (exist in existingSegments but not in segments)
+                val segmentsToDelete = existingSegments.filter { existing ->
+                    existing.id != null && segments.none { it.id == existing.id }
+                }
+                
+                for (segment in segmentsToDelete) {
+                    segment.id?.let { id ->
+                        segmentRepository.deleteSegmentResult(
+                            segmentId = id,
+                            itemId = segment.itemId,
+                            segmentType = segment.type
+                        )
+                    }
+                }
+                
+                // Report result with information about failures
+                if (failedCount > 0) {
+                    Log.w(TAG, "Batch save completed with $failedCount failures out of ${segments.size} segments")
+                }
+                onComplete(Result.success(results))
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception in batch save", e)
+                onComplete(Result.failure(e))
             }
-            
-            Result.success(results)
-        } catch (e: Exception) {
-            Log.e(TAG, "Exception in batch save", e)
-            Result.failure(e)
         }
     }
 

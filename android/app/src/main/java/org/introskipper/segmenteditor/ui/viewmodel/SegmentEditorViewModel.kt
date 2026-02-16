@@ -188,7 +188,7 @@ class SegmentEditorViewModel @Inject constructor(
             try {
                 val segmentRequest = SegmentCreateRequest(
                     itemId = current.itemId,
-                    type = current.segmentType,
+                    type = org.introskipper.segmenteditor.data.model.SegmentType.stringToApiValue(current.segmentType),
                     startTicks = TimeUtils.secondsToTicks(current.startTime),
                     endTicks = TimeUtils.secondsToTicks(current.endTime)
                 )
