@@ -141,6 +141,39 @@ fun PlayerScreen(
     // Local editing state for segments (unsaved changes)
     var editingSegments by remember(itemId) { mutableStateOf<List<Segment>>(emptyList()) }
     var segmentHasChanges by remember(itemId) { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
+    // Stable keys for segments (used for tracking changes across segment updates/copies)
+    var segmentKeys by remember(itemId) { mutableStateOf<Map<Segment, String>>(emptyMap()) }
+    var nextClientId by remember(itemId) { mutableIntStateOf(0) }
+    
+    // Helper function to get or create a stable key for a segment
+    fun getSegmentKey(segment: Segment): String {
+        // If segment has an ID, use it
+        if (segment.id != null) {
+            return segment.id
+        }
+        // Check if we already have a key for this segment
+        val existingKey = segmentKeys[segment]
+        if (existingKey != null) {
+            return existingKey
+        }
+        // Create a new client-side key
+        val newKey = "client_${nextClientId}"
+        nextClientId++
+        segmentKeys = segmentKeys + (segment to newKey)
+        return newKey
+    }
+    
+    // Helper function to transfer key from old segment to new segment
+    fun transferSegmentKey(oldSegment: Segment, newSegment: Segment) {
+        val key = getSegmentKey(oldSegment)
+        if (newSegment.id == null) {
+            // Only track unsaved segments
+            segmentKeys = segmentKeys - oldSegment + (newSegment to key)
+        } else {
+            // Saved segment, remove from tracking
+            segmentKeys = segmentKeys - oldSegment
+        }
+    }
     
     // Sync editing segments from server when data changes
     LaunchedEffect(uiState.segments) {
@@ -288,7 +321,9 @@ fun PlayerScreen(
                                     )
                                     editingSegments = editingSegments + newSegment
                                     activeSegmentIndex = editingSegments.size - 1
-                                    segmentHasChanges = segmentHasChanges + (newSegment.toString() to true)
+                                    // Mark new segment as having changes using stable key
+                                    val key = getSegmentKey(newSegment)
+                                    segmentHasChanges = segmentHasChanges + (key to true)
                                 }
                             )
                         }
@@ -337,6 +372,7 @@ fun PlayerScreen(
                 activeSegmentIndex = activeSegmentIndex,
                 editingSegments = editingSegments,
                 segmentHasChanges = segmentHasChanges,
+                segmentKeys = segmentKeys,
                 useDirectPlay = useDirectPlay,
                 onPlayerReady = { player = it },
                 onAudioTracksClick = { showAudioTracks = true },
@@ -346,16 +382,25 @@ fun PlayerScreen(
                         it.id == segment.id || (it.id == null && it === editingSegments[activeSegmentIndex])
                     }
                     if (index != -1) {
+                        val originalSegment = editingSegments[index]
+                        val key = getSegmentKey(originalSegment)
+                        
+                        // Transfer the key to the new segment
+                        transferSegmentKey(originalSegment, segment)
+                        
                         editingSegments = editingSegments.toMutableList().apply {
                             set(index, segment)
                         }
                         // Mark as having changes
-                        val key = segment.id ?: segment.toString()
                         segmentHasChanges = segmentHasChanges + (key to true)
                     }
                 },
                 onSaveSegment = { segment ->
                     // Save individual segment
+                    val segmentIndex = editingSegments.indexOfFirst {
+                        (it.id == null && it === segment) || it.id == segment.id
+                    }
+                    
                     viewModel.saveSegment(segment) { result ->
                         result.fold(
                             onSuccess = { savedSegment ->
@@ -364,13 +409,19 @@ fun PlayerScreen(
                                     (it.id == null && it === segment) || it.id == segment.id
                                 }
                                 if (index != -1) {
+                                    // Get the key before updating the segment
+                                    val key = getSegmentKey(segment)
+                                    
+                                    // Transfer key and update segment
+                                    transferSegmentKey(segment, savedSegment)
+                                    
                                     editingSegments = editingSegments.toMutableList().apply {
                                         set(index, savedSegment)
                                     }
+                                    
+                                    // Clear change flag
+                                    segmentHasChanges = segmentHasChanges - key
                                 }
-                                // Clear change flag
-                                val key = segment.id ?: segment.toString()
-                                segmentHasChanges = segmentHasChanges - key
                                 
                                 // Refresh from server
                                 viewModel.refreshSegments()
@@ -401,12 +452,21 @@ fun PlayerScreen(
                 onDeleteSegment = { segment ->
                     // If segment has no ID (unsaved), remove it directly from the list
                     if (segment.id == null) {
-                        editingSegments = editingSegments.filter { it !== segment }
-                        // Clear change flag
-                        segmentHasChanges = segmentHasChanges - segment.toString()
-                        // Adjust active index if needed
-                        if (activeSegmentIndex >= editingSegments.size) {
-                            activeSegmentIndex = (editingSegments.size - 1).coerceAtLeast(0)
+                        val index = editingSegments.indexOfFirst { it === segment }
+                        if (index != -1) {
+                            // Get the key before removing
+                            val key = getSegmentKey(segment)
+                            
+                            editingSegments = editingSegments.filter { it !== segment }
+                            
+                            // Clear change flag and segment key
+                            segmentHasChanges = segmentHasChanges - key
+                            segmentKeys = segmentKeys - segment
+                            
+                            // Adjust active index if needed
+                            if (activeSegmentIndex >= editingSegments.size) {
+                                activeSegmentIndex = (editingSegments.size - 1).coerceAtLeast(0)
+                            }
                         }
                     } else {
                         // For saved segments, show confirmation dialog
@@ -421,14 +481,15 @@ fun PlayerScreen(
                     player?.currentPosition?.let { positionMs ->
                         val segment = editingSegments.getOrNull(index)
                         if (segment != null) {
+                            val key = getSegmentKey(segment)
                             val updatedSegment = segment.copy(
                                 startTicks = Segment.secondsToTicks(positionMs / 1000.0)
                             )
+                            transferSegmentKey(segment, updatedSegment)
                             editingSegments = editingSegments.toMutableList().apply {
                                 set(index, updatedSegment)
                             }
                             // Mark as having changes
-                            val key = segment.id ?: segment.toString()
                             segmentHasChanges = segmentHasChanges + (key to true)
                         }
                     }
@@ -437,14 +498,15 @@ fun PlayerScreen(
                     player?.currentPosition?.let { positionMs ->
                         val segment = editingSegments.getOrNull(index)
                         if (segment != null) {
+                            val key = getSegmentKey(segment)
                             val updatedSegment = segment.copy(
                                 endTicks = Segment.secondsToTicks(positionMs / 1000.0)
                             )
+                            transferSegmentKey(segment, updatedSegment)
                             editingSegments = editingSegments.toMutableList().apply {
                                 set(index, updatedSegment)
                             }
                             // Mark as having changes
-                            val key = segment.id ?: segment.toString()
                             segmentHasChanges = segmentHasChanges + (key to true)
                         }
                     }
@@ -597,6 +659,7 @@ private fun PlayerContent(
     activeSegmentIndex: Int,
     editingSegments: List<Segment>,
     segmentHasChanges: Map<String, Boolean>,
+    segmentKeys: Map<Segment, String>,
     useDirectPlay: Boolean,
     onPlayerReady: (ExoPlayer) -> Unit,
     onAudioTracksClick: () -> Unit,
@@ -704,7 +767,8 @@ private fun PlayerContent(
                     
                     items(editingSegments.size) { index ->
                         val segment = editingSegments[index]
-                        val segmentKey = segment.id ?: segment.toString()
+                        // Use stable key: ID for saved segments, client key for unsaved
+                        val segmentKey = segment.id ?: (segmentKeys[segment] ?: "client_unknown")
                         val hasChanges = segmentHasChanges[segmentKey] ?: false
                         
                         SegmentSlider(
