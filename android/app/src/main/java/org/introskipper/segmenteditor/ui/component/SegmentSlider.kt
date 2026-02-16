@@ -106,8 +106,13 @@ fun SegmentSlider(
     LaunchedEffect(segment.startTicks, segment.endTicks) {
         localStartSeconds = segment.getStartSeconds()
         localEndSeconds = segment.getEndSeconds()
-        // If we receive an update and were saving, we can clear the saving state
-        isSaving = false
+    }
+    
+    // Clear saving state when changes are saved (hasUnsavedChanges becomes false)
+    LaunchedEffect(hasUnsavedChanges) {
+        if (!hasUnsavedChanges) {
+            isSaving = false
+        }
     }
     
     // Commit changes when dragging ends
