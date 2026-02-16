@@ -48,7 +48,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -64,7 +63,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.ui.component.PlaybackSpeedDialog
@@ -90,7 +88,6 @@ fun PlayerScreen(
     val uiState by viewModel.uiState.collectAsState()
     val events by viewModel.events.collectAsState()
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     
     // Determine if we should use direct play (no HLS transcoding)
@@ -359,58 +356,46 @@ fun PlayerScreen(
                 },
                 onSaveSegment = { segment ->
                     // Save individual segment
-                    coroutineScope.launch {
-                        try {
-                            val result = viewModel.saveSegment(segment)
-                            
-                            result.fold(
-                                onSuccess = { savedSegment ->
-                                    // Update the local segment with the server ID
-                                    val index = editingSegments.indexOfFirst {
-                                        (it.id == null && it === segment) || it.id == segment.id
-                                    }
-                                    if (index != -1) {
-                                        editingSegments = editingSegments.toMutableList().apply {
-                                            set(index, savedSegment)
-                                        }
-                                    }
-                                    // Clear change flag
-                                    val key = segment.id ?: segment.toString()
-                                    segmentHasChanges = segmentHasChanges - key
-                                    
-                                    // Refresh from server
-                                    viewModel.refreshSegments()
-                                },
-                                onFailure = { error ->
-                                    Log.e("PlayerScreen", "Failed to save segment", error)
+                    viewModel.saveSegment(segment) { result ->
+                        result.fold(
+                            onSuccess = { savedSegment ->
+                                // Update the local segment with the server ID
+                                val index = editingSegments.indexOfFirst {
+                                    (it.id == null && it === segment) || it.id == segment.id
                                 }
-                            )
-                        } catch (e: Exception) {
-                            Log.e("PlayerScreen", "Exception saving segment", e)
-                        }
+                                if (index != -1) {
+                                    editingSegments = editingSegments.toMutableList().apply {
+                                        set(index, savedSegment)
+                                    }
+                                }
+                                // Clear change flag
+                                val key = segment.id ?: segment.toString()
+                                segmentHasChanges = segmentHasChanges - key
+                                
+                                // Refresh from server
+                                viewModel.refreshSegments()
+                            },
+                            onFailure = { error ->
+                                Log.e("PlayerScreen", "Failed to save segment", error)
+                            }
+                        )
                     }
                 },
                 onSaveAll = {
                     // Save all segments with changes
-                    coroutineScope.launch {
-                        try {
-                            val result = viewModel.saveAllSegments(editingSegments, uiState.segments)
-                            
-                            result.fold(
-                                onSuccess = { savedSegments ->
-                                    // Clear all change flags
-                                    segmentHasChanges = emptyMap()
-                                    
-                                    // Refresh from server
-                                    viewModel.refreshSegments()
-                                },
-                                onFailure = { error ->
-                                    Log.e("PlayerScreen", "Failed to save all segments", error)
-                                }
-                            )
-                        } catch (e: Exception) {
-                            Log.e("PlayerScreen", "Exception saving all segments", e)
-                        }
+                    viewModel.saveAllSegments(editingSegments, uiState.segments) { result ->
+                        result.fold(
+                            onSuccess = { savedSegments ->
+                                // Clear all change flags
+                                segmentHasChanges = emptyMap()
+                                
+                                // Refresh from server
+                                viewModel.refreshSegments()
+                            },
+                            onFailure = { error ->
+                                Log.e("PlayerScreen", "Failed to save all segments", error)
+                            }
+                        )
                     }
                 },
                 onDeleteSegment = { segment ->
