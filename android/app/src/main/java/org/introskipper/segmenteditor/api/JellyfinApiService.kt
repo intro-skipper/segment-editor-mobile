@@ -1,6 +1,7 @@
 package org.introskipper.segmenteditor.api
 
 import android.net.Uri
+import androidx.core.net.toUri
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.introskipper.segmenteditor.BuildConfig
@@ -19,7 +20,6 @@ import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
-import androidx.core.net.toUri
 
 class JellyfinApiService {
     private var api: JellyfinApi? = null

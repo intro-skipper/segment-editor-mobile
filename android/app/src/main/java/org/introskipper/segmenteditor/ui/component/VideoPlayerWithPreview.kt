@@ -7,9 +7,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -19,12 +23,14 @@ import androidx.media3.common.C.TRACK_TYPE_VIDEO
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
+import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+import androidx.media3.ui.SubtitleView
 import androidx.media3.ui.compose.ContentFrame
 import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory
 import kotlinx.coroutines.CoroutineScope
@@ -41,7 +47,7 @@ private const val MIN_POSITION_TO_RESTORE_MS = 1000L
 /**
  * Enhanced VideoPlayer with scrub preview support using Media3 Compose
  * Shows thumbnail previews when dragging the video timeline
- * Uses ContentFrame from media3-ui-compose instead of AndroidView
+ * Uses ContentFrame for video rendering and SubtitleView via AndroidView for subtitles
  */
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
@@ -99,6 +105,9 @@ fun VideoPlayerWithPreview(
             .setMediaSourceFactory(mediaFactory)
             .build()
     }
+
+    // State to hold current subtitle cues
+    var currentCues by remember { mutableStateOf(exoPlayer.currentCues.cues) }
     
     // Helper function to load media and restore playback state
     val loadMedia = { logMessage: String ->
@@ -277,6 +286,10 @@ fun VideoPlayerWithPreview(
         }
         
         val playbackListener = object : Player.Listener {
+            override fun onCues(cueGroup: CueGroup) {
+                currentCues = cueGroup.cues
+            }
+
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 onPlaybackStateChanged(
                     isPlaying,
@@ -369,6 +382,20 @@ fun VideoPlayerWithPreview(
         ContentFrame(
             player = exoPlayer,
             contentScale = uiState.playerContentScale,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Subtitles overlay using SubtitleView
+        AndroidView(
+            factory = { ctx ->
+                SubtitleView(ctx).apply {
+                    setUserDefaultStyle()
+                    setUserDefaultTextSize()
+                }
+            },
+            update = { subtitleView ->
+                subtitleView.setCues(currentCues)
+            },
             modifier = Modifier.fillMaxSize()
         )
         

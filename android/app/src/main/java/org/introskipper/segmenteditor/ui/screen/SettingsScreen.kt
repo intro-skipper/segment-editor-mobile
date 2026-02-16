@@ -29,7 +29,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.component.settings.ClickableSettingItem
 import org.introskipper.segmenteditor.ui.component.settings.DropdownSettingsItem
-import org.introskipper.segmenteditor.ui.component.settings.RadioGroupSettingItem
 import org.introskipper.segmenteditor.ui.component.settings.SettingsSection
 import org.introskipper.segmenteditor.ui.component.settings.SwitchSettingItem
 import org.introskipper.segmenteditor.ui.state.AppTheme
