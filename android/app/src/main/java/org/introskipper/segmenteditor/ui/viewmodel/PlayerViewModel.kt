@@ -614,41 +614,55 @@ class PlayerViewModel @Inject constructor(
     }
 
     /**
+     * Helper function to save a single segment (delete-then-create pattern)
+     * Returns the saved segment or null if save failed
+     */
+    private suspend fun saveSegmentInternal(segment: Segment): Segment? {
+        return try {
+            val segmentRequest = org.introskipper.segmenteditor.data.model.SegmentCreateRequest(
+                itemId = segment.itemId,
+                type = segment.type,
+                startTicks = segment.startTicks,
+                endTicks = segment.endTicks
+            )
+            
+            // If segment has an ID, delete it first then create new
+            if (segment.id != null) {
+                val deleteResult = segmentRepository.deleteSegmentResult(
+                    segmentId = segment.id,
+                    itemId = segment.itemId,
+                    segmentType = segment.type
+                )
+                
+                if (deleteResult.isFailure) {
+                    Log.e(TAG, "Failed to delete segment ${segment.type} during update", deleteResult.exceptionOrNull())
+                    return null
+                }
+            }
+            
+            // Create the segment
+            val result = segmentRepository.createSegmentResult(
+                itemId = segment.itemId,
+                segment = segmentRequest
+            )
+            
+            result.getOrNull()
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception saving segment ${segment.type}", e)
+            null
+        }
+    }
+
+    /**
      * Saves a segment (creates new or updates existing)
      */
     fun saveSegment(segment: Segment, onComplete: (Result<Segment>) -> Unit) {
         viewModelScope.launch {
-            try {
-                val segmentRequest = org.introskipper.segmenteditor.data.model.SegmentCreateRequest(
-                    itemId = segment.itemId,
-                    type = segment.type,
-                    startTicks = segment.startTicks,
-                    endTicks = segment.endTicks
-                )
-                
-                // If segment has an ID, delete it first then create new
-                if (segment.id != null) {
-                    val deleteResult = segmentRepository.deleteSegmentResult(
-                        segmentId = segment.id,
-                        itemId = segment.itemId,
-                        segmentType = segment.type
-                    )
-                    
-                    if (deleteResult.isFailure) {
-                        onComplete(deleteResult.map { segment }) // Return failure
-                        return@launch
-                    }
-                }
-                
-                // Create the segment
-                val result = segmentRepository.createSegmentResult(
-                    itemId = segment.itemId,
-                    segment = segmentRequest
-                )
-                onComplete(result)
-            } catch (e: Exception) {
-                Log.e(TAG, "Exception saving segment", e)
-                onComplete(Result.failure(e))
+            val savedSegment = saveSegmentInternal(segment)
+            if (savedSegment != null) {
+                onComplete(Result.success(savedSegment))
+            } else {
+                onComplete(Result.failure(Exception("Failed to save segment")))
             }
         }
     }
@@ -667,42 +681,10 @@ class PlayerViewModel @Inject constructor(
                 
                 // Save each segment
                 for (segment in segments) {
-                    val segmentRequest = org.introskipper.segmenteditor.data.model.SegmentCreateRequest(
-                        itemId = segment.itemId,
-                        type = segment.type,
-                        startTicks = segment.startTicks,
-                        endTicks = segment.endTicks
-                    )
-                    
-                    // If segment has an ID, delete it first then create new
-                    if (segment.id != null) {
-                        val deleteResult = segmentRepository.deleteSegmentResult(
-                            segmentId = segment.id,
-                            itemId = segment.itemId,
-                            segmentType = segment.type
-                        )
-                        
-                        if (deleteResult.isFailure) {
-                            Log.e(TAG, "Failed to delete segment ${segment.type} during update", deleteResult.exceptionOrNull())
-                            continue
-                        }
+                    val savedSegment = saveSegmentInternal(segment)
+                    if (savedSegment != null) {
+                        results.add(savedSegment)
                     }
-                    
-                    // Create the segment
-                    val result = segmentRepository.createSegmentResult(
-                        itemId = segment.itemId,
-                        segment = segmentRequest
-                    )
-                    
-                    result.fold(
-                        onSuccess = { savedSegment ->
-                            results.add(savedSegment)
-                        },
-                        onFailure = { error ->
-                            Log.e(TAG, "Failed to save segment ${segment.type}", error)
-                            // Continue with other segments even if one fails
-                        }
-                    )
                 }
                 
                 // Delete segments that were removed (exist in existingSegments but not in segments)
