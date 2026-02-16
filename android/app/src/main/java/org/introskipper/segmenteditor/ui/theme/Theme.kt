@@ -10,7 +10,9 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
@@ -37,9 +39,11 @@ data class DynamicColorsOptions(
     val isDark: Boolean? = null
 )
 
+val LocalAppTheme = compositionLocalOf { AppTheme.SYSTEM }
+
 @Composable
 fun SegmentEditorTheme(
-    appTheme: AppTheme = AppTheme.SYSTEM,
+    appTheme: AppTheme = LocalAppTheme.current,
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     dynamicColorsOptions: DynamicColorsOptions = DynamicColorsOptions(),
@@ -149,9 +153,11 @@ fun SegmentEditorTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    CompositionLocalProvider(LocalAppTheme provides appTheme) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }

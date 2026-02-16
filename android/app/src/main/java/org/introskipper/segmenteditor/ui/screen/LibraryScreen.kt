@@ -29,13 +29,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,6 +53,8 @@ import coil.compose.AsyncImage
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import org.introskipper.segmenteditor.R
+import org.introskipper.segmenteditor.ui.state.ThemeState
+import org.introskipper.segmenteditor.ui.util.getDominantColor
 import org.introskipper.segmenteditor.ui.viewmodel.Library
 import org.introskipper.segmenteditor.ui.viewmodel.LibraryUiState
 import org.introskipper.segmenteditor.ui.viewmodel.LibraryViewModel
@@ -57,7 +64,8 @@ import org.introskipper.segmenteditor.ui.viewmodel.LibraryViewModel
 fun LibraryScreen(
     onLibraryClick: (String, String?) -> Unit,
     onSettingsClick: () -> Unit = {},
-    viewModel: LibraryViewModel = hiltViewModel()
+    viewModel: LibraryViewModel = hiltViewModel(),
+    themeState: ThemeState
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -127,8 +135,13 @@ fun LibraryScreen(
                             val library = state.libraries[item]
                             LibraryCard(
                                 library = library,
-                                onClick = { onLibraryClick(library.id, library.collectionType) },
-                                getPrimaryImageUrl = { itemId, imageTag -> viewModel.getPrimaryImageUrl(itemId, imageTag) }
+                                onClick = { 
+                                    onLibraryClick(library.id, library.collectionType) 
+                                },
+                                getPrimaryImageUrl = { itemId, imageTag -> viewModel.getPrimaryImageUrl(itemId, imageTag) },
+                                onColorSampled = { color ->
+                                    themeState.globalSeedColor = color
+                                }
                             )
                         }
                     }
@@ -163,12 +176,21 @@ private fun LibraryCard(
     library: Library,
     onClick: () -> Unit,
     getPrimaryImageUrl: (String, String) -> String,
+    onColorSampled: (Int?) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val primaryImageUrl = if (library.primaryImageTag != null) {
         getPrimaryImageUrl(library.id, library.primaryImageTag)
     } else {
         null
+    }
+
+    LaunchedEffect(primaryImageUrl) {
+        if (primaryImageUrl != null) {
+            val color = getDominantColor(context, primaryImageUrl)
+            onColorSampled(color)
+        }
     }
     
     Card(

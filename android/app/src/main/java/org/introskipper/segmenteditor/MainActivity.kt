@@ -74,6 +74,7 @@ class MainActivity : ComponentActivity(), PictureInPictureDelegate.OnPictureInPi
                         startDestination = startDestination,
                         securePreferences = securePreferences,
                         apiService = apiService,
+                        themeState = themeState,
                         onThemeChanged = { theme ->
                             currentTheme = theme
                         }

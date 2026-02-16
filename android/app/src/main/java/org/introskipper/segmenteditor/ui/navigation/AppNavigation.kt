@@ -23,6 +23,7 @@ import org.introskipper.segmenteditor.ui.screen.SeriesScreen
 import org.introskipper.segmenteditor.ui.screen.ServerDiscoveryScreen
 import org.introskipper.segmenteditor.ui.screen.ServerEntryScreen
 import org.introskipper.segmenteditor.ui.screen.SettingsScreen
+import org.introskipper.segmenteditor.ui.state.ThemeState
 import org.introskipper.segmenteditor.ui.viewmodel.AuthViewModel
 import org.introskipper.segmenteditor.ui.viewmodel.AuthViewModelFactory
 import org.introskipper.segmenteditor.ui.viewmodel.ConnectionViewModel
@@ -33,6 +34,7 @@ fun AppNavigation(
     startDestination: String,
     securePreferences: SecurePreferences,
     apiService: JellyfinApiService,
+    themeState: ThemeState,
     onThemeChanged: (org.introskipper.segmenteditor.ui.state.AppTheme) -> Unit = {}
 ) {
     val navController = rememberNavController()
@@ -93,7 +95,8 @@ fun AppNavigation(
                 },
                 onSettingsClick = {
                     navController.navigate(Screen.Settings.route)
-                }
+                },
+                themeState = themeState
             )
         }
         
@@ -104,7 +107,8 @@ fun AppNavigation(
                 },
                 onSettingsClick = {
                     navController.navigate(Screen.Settings.route)
-                }
+                },
+                themeState = themeState
             )
         }
         
