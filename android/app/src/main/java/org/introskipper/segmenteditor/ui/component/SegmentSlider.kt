@@ -90,6 +90,9 @@ fun SegmentSlider(
     var isDraggingStart by remember { mutableStateOf(false) }
     var isDraggingEnd by remember { mutableStateOf(false) }
     
+    // Internal loading state for individual save
+    var isSaving by remember { mutableStateOf(false) }
+    
     val segmentColor = getSegmentColor(segment.type)
     val duration = localEndSeconds - localStartSeconds
     val minGap = 0.5 // Minimum gap between start and end in seconds
@@ -103,6 +106,8 @@ fun SegmentSlider(
     LaunchedEffect(segment.startTicks, segment.endTicks) {
         localStartSeconds = segment.getStartSeconds()
         localEndSeconds = segment.getEndSeconds()
+        // If we receive an update and were saving, we can clear the saving state
+        isSaving = false
     }
     
     // Commit changes when dragging ends
@@ -197,15 +202,19 @@ fun SegmentSlider(
                     
                     // Save button (if callback provided)
                     if (onSave != null) {
+                        val canSave = hasUnsavedChanges && !isSaving
                         IconButton(
-                            onClick = onSave,
+                            onClick = {
+                                isSaving = true
+                                onSave()
+                            },
                             modifier = Modifier.size(36.dp),
-                            enabled = hasUnsavedChanges
+                            enabled = canSave
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Save,
                                 contentDescription = "Save segment",
-                                tint = if (hasUnsavedChanges) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                tint = if (canSave) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                 modifier = Modifier.size(18.dp)
                             )
                         }

@@ -764,8 +764,8 @@ private fun PlayerContent(
                     }
                 }
                 
-                // Save All button - only show if there are unsaved changes
-                if (segmentHasChanges.values.any { it }) {
+                // Save All button - only show if there are more than one unsaved changes
+                if (segmentHasChanges.values.count { it } > 1) {
                     item {
                         Button(
                             onClick = onSaveAll,
