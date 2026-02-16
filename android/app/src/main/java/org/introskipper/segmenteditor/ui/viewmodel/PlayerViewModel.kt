@@ -678,12 +678,16 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val results = mutableListOf<Segment>()
+                var failedCount = 0
                 
                 // Save each segment
                 for (segment in segments) {
                     val savedSegment = saveSegmentInternal(segment)
                     if (savedSegment != null) {
                         results.add(savedSegment)
+                    } else {
+                        failedCount++
+                        Log.w(TAG, "Failed to save segment ${segment.type} (ID: ${segment.id})")
                     }
                 }
                 
@@ -702,6 +706,10 @@ class PlayerViewModel @Inject constructor(
                     }
                 }
                 
+                // Report result with information about failures
+                if (failedCount > 0) {
+                    Log.w(TAG, "Batch save completed with $failedCount failures out of ${segments.size} segments")
+                }
                 onComplete(Result.success(results))
             } catch (e: Exception) {
                 Log.e(TAG, "Exception in batch save", e)
