@@ -621,7 +621,7 @@ class PlayerViewModel @Inject constructor(
         return try {
             val segmentRequest = org.introskipper.segmenteditor.data.model.SegmentCreateRequest(
                 itemId = segment.itemId,
-                type = segment.type,
+                type = org.introskipper.segmenteditor.data.model.SegmentType.stringToApiValue(segment.type),
                 startTicks = segment.startTicks,
                 endTicks = segment.endTicks
             )

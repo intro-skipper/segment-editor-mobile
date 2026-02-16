@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Preview
@@ -60,7 +61,8 @@ private fun SegmentTypeChip(
         SegmentType.OUTRO -> Icons.Default.Stop
         SegmentType.RECAP -> Icons.Default.Replay
         SegmentType.PREVIEW -> Icons.Default.Preview
-        SegmentType.CREDITS -> Icons.Default.Movie
+        SegmentType.COMMERCIAL -> Icons.Default.Movie
+        SegmentType.UNKNOWN -> Icons.Default.Error
     }
     
     val colors = if (isSelected) {
@@ -70,7 +72,8 @@ private fun SegmentTypeChip(
                 SegmentType.OUTRO -> MaterialTheme.colorScheme.secondaryContainer
                 SegmentType.RECAP -> MaterialTheme.colorScheme.tertiaryContainer
                 SegmentType.PREVIEW -> MaterialTheme.colorScheme.surfaceVariant
-                SegmentType.CREDITS -> MaterialTheme.colorScheme.errorContainer
+                SegmentType.COMMERCIAL -> MaterialTheme.colorScheme.errorContainer
+                SegmentType.UNKNOWN -> MaterialTheme.colorScheme.outlineVariant
             }
         )
     } else {
