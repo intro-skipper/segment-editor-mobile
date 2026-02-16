@@ -456,7 +456,7 @@ private fun SegmentEditorSlider(
                     .width(handleWidth)
                     .fillMaxHeight()
                     .background(segmentColor)
-                    .pointerInput(Unit) {
+                    .pointerInput(duration, startTime, endTime) {
                         detectDragGestures(
                             onDrag = { change, dragAmount ->
                                 change.consume()
@@ -483,7 +483,7 @@ private fun SegmentEditorSlider(
                     .width(handleWidth)
                     .fillMaxHeight()
                     .background(segmentColor)
-                    .pointerInput(Unit) {
+                    .pointerInput(duration, startTime, endTime) {
                         detectDragGestures(
                             onDrag = { change, dragAmount ->
                                 change.consume()
