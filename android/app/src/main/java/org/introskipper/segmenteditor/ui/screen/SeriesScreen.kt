@@ -25,6 +25,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -89,7 +90,11 @@ fun SeriesScreen(
                     title = { Text(stringResource(R.string.series_title)) },
                     navigationIcon = {
                         IconButton(onClick = { navController.navigateUp() }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = stringResource(R.string.back),
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
                         }
                     },
                     actions = {
@@ -98,10 +103,15 @@ fun SeriesScreen(
                         }) {
                             Icon(
                                 imageVector = Icons.Default.Settings,
-                                contentDescription = stringResource(R.string.home_settings)
+                                contentDescription = stringResource(R.string.home_settings),
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
-                    }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface
+                    )
                 )
             },
             containerColor = MaterialTheme.colorScheme.surface
@@ -200,7 +210,8 @@ fun SeriesScreen(
                                 ) {
                                     Text(
                                         text = "No episodes found",
-                                        style = MaterialTheme.typography.bodyLarge
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                 }
                             } else if (sortedSeasons.size > 1) {
@@ -208,7 +219,9 @@ fun SeriesScreen(
                                 ScrollableTabRow(
                                     selectedTabIndex = selectedSeasonIndex,
                                     modifier = Modifier.fillMaxWidth(),
-                                    edgePadding = 8.dp
+                                    edgePadding = 8.dp,
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    contentColor = MaterialTheme.colorScheme.primary
                                 ) {
                                     sortedSeasons.forEachIndexed { index, seasonNumber ->
                                         Tab(
@@ -217,7 +230,11 @@ fun SeriesScreen(
                                             text = { 
                                                 Text(
                                                     text = state.seasonNames[seasonNumber] ?: "Season $seasonNumber",
-                                                    style = MaterialTheme.typography.titleMedium
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = if (selectedSeasonIndex == index) 
+                                                        MaterialTheme.colorScheme.primary 
+                                                    else 
+                                                        MaterialTheme.colorScheme.onSurfaceVariant
                                                 ) 
                                             }
                                         )

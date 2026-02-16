@@ -22,7 +22,14 @@ suspend fun getDominantColor(context: Context, imageUrl: String): Int? {
             val bitmap = (result as BitmapDrawable).bitmap
 
             val palette = Palette.from(bitmap).generate()
-            palette.getDominantColor(0)
+
+            // Prefer vibrant colors for a more lively theme
+            val vibrant = palette.vibrantSwatch?.rgb
+            val darkVibrant = palette.darkVibrantSwatch?.rgb
+            val lightVibrant = palette.lightVibrantSwatch?.rgb
+            val dominant = palette.dominantSwatch?.rgb
+
+            vibrant ?: darkVibrant ?: lightVibrant ?: dominant
         } catch (e: Exception) {
             null
         }

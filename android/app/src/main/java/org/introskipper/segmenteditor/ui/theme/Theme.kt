@@ -3,6 +3,7 @@ package org.introskipper.segmenteditor.ui.theme
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -11,6 +12,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -53,51 +55,76 @@ fun SegmentEditorTheme(
     
     val colorScheme = when {
         dynamicColorsOptions.seedColor != null -> {
-            val color = Color(dynamicColorsOptions.seedColor)
+            val seedColor = Color(dynamicColorsOptions.seedColor)
             val isDark = dynamicColorsOptions.isDark ?: darkTheme
-
-            // Calculate a surface color based on the seed
-            // For dark: very dark version of the color. For light: very light version.
-            val surfaceColor = if (isDark) {
-                // Mix with black for dark surface
-                Color.Black.copy(alpha = 0.9f).compositeOver(color.copy(alpha = 0.1f))
-            } else {
-                // Mix with white for light surface
-                Color.White.copy(alpha = 0.9f).compositeOver(color.copy(alpha = 0.1f))
-            }
-
-            val onSurfaceColor = if (surfaceColor.luminance() > 0.5f) Color.Black else Color.White
-            val onColor = if (color.luminance() > 0.5f) Color.Black else Color.White
             
             if (isDark) {
+                val surfaceBase = Color(0xFF121212)
+                val surface = seedColor.copy(alpha = 0.1f).compositeOver(surfaceBase)
+                val onSurface = if (surface.luminance() > 0.5f) Color.Black else Color.White
+                
+                // Ensure primary contrasts with surface
+                val primary = if (seedColor.luminance() < 0.4f) {
+                    seedColor.copy(alpha = 0.6f).compositeOver(Color.White)
+                } else {
+                    seedColor
+                }
+                val onPrimary = if (primary.luminance() > 0.5f) Color.Black else Color.White
+                
+                val secondaryContainer = seedColor.copy(alpha = 0.25f).compositeOver(surfaceBase)
+                val onSecondaryContainer = if (secondaryContainer.luminance() > 0.5f) Color.Black else Color.White
+                
+                val surfaceVariant = seedColor.copy(alpha = 0.18f).compositeOver(surfaceBase)
+                val onSurfaceVariant = if (surfaceVariant.luminance() > 0.5f) Color.Black.copy(alpha = 0.7f) else Color.White.copy(alpha = 0.7f)
+
                 darkColorScheme(
-                    primary = color,
-                    onPrimary = onColor,
-                    primaryContainer = color,
-                    onPrimaryContainer = onColor,
-                    secondaryContainer = color.copy(alpha = 0.2f),
-                    onSecondaryContainer = onSurfaceColor,
-                    surface = surfaceColor,
-                    onSurface = onSurfaceColor,
-                    background = surfaceColor,
-                    onBackground = onSurfaceColor,
-                    surfaceVariant = surfaceColor.copy(alpha = 0.8f).compositeOver(onSurfaceColor.copy(alpha = 0.1f)),
-                    onSurfaceVariant = onSurfaceColor.copy(alpha = 0.7f)
+                    primary = primary,
+                    onPrimary = onPrimary,
+                    primaryContainer = primary,
+                    onPrimaryContainer = onPrimary,
+                    secondaryContainer = secondaryContainer,
+                    onSecondaryContainer = onSecondaryContainer,
+                    surface = surface,
+                    onSurface = onSurface,
+                    background = surface,
+                    onBackground = onSurface,
+                    surfaceVariant = surfaceVariant,
+                    onSurfaceVariant = onSurfaceVariant,
+                    outline = onSurface.copy(alpha = 0.12f)
                 )
             } else {
+                val surfaceBase = Color(0xFFFEFEFE)
+                val surface = seedColor.copy(alpha = 0.05f).compositeOver(surfaceBase)
+                val onSurface = if (surface.luminance() > 0.5f) Color.Black else Color.White
+                
+                // Ensure primary contrasts with surface
+                val primary = if (seedColor.luminance() > 0.6f) {
+                    seedColor.copy(alpha = 0.6f).compositeOver(Color.Black)
+                } else {
+                    seedColor
+                }
+                val onPrimary = if (primary.luminance() > 0.5f) Color.Black else Color.White
+                
+                val secondaryContainer = seedColor.copy(alpha = 0.15f).compositeOver(surfaceBase)
+                val onSecondaryContainer = if (secondaryContainer.luminance() > 0.5f) Color.Black else Color.White
+                
+                val surfaceVariant = seedColor.copy(alpha = 0.12f).compositeOver(surfaceBase)
+                val onSurfaceVariant = if (surfaceVariant.luminance() > 0.5f) Color.Black.copy(alpha = 0.7f) else Color.White.copy(alpha = 0.7f)
+
                 lightColorScheme(
-                    primary = color,
-                    onPrimary = onColor,
-                    primaryContainer = color,
-                    onPrimaryContainer = onColor,
-                    secondaryContainer = color.copy(alpha = 0.2f),
-                    onSecondaryContainer = onSurfaceColor,
-                    surface = surfaceColor,
-                    onSurface = onSurfaceColor,
-                    background = surfaceColor,
-                    onBackground = onSurfaceColor,
-                    surfaceVariant = surfaceColor.copy(alpha = 0.8f).compositeOver(onSurfaceColor.copy(alpha = 0.1f)),
-                    onSurfaceVariant = onSurfaceColor.copy(alpha = 0.7f)
+                    primary = primary,
+                    onPrimary = onPrimary,
+                    primaryContainer = primary,
+                    onPrimaryContainer = onPrimary,
+                    secondaryContainer = secondaryContainer,
+                    onSecondaryContainer = onSecondaryContainer,
+                    surface = surface,
+                    onSurface = onSurface,
+                    background = surface,
+                    onBackground = onSurface,
+                    surfaceVariant = surfaceVariant,
+                    onSurfaceVariant = onSurfaceVariant,
+                    outline = onSurface.copy(alpha = 0.12f)
                 )
             }
         }
@@ -116,7 +143,6 @@ fun SegmentEditorTheme(
                 window.statusBarColor = colorScheme.primary.toArgb()
                 WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
             } else {
-                // When using dynamic colors, use surface color for status bar to blend in
                 window.statusBarColor = colorScheme.surface.toArgb()
                 WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = colorScheme.surface.luminance() > 0.5f
             }
@@ -127,17 +153,5 @@ fun SegmentEditorTheme(
         colorScheme = colorScheme,
         typography = Typography,
         content = content
-    )
-}
-
-// Helper to composite colors since it's missing in basic Color class without extension
-private fun Color.compositeOver(background: Color): Color {
-    val alpha = this.alpha
-    val invAlpha = 1.0f - alpha
-    return Color(
-        red = (this.red * alpha) + (background.red * invAlpha),
-        green = (this.green * alpha) + (background.green * invAlpha),
-        blue = (this.blue * alpha) + (background.blue * invAlpha),
-        alpha = 1.0f
     )
 }
