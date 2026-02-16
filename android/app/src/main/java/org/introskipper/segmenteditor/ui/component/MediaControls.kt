@@ -107,7 +107,7 @@ fun MediaControls(
     // Auto-hide controls after 3 seconds of playback
     LaunchedEffect(showControls, isPlaying) {
         if (showControls && isPlaying) {
-            delay(3000)
+            delay(5000)
             showControls = false
         }
     }
