@@ -23,7 +23,7 @@ interface JellyfinApi {
     
     // ========== Segment Endpoints ==========
     
-    @GET("MediaSegmentsApi/{itemId}")
+    @GET("MediaSegments/{itemId}")
     suspend fun getSegments(
         @Path("itemId") itemId: String,
         @Header("X-Emby-Token") apiKey: String
