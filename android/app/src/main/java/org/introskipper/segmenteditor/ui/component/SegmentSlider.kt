@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
@@ -40,10 +41,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -56,7 +57,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.TimeUtils
-import org.introskipper.segmenteditor.ui.component.segment.TimeInputField
 import org.introskipper.segmenteditor.ui.theme.getSegmentColor
 import org.introskipper.segmenteditor.ui.validation.SegmentValidator
 import kotlin.math.max
@@ -72,7 +72,7 @@ fun SegmentSlider(
     isActive: Boolean,
     runtimeSeconds: Double,
     onUpdate: (Segment) -> Unit,
-    onDelete: () -> Unit,
+    onDelete: (Segment) -> Unit,
     onSeekTo: (Double) -> Unit,
     onSetActive: () -> Unit,
     onSetStartFromPlayer: (() -> Unit)? = null,
@@ -227,7 +227,7 @@ fun SegmentSlider(
                     
                     // Delete button
                     IconButton(
-                        onClick = onDelete,
+                        onClick = { onDelete(segment) },
                         modifier = Modifier.size(36.dp)
                     ) {
                         Icon(
@@ -276,8 +276,12 @@ fun SegmentSlider(
                     label = "Start:",
                     timeSeconds = localStartSeconds,
                     onTimeChanged = { newTime ->
-                        isDraggingEnd = true
+                        isDraggingStart = true
                         localStartSeconds = newTime.coerceIn(0.0, localEndSeconds - minGap)
+                        // Trigger update after direct input
+                        val newStartTicks = Segment.secondsToTicks(localStartSeconds)
+                        onUpdate(segment.copy(startTicks = newStartTicks))
+                        isDraggingStart = false
                     },
                     keyboardActions = KeyboardActions(
                         onDone = {
@@ -298,6 +302,10 @@ fun SegmentSlider(
                     onTimeChanged = { newTime ->
                         isDraggingEnd = true
                         localEndSeconds = newTime.coerceIn(localStartSeconds + minGap, runtimeSeconds)
+                        // Trigger update after direct input
+                        val newEndTicks = Segment.secondsToTicks(localEndSeconds)
+                        onUpdate(segment.copy(endTicks = newEndTicks))
+                        isDraggingEnd = false
                     },
                     keyboardActions = KeyboardActions(
                         onDone = {
@@ -347,86 +355,94 @@ private fun SliderTrack(
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
-    val trackHeight = 40.dp
-    val handleWidth = 14.dp
+    val trackHeight = 48.dp // Increased track height to match upstream project
+    val handleWidth = 40.dp
     
+    // Wrap callbacks and runtimeSeconds in rememberUpdatedState so pointerInput detects changes
+    val currentOnStartDrag by rememberUpdatedState(onStartDrag)
+    val currentOnEndDrag by rememberUpdatedState(onEndDrag)
+    val currentOnDragEnd by rememberUpdatedState(onDragEnd)
+    val currentRuntimeSeconds by rememberUpdatedState(runtimeSeconds)
+
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
             .height(trackHeight)
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
     ) {
-        val maxWidthPx = with(density) { maxWidth.toPx() }
+        val widthPx = constraints.maxWidth.toFloat()
         
-        // Segment range - drawn using Canvas for precise positioning
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val width = size.width
-            val height = size.height
-            
-            // Draw segment range
-            val startX = startPercent * width
-            val endX = endPercent * width
-            val segmentWidth = max(endX - startX, 2f)
-            
-            drawRect(
-                color = segmentColor.copy(alpha = 0.7f),
-                topLeft = Offset(startX, 0f),
-                size = Size(segmentWidth, height)
-            )
+        // Track background
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+        ) {
+            // Segment range - drawn using Canvas
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val startX = startPercent * size.width
+                val endX = endPercent * size.width
+                drawRect(
+                    color = segmentColor.copy(alpha = 0.7f),
+                    topLeft = Offset(startX, 0f),
+                    size = Size(max(endX - startX, 2f), size.height)
+                )
+            }
         }
         
         // Start handle
         Box(
             modifier = Modifier
-                .offset(x = ((maxWidth * startPercent) - (handleWidth / 2)).coerceAtLeast(0.dp))
+                .offset(x = (maxWidth * startPercent) - (handleWidth / 2))
                 .width(handleWidth)
                 .fillMaxHeight()
-                .background(segmentColor)
                 .pointerInput(Unit) {
                     detectDragGestures(
-                        onDragEnd = { onDragEnd() },
+                        onDragEnd = { currentOnDragEnd() },
+                        onDragCancel = { currentOnDragEnd() },
                         onDrag = { change, dragAmount ->
                             change.consume()
-                            val dragDelta = (dragAmount.x / maxWidthPx) * runtimeSeconds.toFloat()
-                            onStartDrag(dragDelta)
+                            val dragDelta = (dragAmount.x / widthPx) * currentRuntimeSeconds.toFloat()
+                            currentOnStartDrag(dragDelta)
                         }
                     )
-                }
+                },
+            contentAlignment = Alignment.Center
         ) {
+            // Visual handle (vertical pill)
             Box(
                 modifier = Modifier
-                    .width(2.dp)
-                    .height(16.dp)
-                    .background(Color.White.copy(alpha = 0.8f))
-                    .align(Alignment.Center)
+                    .width(4.dp)
+                    .height(32.dp)
+                    .background(Color.White.copy(alpha = 0.8f), CircleShape)
             )
         }
         
         // End handle
         Box(
             modifier = Modifier
-                .offset(x = ((maxWidth * endPercent) - (handleWidth / 2)).coerceAtLeast(0.dp))
+                .offset(x = (maxWidth * endPercent) - (handleWidth / 2))
                 .width(handleWidth)
                 .fillMaxHeight()
-                .background(segmentColor)
                 .pointerInput(Unit) {
                     detectDragGestures(
-                        onDragEnd = { onDragEnd() },
+                        onDragEnd = { currentOnDragEnd() },
+                        onDragCancel = { currentOnDragEnd() },
                         onDrag = { change, dragAmount ->
                             change.consume()
-                            val dragDelta = (dragAmount.x / maxWidthPx) * runtimeSeconds.toFloat()
-                            onEndDrag(dragDelta)
+                            val dragDelta = (dragAmount.x / widthPx) * currentRuntimeSeconds.toFloat()
+                            currentOnEndDrag(dragDelta)
                         }
                     )
-                }
+                },
+            contentAlignment = Alignment.Center
         ) {
+            // Visual handle (vertical pill)
             Box(
                 modifier = Modifier
-                    .width(2.dp)
-                    .height(16.dp)
-                    .background(Color.White.copy(alpha = 0.8f))
-                    .align(Alignment.Center)
+                    .width(4.dp)
+                    .height(32.dp)
+                    .background(Color.White.copy(alpha = 0.8f), CircleShape)
             )
         }
     }
@@ -434,13 +450,13 @@ private fun SliderTrack(
 
 @Composable
 private fun TimeInputRow(
+    modifier: Modifier = Modifier,
     label: String,
     timeSeconds: Double,
     onTimeChanged: (Double) -> Unit,
     keyboardActions: KeyboardActions,
     onSeek: () -> Unit,
-    onSetFromPlayer: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    onSetFromPlayer: (() -> Unit)? = null
 ) {
     Row(
         modifier = modifier,
@@ -474,6 +490,7 @@ private fun TimeInputRow(
             }
         }
         
+        // Use local definition or import if missing
         TimeInputField(
             label = label.removeSuffix(":"),
             timeInSeconds = timeSeconds,

@@ -1,4 +1,4 @@
-package org.introskipper.segmenteditor.ui.component.segment
+package org.introskipper.segmenteditor.ui.component
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardActions

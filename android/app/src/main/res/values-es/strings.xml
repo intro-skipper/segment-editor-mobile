@@ -166,8 +166,6 @@
     <string name="segment_created">Segmento creado exitosamente</string>
     <string name="segment_updated">Segmento actualizado exitosamente</string>
     <string name="segment_deleted">Segmento eliminado correctamente</string>
-    <string name="segment_create_title">Crear segmento</string>
-    <string name="segment_edit_title">Editar segmento</string>
 
     <!-- Playback Speed Dialog -->
     <string name="playback_speed_title">Velocidad de reproducción</string>
