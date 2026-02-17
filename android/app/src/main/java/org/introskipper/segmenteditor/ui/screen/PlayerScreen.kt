@@ -424,7 +424,7 @@ fun PlayerScreen(
                                 }
                                 
                                 // Refresh from server
-                                viewModel.refreshSegments()
+                                viewModel.refreshSegments(itemId)
                             },
                             onFailure = { error ->
                                 Log.e("PlayerScreen", "Failed to save segment", error)
@@ -441,7 +441,7 @@ fun PlayerScreen(
                                 segmentHasChanges = emptyMap()
                                 
                                 // Refresh from server
-                                viewModel.refreshSegments()
+                                viewModel.refreshSegments(itemId)
                             },
                             onFailure = { error ->
                                 Log.e("PlayerScreen", "Failed to save all segments", error)
