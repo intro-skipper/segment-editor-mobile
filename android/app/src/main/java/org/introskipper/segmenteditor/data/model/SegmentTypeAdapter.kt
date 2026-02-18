@@ -16,14 +16,14 @@ class SegmentTypeAdapter : JsonDeserializer<Segment> {
     ): Segment {
         val jsonObject = json.asJsonObject
         
-        // Extract fields
-        val id = jsonObject.get("Id")?.asString
-        val itemId = jsonObject.get("ItemId").asString
-        val startTicks = jsonObject.get("StartTicks").asLong
-        val endTicks = jsonObject.get("EndTicks").asLong
+        // Extract fields with proper null handling
+        val id = jsonObject.get("Id")?.takeIf { !it.isJsonNull }?.asString
+        val itemId = jsonObject.get("ItemId")?.asString ?: throw JsonParseException("ItemId is required")
+        val startTicks = jsonObject.get("StartTicks")?.asLong ?: throw JsonParseException("StartTicks is required")
+        val endTicks = jsonObject.get("EndTicks")?.asLong ?: throw JsonParseException("EndTicks is required")
         
         // Handle Type field - can be either integer or string
-        val typeElement = jsonObject.get("Type")
+        val typeElement = jsonObject.get("Type") ?: throw JsonParseException("Type is required")
         val type: String = when {
             typeElement.isJsonPrimitive && typeElement.asJsonPrimitive.isNumber -> {
                 // Type is an integer, convert to string name
@@ -34,7 +34,7 @@ class SegmentTypeAdapter : JsonDeserializer<Segment> {
                 // Type is already a string
                 typeElement.asString
             }
-            else -> "Unknown"
+            else -> throw JsonParseException("Type must be either integer or string")
         }
         
         return Segment(
