@@ -83,11 +83,11 @@ class SegmentRepository(private val apiService: JellyfinApiService) {
                     // Successfully created and got segment data back
                     Result.success(body)
                 } else {
-                    // Request succeeded but no body returned - this is OK for creates
-                    // Return a minimal segment representing the request
-                    // The caller should refresh to get the actual created segment
+                    // Request succeeded but no body returned
+                    // This is acceptable - return a segment based on what we sent
+                    // The caller should call refreshSegments() to get actual server data including the ID
                     Result.success(Segment(
-                        id = null, // Will be assigned by server
+                        id = null, // Will be assigned by server, retrieved via refresh
                         itemId = segment.itemId,
                         type = SegmentType.apiValueToString(segment.type),
                         startTicks = segment.startTicks,

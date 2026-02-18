@@ -8,6 +8,11 @@ import java.lang.reflect.Type
  * Custom Gson TypeAdapter for Segment to handle Type field that can be either Int or String.
  * The server returns Type as an integer when creating/updating segments,
  * but as a string when listing segments.
+ * 
+ * This adapter is lenient with missing/null fields because:
+ * - Some API responses (especially POST creates) may return minimal data
+ * - The caller typically calls refreshSegments() immediately after to get complete data
+ * - Default values are temporary placeholders, not used for actual operations
  */
 class SegmentTypeAdapter : JsonDeserializer<Segment> {
     override fun deserialize(
