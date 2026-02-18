@@ -777,7 +777,14 @@ private fun PlayerContent(
                     // uiState.duration is already in milliseconds, convert to seconds
                     val runtimeSeconds = uiState.duration / 1000.0
                     
-                    items(editingSegments.size) { index ->
+                    items(
+                        count = editingSegments.size,
+                        key = { index ->
+                            val segment = editingSegments[index]
+                            // Use stable key: ID for saved segments, client key for unsaved
+                            segment.id ?: (segmentKeys[segment] ?: "client_$index")
+                        }
+                    ) { index ->
                         val segment = editingSegments[index]
                         // Use stable key: ID for saved segments, client key for unsaved
                         val segmentKey = segment.id ?: (segmentKeys[segment] ?: "client_unknown")
