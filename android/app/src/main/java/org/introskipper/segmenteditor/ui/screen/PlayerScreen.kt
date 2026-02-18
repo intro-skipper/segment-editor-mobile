@@ -782,13 +782,11 @@ private fun PlayerContent(
                         key = { index ->
                             val segment = editingSegments[index]
                             // Use stable key: ID for saved segments, client key for unsaved
-                            segment.id ?: (segmentKeys[segment] ?: "client_$index")
+                            segment.id ?: (segmentKeys[segment] ?: "client_unknown_$index")
                         }
                     ) { index ->
                         val segment = editingSegments[index]
-                        // Use stable key: ID for saved segments, client key for unsaved
-                        val segmentKey = segment.id ?: (segmentKeys[segment] ?: "client_unknown")
-                        val hasChanges = segmentHasChanges[segmentKey] ?: false
+                        val hasChanges = segmentHasChanges[segment.id ?: (segmentKeys[segment] ?: "client_unknown_$index")] ?: false
                         
                         SegmentSlider(
                             segment = segment,
