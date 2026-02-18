@@ -469,7 +469,7 @@ fun PlayerScreen(
                             // Get the key before removing
                             val key = getSegmentKey(currentSegment)
                             
-                            editingSegments = editingSegments.filterIndexed { i, _ -> i != index }
+                            editingSegments = editingSegments.toMutableList().apply { removeAt(index) }
                             
                             // Clear change flag and segment key
                             segmentHasChanges = segmentHasChanges - key
