@@ -3,6 +3,7 @@ package org.introskipper.segmenteditor.data.repository
 import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.SegmentCreateRequest
+import org.introskipper.segmenteditor.data.model.SegmentType
 import retrofit2.Response
 
 /**
@@ -76,8 +77,23 @@ class SegmentRepository(private val apiService: JellyfinApiService) {
     suspend fun createSegmentResult(itemId: String, segment: SegmentCreateRequest, providerId: String = "IntroSkipper"): Result<Segment> {
         return try {
             val response = createSegment(itemId, segment, providerId)
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    // Successfully created and got segment data back
+                    Result.success(body)
+                } else {
+                    // Request succeeded but no body returned
+                    // This is acceptable - return a segment based on what we sent
+                    // The caller should call refreshSegments() to get actual server data including the ID
+                    Result.success(Segment(
+                        id = null, // Will be assigned by server, retrieved via refresh
+                        itemId = segment.itemId,
+                        type = SegmentType.apiValueToString(segment.type),
+                        startTicks = segment.startTicks,
+                        endTicks = segment.endTicks
+                    ))
+                }
             } else {
                 Result.failure(Exception("Failed to create segment: ${response.code()} ${response.message()}"))
             }

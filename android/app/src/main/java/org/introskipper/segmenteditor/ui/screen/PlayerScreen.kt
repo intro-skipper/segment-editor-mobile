@@ -450,28 +450,40 @@ fun PlayerScreen(
                     }
                 },
                 onDeleteSegment = { segment ->
-                    // If segment has no ID (unsaved), remove it directly from the list
-                    if (segment.id == null) {
-                        val index = editingSegments.indexOfFirst { it === segment }
-                        if (index != -1) {
+                    // Find the segment in the current list (by ID if available, or by reference)
+                    val index = editingSegments.indexOfFirst {
+                        if (segment.id != null) {
+                            // For saved segments, match by ID
+                            it.id == segment.id
+                        } else {
+                            // For unsaved segments, match by reference
+                            it === segment
+                        }
+                    }
+                    
+                    if (index != -1) {
+                        val currentSegment = editingSegments[index]
+                        
+                        // If segment has no ID (unsaved), remove it directly from the list
+                        if (currentSegment.id == null) {
                             // Get the key before removing
-                            val key = getSegmentKey(segment)
+                            val key = getSegmentKey(currentSegment)
                             
-                            editingSegments = editingSegments.filter { it !== segment }
+                            editingSegments = editingSegments.toMutableList().apply { removeAt(index) }
                             
                             // Clear change flag and segment key
                             segmentHasChanges = segmentHasChanges - key
-                            segmentKeys = segmentKeys - segment
+                            segmentKeys = segmentKeys - currentSegment
                             
                             // Adjust active index if needed
                             if (activeSegmentIndex >= editingSegments.size) {
                                 activeSegmentIndex = (editingSegments.size - 1).coerceAtLeast(0)
                             }
+                        } else {
+                            // For saved segments, show confirmation dialog
+                            segmentToDelete = currentSegment
+                            showDeleteConfirmation = true
                         }
-                    } else {
-                        // For saved segments, show confirmation dialog
-                        segmentToDelete = segment
-                        showDeleteConfirmation = true
                     }
                 },
                 onSetActiveSegment = { index ->
@@ -765,11 +777,16 @@ private fun PlayerContent(
                     // uiState.duration is already in milliseconds, convert to seconds
                     val runtimeSeconds = uiState.duration / 1000.0
                     
-                    items(editingSegments.size) { index ->
+                    items(
+                        count = editingSegments.size,
+                        key = { index ->
+                            val segment = editingSegments[index]
+                            // Use stable key: ID for saved segments, client key for unsaved
+                            segment.id ?: (segmentKeys[segment] ?: "client_unknown_$index")
+                        }
+                    ) { index ->
                         val segment = editingSegments[index]
-                        // Use stable key: ID for saved segments, client key for unsaved
-                        val segmentKey = segment.id ?: (segmentKeys[segment] ?: "client_unknown")
-                        val hasChanges = segmentHasChanges[segmentKey] ?: false
+                        val hasChanges = segmentHasChanges[segment.id ?: (segmentKeys[segment] ?: "client_unknown_$index")] ?: false
                         
                         SegmentSlider(
                             segment = segment,
@@ -779,9 +796,9 @@ private fun PlayerContent(
                                 // Update local state only
                                 onUpdateSegment(updatedSegment)
                             },
-                            onDelete = {
+                            onDelete = { deletedSegment ->
                                 // Trigger delete confirmation directly
-                                onDeleteSegment(segment)
+                                onDeleteSegment(deletedSegment)
                             },
                             onSeekTo = { timeSeconds ->
                                 player?.seekTo(timeSeconds.toDuration(DurationUnit.SECONDS).inWholeMilliseconds)

@@ -55,10 +55,18 @@ class JellyfinApiService {
             .writeTimeout(30, TimeUnit.SECONDS)
             .build()
         
+        // Create Gson with custom type adapter for Segment to handle Type field
+        val gson = com.google.gson.GsonBuilder()
+            .registerTypeAdapter(
+                org.introskipper.segmenteditor.data.model.Segment::class.java,
+                org.introskipper.segmenteditor.data.model.SegmentTypeAdapter()
+            )
+            .create()
+        
         val retrofit = Retrofit.Builder()
             .baseUrl(baseUrl)
             .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
         
         api = retrofit.create(JellyfinApi::class.java)
