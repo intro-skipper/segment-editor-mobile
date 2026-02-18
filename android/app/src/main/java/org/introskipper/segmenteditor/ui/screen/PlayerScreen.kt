@@ -796,9 +796,9 @@ private fun PlayerContent(
                                 // Update local state only
                                 onUpdateSegment(updatedSegment)
                             },
-                            onDelete = {
+                            onDelete = { deletedSegment ->
                                 // Trigger delete confirmation directly
-                                onDeleteSegment(segment)
+                                onDeleteSegment(deletedSegment)
                             },
                             onSeekTo = { timeSeconds ->
                                 player?.seekTo(timeSeconds.toDuration(DurationUnit.SECONDS).inWholeMilliseconds)
