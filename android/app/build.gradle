@@ -29,7 +29,7 @@ android {
         buildConfigField "String", "COMMIT", "\""+commit+"\""
     }
     androidResources {
-        generateLocaleConfig = true
+        generateLocaleConfig = false
     }
 
     flavorDimensions += "source"
