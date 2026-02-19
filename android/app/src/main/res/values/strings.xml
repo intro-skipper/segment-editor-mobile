@@ -123,10 +123,19 @@
     <string name="player_subtitle_tracks">Subtitle Tracks</string>
     <string name="player_error_load">Unable to load video</string>
     <string name="player_toggle_fullscreen">Toggle fullscreen</string>
+    <string name="player_content_scale">Toggle content scale</string>
+    <string name="player_rewind">Rewind</string>
+    <string name="player_fast_forward">Fast-forward</string>
+    <string name="player_pause">Pause</string>
+    <string name="player_play">Play</string>
     <string name="player_playback_speed">%1$.1fx</string>
     <string name="player_direct_play_failed_title">Playback Failed</string>
     <string name="player_direct_play_failed_message">Your device cannot play this video in direct play mode. Would you like to switch to HLS streaming instead?</string>
     <string name="player_switch_to_hls">Switch to HLS</string>
+    <string name="player_unknown">Unknown</string>
+    <string name="player_audio_track_label">Audio %1$d</string>
+    <string name="player_subtitle_track_label">Subtitle %1$d</string>
+    <string name="skip_segment">Skip %1$s</string>
 
     <!-- Library Screen -->
     <string name="library_select">Select Library</string>

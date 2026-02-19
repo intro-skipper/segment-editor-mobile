@@ -55,8 +55,8 @@ fun SkipOverlay(
             enter = fadeIn() + slideInHorizontally(initialOffsetX = { it }),
             exit = fadeOut() + slideOutHorizontally(targetOffsetX = { it }),
             modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(bottom = 80.dp, end = 16.dp)
+                .align(Alignment.CenterEnd)
+                .padding(end = 16.dp)
         ) {
             activeSegment?.let { segment ->
                 Button(
@@ -71,7 +71,7 @@ fun SkipOverlay(
                     shape = MaterialTheme.shapes.medium
                 ) {
                     Text(
-                        text = "Skip ${segment.type}",
+                        text = stringResource(R.string.skip_segment, segment.type),
                         style = MaterialTheme.typography.labelLarge
                     )
                 }

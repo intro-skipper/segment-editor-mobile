@@ -144,7 +144,7 @@ fun MediaControls(
                 ) {
                     Icon(
                         imageVector = Icons.Default.AspectRatio,
-                        contentDescription = "Toggle content scale",
+                        contentDescription = "Next content scale",
                         tint = Color.White
                     )
                 }

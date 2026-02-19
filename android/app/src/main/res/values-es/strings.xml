@@ -36,9 +36,16 @@
     <string name="settings_theme_system">📱 Predeterminado del sistema</string>
     
     <string name="settings_section_playback">Reproducción</string>
+    <string name="settings_prefer_direct_play">Usar reproducción directa</string>
+    <string name="settings_prefer_direct_play_subtitle">Reproducir contenido directamente sin transcodificar</string>
     <string name="settings_autoplay_next">Reproducir siguiente episodio automáticamente</string>
     <string name="settings_autoplay_next_subtitle">Reproducir automáticamente el siguiente episodio</string>
-    
+    <string name="settings_preview_source">Vistas previas de video</string>
+    <string name="settings_preview_source_subtitle">Origen de las miniaturas de vista previa</string>
+    <string name="settings_preview_trickplay">🌐 Jellyfin Trickplay</string>
+    <string name="settings_preview_metadata">📱 Generación local</string>
+    <string name="settings_preview_disabled">🚫 Deshabilitado</string>
+
     <string name="settings_section_export">Exportar</string>
     <string name="settings_export_format">Formato de exportación predeterminado</string>
     <string name="settings_export_format_subtitle">Formato para exportar segmentos</string>
@@ -101,6 +108,8 @@
 
     <!-- Home Screen -->
     <string name="home_tv_shows">Programas de TV</string>
+    <string name="home_movies">Películas</string>
+    <string name="home_media">Multimedia</string>
     <string name="home_settings">Ajustes</string>
     <string name="home_no_media">No se encontraron elementos multimedia</string>
 
@@ -113,10 +122,19 @@
     <string name="player_subtitle_tracks">Pistas de subtítulos</string>
     <string name="player_error_load">No se puede cargar el video</string>
     <string name="player_toggle_fullscreen">Alternar pantalla completa</string>
+    <string name="player_content_scale">Cambiar escala de contenido</string>
+    <string name="player_rewind">Retroceder</string>
+    <string name="player_fast_forward">Adelantar</string>
+    <string name="player_pause">Pausar</string>
+    <string name="player_play">Reproducir</string>
     <string name="player_playback_speed">%1$.1fx</string>
     <string name="player_direct_play_failed_title">Reproducción fallida</string>
     <string name="player_direct_play_failed_message">Su dispositivo no puede reproducir este video en modo de reproducción directa. ¿Desea cambiar a transmisión HLS en su lugar?</string>
     <string name="player_switch_to_hls">Cambiar a HLS</string>
+    <string name="player_unknown">Desconocido</string>
+    <string name="player_audio_track_label">Audio %1$d</string>
+    <string name="player_subtitle_track_label">Subtítulo %1$d</string>
+    <string name="skip_segment">Omitir %1$s</string>
 
     <!-- Library Screen -->
     <string name="library_select">Seleccionar biblioteca</string>
@@ -177,4 +195,12 @@
     <string name="validation_error_end_exceeds_duration">El tiempo de finalización excede la duración del video</string>
     <string name="validation_error_start_exceeds_duration">El tiempo de inicio excede la duración del video</string>
     <string name="validation_error_overlaps">Se superpone con segmento(s) existente(s): %1$s</string>
+
+    <!-- Segment Editor Actions -->
+    <string name="segment_set_start_from_player">Desde el reproductor (inicio)</string>
+    <string name="segment_set_end_from_player">Desde el reproductor (fin)</string>
+    <string name="segment_save">Guardar segmento</string>
+    <string name="segment_save_all">Guardar todo</string>
+    <string name="segment_saved">Segmento guardado exitosamente</string>
+    <string name="segment_all_saved">Todos los segmentos guardados exitosamente</string>
 </resources>
