@@ -51,7 +51,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
@@ -354,7 +353,6 @@ private fun SliderTrack(
     runtimeSeconds: Double,
     modifier: Modifier = Modifier
 ) {
-    val density = LocalDensity.current
     val trackHeight = 48.dp // Increased track height to match upstream project
     val handleWidth = 40.dp
     

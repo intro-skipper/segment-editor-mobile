@@ -410,6 +410,14 @@ fun VideoPlayerWithPreview(
             )
         }
 
+        // Skip overlay for segments
+        // Placed after MediaControls to ensure it's clickable even when controls are visible
+        SkipOverlay(
+            player = exoPlayer,
+            uiState = uiState,
+            modifier = Modifier.fillMaxSize()
+        )
+
         SideEffect {
             CoroutineScope(Dispatchers.IO).launch {
                 // Load initial preview and preload adjacent ones
