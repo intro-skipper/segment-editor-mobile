@@ -179,12 +179,19 @@ fun MediaControls(
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.Center)
         ) {
+            val isLandscape = uiState.isFullscreen || uiState.isUserLandscape
+            val playButtonSize = if (isLandscape) 80.dp else 56.dp
+            val sideButtonSize = if (isLandscape) 60.dp else 40.dp
+            val playIconSize = if (isLandscape) 48.dp else 32.dp
+            val sideIconSize = if (isLandscape) 32.dp else 24.dp
+
             Row(
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(if (isLandscape) 16.dp else 8.dp)
             ) {
                 IconButton(
                     onClick = {  },
-                    modifier = Modifier.size(60.dp)
+                    modifier = Modifier.size(sideButtonSize)
                         .background(
                             Color.Black.copy(alpha = 0.5f),
                             shape = androidx.compose.foundation.shape.CircleShape
@@ -194,7 +201,7 @@ fun MediaControls(
                         imageVector = Icons.Default.FastRewind,
                         contentDescription = "Rewind",
                         tint = Color.White,
-                        modifier = Modifier.size(32.dp).onTouchHeldAnimated(
+                        modifier = Modifier.size(sideIconSize).onTouchHeldAnimated(
                             onTouchHeld = { player?.seekBack() }
                         )
                     )
@@ -210,7 +217,7 @@ fun MediaControls(
                         }
                     },
                     modifier = Modifier
-                        .size(80.dp)
+                        .size(playButtonSize)
                         .background(
                             Color.Black.copy(alpha = 0.5f),
                             shape = androidx.compose.foundation.shape.CircleShape
@@ -220,12 +227,12 @@ fun MediaControls(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = if (isPlaying) "Pause" else "Play",
                         tint = Color.White,
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(playIconSize)
                     )
                 }
                 IconButton(
                     onClick = {  },
-                    modifier = Modifier.size(60.dp)
+                    modifier = Modifier.size(sideButtonSize)
                         .background(
                             Color.Black.copy(alpha = 0.5f),
                             shape = androidx.compose.foundation.shape.CircleShape
@@ -235,7 +242,7 @@ fun MediaControls(
                         imageVector = Icons.Default.FastForward,
                         contentDescription = "Fast-forward",
                         tint = Color.White,
-                        modifier = Modifier.size(32.dp).onTouchHeldAnimated(
+                        modifier = Modifier.size(sideIconSize).onTouchHeldAnimated(
                             onTouchHeld = { player?.seekForward() }
                         )
                     )
