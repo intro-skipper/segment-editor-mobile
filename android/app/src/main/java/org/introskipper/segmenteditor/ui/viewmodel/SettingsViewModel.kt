@@ -15,6 +15,7 @@ import javax.inject.Inject
 
 data class SettingsUiState(
     val theme: AppTheme = AppTheme.SYSTEM,
+    val dynamicTranslationEnabled: Boolean = false,
     val preferDirectPlay: Boolean = true,
     val autoPlayNextEpisode: Boolean = true,
     val exportFormat: ExportFormat = ExportFormat.JSON,
@@ -48,6 +49,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 theme = securePreferences.getTheme(),
+                dynamicTranslationEnabled = securePreferences.isDynamicTranslationEnabled(),
                 preferDirectPlay = securePreferences.getPreferDirectPlay(),
                 autoPlayNextEpisode = securePreferences.getAutoPlayNextEpisode(),
                 exportFormat = securePreferences.getExportFormat(),
@@ -83,6 +85,11 @@ class SettingsViewModel @Inject constructor(
     fun setTheme(theme: AppTheme) {
         securePreferences.setTheme(theme)
         _uiState.value = _uiState.value.copy(theme = theme)
+    }
+
+    fun setDynamicTranslationEnabled(enabled: Boolean) {
+        securePreferences.setDynamicTranslationEnabled(enabled)
+        _uiState.value = _uiState.value.copy(dynamicTranslationEnabled = enabled)
     }
 
     fun setPreferDirectPlay(enabled: Boolean) {

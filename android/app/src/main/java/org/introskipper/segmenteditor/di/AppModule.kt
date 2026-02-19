@@ -13,6 +13,7 @@ import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
+import org.introskipper.segmenteditor.utils.TranslationService
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
@@ -53,6 +54,15 @@ object AppModule {
         securePreferences: SecurePreferences
     ): JellyfinApiService {
         return JellyfinApiService(securePreferences)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideTranslationService(
+        @ApplicationContext context: Context,
+        securePreferences: SecurePreferences
+    ): TranslationService {
+        return TranslationService(context, securePreferences)
     }
     
     @Provides

@@ -122,6 +122,7 @@ dependencies {
     implementation 'androidx.navigation:navigation-compose:2.9.7'
 
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.0'
     
     // Networking for Jellyfin API
     implementation 'com.squareup.retrofit2:retrofit:3.0.0'
@@ -130,6 +131,9 @@ dependencies {
     implementation 'com.squareup.okhttp3:logging-interceptor:5.3.2'
     implementation 'androidx.browser:browser:1.9.0'
     implementation 'com.google.android.play:app-update-ktx:2.1.0'
+
+    // ML Kit for dynamic translation
+    implementation 'com.google.mlkit:translate:17.0.3'
 
     // ExoPlayer for video playback
     ext.media3_version = '1.9.1'

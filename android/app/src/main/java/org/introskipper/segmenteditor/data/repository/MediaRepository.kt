@@ -9,7 +9,9 @@ import retrofit2.Response
  * Repository for managing media discovery operations.
  * Wraps the JellyfinApiService media-related calls.
  */
-class MediaRepository(private val apiService: JellyfinApiService) {
+class MediaRepository(
+    private val apiService: JellyfinApiService
+) {
     
     /**
      * Gets media items with various filters
