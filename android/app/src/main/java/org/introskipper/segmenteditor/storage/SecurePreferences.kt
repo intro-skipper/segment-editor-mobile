@@ -99,7 +99,7 @@ class SecurePreferences(context: Context) {
     }
 
     fun isDynamicTranslationEnabled(): Boolean {
-        return sharedPreferences.getBoolean(KEY_DYNAMIC_TRANSLATION, false)
+        return sharedPreferences.getBoolean(KEY_DYNAMIC_TRANSLATION, true)
     }
     
     // ========== Export Settings ==========
