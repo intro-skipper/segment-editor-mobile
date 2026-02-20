@@ -690,30 +690,43 @@ class PlayerViewModel @Inject constructor(
             _uiState.update { it.copy(isBatchSaving = true) }
             try {
                 // Step 1: Delete all existing server-side segments in parallel.
-                // Continue on partial failure (same as web's Promise.allSettled pattern).
-                coroutineScope {
+                // Track failed IDs so we can skip recreating them in step 2 and avoid
+                // leaving both old and new copies on the server (duplicates).
+                val deleteResults = coroutineScope {
                     existingSegments
                         .filter { it.id != null }
                         .map { segment ->
                             async {
-                                segmentRepository.deleteSegmentResult(
+                                val result = segmentRepository.deleteSegmentResult(
                                     segmentId = segment.id!!,
                                     itemId = segment.itemId,
                                     segmentType = segment.type
-                                ).onFailure { e ->
+                                )
+                                result.onFailure { e ->
                                     Log.w(TAG, "Failed to delete segment ${segment.type} (ID: ${segment.id}) during batch save", e)
                                 }
+                                segment.id!! to result
                             }
                         }
                         .awaitAll()
                 }
 
+                // Collect IDs of segments whose delete failed; skipping their create
+                // prevents leaving both old and new copies on the server.
+                val failedDeleteIds = deleteResults
+                    .filter { (_, result) -> result.isFailure }
+                    .map { (id, _) -> id }
+                    .toSet()
+
                 // Bail out early if this job was cancelled while deletes were running
                 ensureActive()
 
-                // Step 2: Create all new segments in parallel
+                // Step 2: Create new segments in parallel.
+                // Skip any segment whose previous server copy could not be deleted.
+                // New segments (id == null) are always included since null is never in failedDeleteIds.
+                val segmentsToCreate = segments.filter { it.id !in failedDeleteIds }
                 val createResults = coroutineScope {
-                    segments.map { segment ->
+                    segmentsToCreate.map { segment ->
                         async {
                             val segmentRequest = org.introskipper.segmenteditor.data.model.SegmentCreateRequest(
                                 itemId = segment.itemId,
@@ -727,9 +740,9 @@ class PlayerViewModel @Inject constructor(
                 }
 
                 val saved = createResults.filterNotNull()
-                val failedCount = segments.size - saved.size
+                val failedCount = segmentsToCreate.size - saved.size
                 if (failedCount > 0) {
-                    Log.w(TAG, "Batch save completed with $failedCount failures out of ${segments.size} segments")
+                    Log.w(TAG, "Batch save completed with $failedCount failures out of ${segmentsToCreate.size} segments")
                 }
                 onComplete(Result.success(saved))
             } catch (e: kotlinx.coroutines.CancellationException) {
