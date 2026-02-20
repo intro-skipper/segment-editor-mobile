@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,7 +36,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -46,6 +45,7 @@ import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.component.EpisodeCard
 import org.introskipper.segmenteditor.ui.component.MediaHeader
+import org.introskipper.segmenteditor.ui.component.translatedString
 import org.introskipper.segmenteditor.ui.navigation.Screen
 import org.introskipper.segmenteditor.ui.state.SeriesUiState
 import org.introskipper.segmenteditor.ui.theme.DynamicColorsOptions
@@ -87,12 +87,12 @@ fun SeriesScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(stringResource(R.string.series_title)) },
+                    title = { Text(translatedString(R.string.series_title)) },
                     navigationIcon = {
                         IconButton(onClick = { navController.navigateUp() }) {
                             Icon(
-                                imageVector = Icons.Default.ArrowBack,
-                                contentDescription = stringResource(R.string.back),
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = translatedString(R.string.back),
                                 tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
@@ -103,7 +103,7 @@ fun SeriesScreen(
                         }) {
                             Icon(
                                 imageVector = Icons.Default.Settings,
-                                contentDescription = stringResource(R.string.home_settings),
+                                contentDescription = translatedString(R.string.home_settings),
                                 tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
@@ -140,12 +140,12 @@ fun SeriesScreen(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(
-                                    text = "Error: ${state.message}",
+                                    text = translatedString(R.string.error_prefix, state.message),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.error
                                 )
                                 Button(onClick = { viewModel.refresh(seriesId) }) {
-                                    Text(stringResource(R.string.retry))
+                                    Text(translatedString(R.string.retry))
                                 }
                             }
                         }
@@ -187,7 +187,7 @@ fun SeriesScreen(
                             }
 
                             MediaHeader(
-                                title = series.name ?: stringResource(R.string.series_unknown),
+                                title = series.name ?: translatedString(R.string.series_unknown),
                                 subtitle = buildString {
                                     series.productionYear?.let { append(it.toString()) }
                                     val totalEpisodes = state.episodesBySeason.values.sumOf { it.size }
@@ -209,7 +209,7 @@ fun SeriesScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = "No episodes found",
+                                        text = translatedString(R.string.series_no_episodes),
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )

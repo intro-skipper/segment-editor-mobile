@@ -18,7 +18,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.state.TrackInfo
@@ -51,7 +50,7 @@ fun TrackSelectionSheet(
             
             if (allowDisable) {
                 TrackItem(
-                    displayTitle = "Disabled",
+                    displayTitle = translatedString(R.string.settings_preview_disabled),
                     isSelected = selectedTrackIndex == null,
                     onClick = { onTrackSelected(null) }
                 )
@@ -61,7 +60,7 @@ fun TrackSelectionSheet(
             
             if (tracks.isEmpty()) {
                 Text(
-                    text = "No tracks available",
+                    text = translatedString(R.string.tracks_none_available),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(16.dp)
@@ -82,7 +81,7 @@ fun TrackSelectionSheet(
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(stringResource(R.string.done))
+                Text(translatedString(R.string.done))
             }
             
             Spacer(modifier = Modifier.height(16.dp))

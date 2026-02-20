@@ -33,6 +33,7 @@ import org.introskipper.segmenteditor.ui.theme.DynamicColorsOptions
 import org.introskipper.segmenteditor.ui.theme.SegmentEditorTheme
 import org.introskipper.segmenteditor.update.CustomDialog
 import org.introskipper.segmenteditor.update.UpdateManager
+import org.introskipper.segmenteditor.utils.TranslationService
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -47,6 +48,9 @@ class MainActivity : ComponentActivity(), PictureInPictureDelegate.OnPictureInPi
 
     @Inject
     lateinit var themeState: ThemeState
+
+    @Inject
+    lateinit var translationService: TranslationService
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,6 +68,7 @@ class MainActivity : ComponentActivity(), PictureInPictureDelegate.OnPictureInPi
 
             SegmentEditorTheme(
                 appTheme = currentTheme,
+                translationService = translationService,
                 dynamicColorsOptions = DynamicColorsOptions(seedColor = themeState.globalSeedColor)
             ) {
                 Surface(

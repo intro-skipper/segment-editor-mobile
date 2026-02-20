@@ -54,10 +54,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.TimeUtils
 import org.introskipper.segmenteditor.ui.theme.getSegmentColor
 import org.introskipper.segmenteditor.ui.validation.SegmentValidator
+import org.introskipper.segmenteditor.utils.getTranslatedString
 import kotlin.math.max
 import kotlin.math.min
 
@@ -191,14 +193,19 @@ fun SegmentSlider(
                     // Copy button
                     IconButton(
                         onClick = {
-                            val segmentText = "${segment.type}: ${TimeUtils.formatDurationFromSeconds(localStartSeconds)} - ${TimeUtils.formatDurationFromSeconds(localEndSeconds)}"
+                            val segmentText = context.getTranslatedString(
+                                R.string.segment_info_format,
+                                segment.type,
+                                TimeUtils.formatDurationFromSeconds(localStartSeconds),
+                                TimeUtils.formatDurationFromSeconds(localEndSeconds)
+                            )
                             clipboardManager.setPrimaryClip(ClipData.newPlainText(segment.type, AnnotatedString(segmentText)))
                         },
                         modifier = Modifier.size(36.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.ContentCopy,
-                            contentDescription = "Copy segment",
+                            contentDescription = translatedString(R.string.segment_copy_description),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
@@ -217,7 +224,7 @@ fun SegmentSlider(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Save,
-                                contentDescription = "Save segment",
+                                contentDescription = translatedString(R.string.segment_save_description),
                                 tint = if (canSave) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                 modifier = Modifier.size(18.dp)
                             )
@@ -231,7 +238,7 @@ fun SegmentSlider(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete segment",
+                            contentDescription = translatedString(R.string.segment_delete_description),
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(18.dp)
                         )
@@ -272,7 +279,7 @@ fun SegmentSlider(
             ) {
                 // Start time
                 TimeInputRow(
-                    label = "Start:",
+                    label = translatedString(R.string.start_label),
                     timeSeconds = localStartSeconds,
                     onTimeChanged = { newTime ->
                         isDraggingStart = true
@@ -296,7 +303,7 @@ fun SegmentSlider(
                 
                 // End time
                 TimeInputRow(
-                    label = "End:",
+                    label = translatedString(R.string.end_label),
                     timeSeconds = localEndSeconds,
                     onTimeChanged = { newTime ->
                         isDraggingEnd = true
@@ -467,7 +474,7 @@ private fun TimeInputRow(
         ) {
             Icon(
                 imageVector = Icons.Default.PlayArrow,
-                contentDescription = "Seek to $label",
+                contentDescription = translatedString(R.string.seek_to, label),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(16.dp)
             )
@@ -481,7 +488,7 @@ private fun TimeInputRow(
             ) {
                 Icon(
                     imageVector = Icons.Default.MyLocation,
-                    contentDescription = "Set $label from player",
+                    contentDescription = translatedString(R.string.set_from_player, label),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(16.dp)
                 )
@@ -490,7 +497,7 @@ private fun TimeInputRow(
         
         // Use local definition or import if missing
         TimeInputField(
-            label = label.removeSuffix(":"),
+            label = label,
             timeInSeconds = timeSeconds,
             onTimeChanged = onTimeChanged,
             keyboardActions = keyboardActions,

@@ -35,7 +35,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -47,6 +46,7 @@ import org.introskipper.segmenteditor.ui.component.ErrorMessage
 import org.introskipper.segmenteditor.ui.component.LoadingIndicator
 import org.introskipper.segmenteditor.ui.component.PrimaryButton
 import org.introskipper.segmenteditor.ui.component.TextInputField
+import org.introskipper.segmenteditor.ui.component.translatedString
 import org.introskipper.segmenteditor.ui.navigation.Screen
 import org.introskipper.segmenteditor.ui.viewmodel.AuthMethod
 import org.introskipper.segmenteditor.ui.viewmodel.AuthViewModel
@@ -72,10 +72,10 @@ fun AuthenticationScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.authentication)) },
+                title = { Text(translatedString(R.string.authentication)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, translatedString(R.string.back))
                     }
                 }
             )
@@ -89,7 +89,7 @@ fun AuthenticationScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = stringResource(R.string.auth_sign_in),
+                text = translatedString(R.string.auth_sign_in),
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(bottom = 24.dp)
             )
@@ -102,13 +102,13 @@ fun AuthenticationScreen(
                 FilterChip(
                     selected = state.authMethod == AuthMethod.API_KEY,
                     onClick = { viewModel.setAuthMethod(AuthMethod.API_KEY) },
-                    label = { Text(stringResource(R.string.auth_api_key)) },
+                    label = { Text(translatedString(R.string.auth_api_key)) },
                     modifier = Modifier.weight(1f)
                 )
                 FilterChip(
                     selected = state.authMethod == AuthMethod.USERNAME_PASSWORD,
                     onClick = { viewModel.setAuthMethod(AuthMethod.USERNAME_PASSWORD) },
-                    label = { Text(stringResource(R.string.auth_username_password)) },
+                    label = { Text(translatedString(R.string.auth_username_password)) },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -120,8 +120,8 @@ fun AuthenticationScreen(
                     TextInputField(
                         value = state.apiKey,
                         onValueChange = { viewModel.onApiKeyChange(it) },
-                        label = stringResource(R.string.auth_api_key),
-                        placeholder = stringResource(R.string.auth_api_key_placeholder),
+                        label = translatedString(R.string.auth_api_key),
+                        placeholder = translatedString(R.string.auth_api_key_placeholder),
                         leadingIcon = {
                             Icon(Icons.Default.Key, contentDescription = null)
                         },
@@ -142,7 +142,7 @@ fun AuthenticationScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     
                     Text(
-                        text = "You can generate an API key from your Jellyfin dashboard under User Settings > API Keys",
+                        text = translatedString(R.string.auth_api_key_help),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -152,8 +152,8 @@ fun AuthenticationScreen(
                     TextInputField(
                         value = state.username,
                         onValueChange = { viewModel.onUsernameChange(it) },
-                        label = stringResource(R.string.auth_username),
-                        placeholder = stringResource(R.string.auth_username_placeholder),
+                        label = translatedString(R.string.auth_username),
+                        placeholder = translatedString(R.string.auth_username_placeholder),
                         leadingIcon = {
                             Icon(Icons.Default.Person, contentDescription = null)
                         },
@@ -169,8 +169,8 @@ fun AuthenticationScreen(
                     TextInputField(
                         value = state.password,
                         onValueChange = { viewModel.onPasswordChange(it) },
-                        label = stringResource(R.string.auth_password),
-                        placeholder = stringResource(R.string.auth_password_placeholder),
+                        label = translatedString(R.string.auth_password),
+                        placeholder = translatedString(R.string.auth_password_placeholder),
                         leadingIcon = {
                             Icon(Icons.Default.Lock, contentDescription = null)
                         },
@@ -178,7 +178,7 @@ fun AuthenticationScreen(
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
                                     imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = if (passwordVisible) stringResource(R.string.auth_password_hide) else stringResource(R.string.auth_password_show)
+                                    contentDescription = if (passwordVisible) translatedString(R.string.auth_password_hide) else translatedString(R.string.auth_password_show)
                                 )
                             }
                         },
@@ -202,17 +202,17 @@ fun AuthenticationScreen(
             
             if (state.error != null) {
                 ErrorMessage(
-                    message = state.error!!,
+                    message = translatedString(R.string.error_prefix, state.error!!),
                     onRetry = { viewModel.authenticate() }
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }
             
             if (state.isLoading) {
-                LoadingIndicator(message = "Authenticating...")
+                LoadingIndicator(message = translatedString(R.string.authentication))
             } else {
                 PrimaryButton(
-                    text = stringResource(R.string.auth_sign_in_button),
+                    text = translatedString(R.string.auth_sign_in_button),
                     onClick = { viewModel.authenticate() },
                     enabled = when (state.authMethod) {
                         AuthMethod.API_KEY -> state.apiKey.isNotBlank()

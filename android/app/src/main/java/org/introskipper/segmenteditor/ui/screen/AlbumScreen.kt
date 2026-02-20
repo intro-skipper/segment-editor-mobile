@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,7 +27,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -37,6 +36,7 @@ import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.component.MediaHeader
 import org.introskipper.segmenteditor.ui.component.TrackCard
+import org.introskipper.segmenteditor.ui.component.translatedString
 import org.introskipper.segmenteditor.ui.state.AlbumUiState
 import org.introskipper.segmenteditor.ui.viewmodel.AlbumViewModel
 
@@ -58,10 +58,10 @@ fun AlbumScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.album_title)) },
+                title = { Text(translatedString(R.string.album_title)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = translatedString(R.string.back))
                     }
                 }
             )
@@ -91,12 +91,12 @@ fun AlbumScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = "Error: ${state.message}",
+                                text = translatedString(R.string.error_prefix, state.message),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.error
                             )
                             Button(onClick = { viewModel.refresh(albumId) }) {
-                                Text(stringResource(R.string.retry))
+                                Text(translatedString(R.string.retry))
                             }
                         }
                     }
@@ -116,7 +116,7 @@ fun AlbumScreen(
                             }
 
                             MediaHeader(
-                                title = album.name ?: "Unknown Album",
+                                title = album.name ?: translatedString(R.string.player_unknown),
                                 subtitle = buildString {
                                     album.albumArtist?.let { append(it) }
                                     album.productionYear?.let {
@@ -144,7 +144,7 @@ fun AlbumScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = stringResource(R.string.album_no_tracks),
+                                        text = translatedString(R.string.album_no_tracks),
                                         style = MaterialTheme.typography.bodyLarge
                                     )
                                 }

@@ -1,5 +1,9 @@
 package org.introskipper.segmenteditor.ui.screen
 
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -17,15 +21,19 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.component.settings.ClickableSettingItem
 import org.introskipper.segmenteditor.ui.component.settings.DropdownSettingsItem
@@ -34,6 +42,7 @@ import org.introskipper.segmenteditor.ui.component.settings.SwitchSettingItem
 import org.introskipper.segmenteditor.ui.state.AppTheme
 import org.introskipper.segmenteditor.ui.state.ExportFormat
 import org.introskipper.segmenteditor.ui.viewmodel.SettingsViewModel
+import org.introskipper.segmenteditor.ui.component.translatedString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,18 +53,33 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     var showAboutDialog by remember { mutableStateOf(false) }
     var showChangeServerDialog by remember { mutableStateOf(false) }
+    
+    // Refresh preferences when returning to the screen (e.g. from system language settings)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.loadPreferences()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
     
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.settings)) },
+                title = { Text(translatedString(R.string.settings)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back)
+                            contentDescription = translatedString(R.string.back)
                         )
                     }
                 }
@@ -69,10 +93,10 @@ fun SettingsScreen(
         ) {
             // Connection Section
             item {
-                SettingsSection(title = stringResource(R.string.settings_section_connection)) {
+                SettingsSection(title = translatedString(R.string.settings_section_connection)) {
                     ClickableSettingItem(
-                        title = stringResource(R.string.settings_change_server),
-                        subtitle = stringResource(R.string.settings_change_server_subtitle),
+                        title = translatedString(R.string.settings_change_server),
+                        subtitle = translatedString(R.string.settings_change_server_subtitle),
                         onClick = { showChangeServerDialog = true }
                     )
                 }
@@ -80,14 +104,14 @@ fun SettingsScreen(
 
             // Theme Section
             item {
-                SettingsSection(title = stringResource(R.string.settings_section_appearance)) {
+                SettingsSection(title = translatedString(R.string.settings_section_appearance)) {
                     DropdownSettingsItem(
-                        title = stringResource(R.string.settings_theme),
-                        subtitle = stringResource(R.string.settings_theme_subtitle),
+                        title = translatedString(R.string.settings_theme),
+                        subtitle = translatedString(R.string.settings_theme_subtitle),
                         options = listOf(
-                            AppTheme.LIGHT to stringResource(R.string.settings_theme_light),
-                            AppTheme.DARK to stringResource(R.string.settings_theme_dark),
-                            AppTheme.SYSTEM to stringResource(R.string.settings_theme_system)
+                            AppTheme.LIGHT to translatedString(R.string.settings_theme_light),
+                            AppTheme.DARK to translatedString(R.string.settings_theme_dark),
+                            AppTheme.SYSTEM to translatedString(R.string.settings_theme_system)
                         ),
                         selectedOption = uiState.theme,
                         onOptionSelected = { theme ->
@@ -95,22 +119,42 @@ fun SettingsScreen(
                             onThemeChanged(theme)
                         }
                     )
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        ClickableSettingItem(
+                            title = translatedString(R.string.settings_language),
+                            subtitle = uiState.currentLocaleName.ifEmpty { translatedString(R.string.settings_language_subtitle) },
+                            onClick = {
+                                val intent = Intent(Settings.ACTION_APP_LOCALE_SETTINGS).apply {
+                                    data = Uri.fromParts("package", context.packageName, null)
+                                }
+                                context.startActivity(intent)
+                            }
+                        )
+                    }
+
+                    SwitchSettingItem(
+                        title = translatedString(R.string.settings_dynamic_translation),
+                        subtitle = translatedString(R.string.settings_dynamic_translation_subtitle),
+                        checked = uiState.dynamicTranslationEnabled,
+                        onCheckedChange = viewModel::setDynamicTranslationEnabled
+                    )
                 }
             }
 
             // Pagination Section
             item {
-                SettingsSection(title = stringResource(R.string.settings_section_browsing)) {
+                SettingsSection(title = translatedString(R.string.settings_section_browsing)) {
                     DropdownSettingsItem(
-                        title = stringResource(R.string.settings_items_per_page),
-                        subtitle = stringResource(R.string.settings_items_per_page_subtitle),
+                        title = translatedString(R.string.settings_items_per_page),
+                        subtitle = translatedString(R.string.settings_items_per_page_subtitle),
                         options = listOf(
                             10 to "10",
                             20 to "20",
                             30 to "30",
                             50 to "50",
                             100 to "100",
-                            Int.MAX_VALUE to stringResource(R.string.settings_show_all)
+                            Int.MAX_VALUE to translatedString(R.string.settings_show_all)
                         ),
                         selectedOption = uiState.itemsPerPage,
                         onOptionSelected = viewModel::setItemsPerPage
@@ -121,9 +165,9 @@ fun SettingsScreen(
             // Hidden Libraries Section
             item {
                 if (uiState.availableLibraries.isNotEmpty()) {
-                    SettingsSection(title = stringResource(R.string.settings_hidden_libraries)) {
+                    SettingsSection(title = translatedString(R.string.settings_hidden_libraries)) {
                         Text(
-                            text = stringResource(R.string.settings_hidden_libraries_subtitle),
+                            text = translatedString(R.string.settings_hidden_libraries_subtitle),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -142,17 +186,17 @@ fun SettingsScreen(
             
             // Playback Section
             item {
-                SettingsSection(title = stringResource(R.string.settings_section_playback)) {
+                SettingsSection(title = translatedString(R.string.settings_section_playback)) {
                     SwitchSettingItem(
-                        title = stringResource(R.string.settings_prefer_direct_play),
-                        subtitle = stringResource(R.string.settings_prefer_direct_play_subtitle),
+                        title = translatedString(R.string.settings_prefer_direct_play),
+                        subtitle = translatedString(R.string.settings_prefer_direct_play_subtitle),
                         checked = uiState.preferDirectPlay,
                         onCheckedChange = viewModel::setPreferDirectPlay
                     )
                     
                     SwitchSettingItem(
-                        title = stringResource(R.string.settings_autoplay_next),
-                        subtitle = stringResource(R.string.settings_autoplay_next_subtitle),
+                        title = translatedString(R.string.settings_autoplay_next),
+                        subtitle = translatedString(R.string.settings_autoplay_next_subtitle),
                         checked = uiState.autoPlayNextEpisode,
                         onCheckedChange = viewModel::setAutoPlayNextEpisode
                     )
@@ -161,14 +205,14 @@ fun SettingsScreen(
             
             // Export Section
             item {
-                SettingsSection(title = stringResource(R.string.settings_section_export)) {
+                SettingsSection(title = translatedString(R.string.settings_section_export)) {
                     DropdownSettingsItem(
-                        title = stringResource(R.string.settings_export_format),
-                        subtitle = stringResource(R.string.settings_export_format_subtitle),
+                        title = translatedString(R.string.settings_export_format),
+                        subtitle = translatedString(R.string.settings_export_format_subtitle),
                         options = listOf(
-                            ExportFormat.JSON to stringResource(R.string.settings_export_json),
-                            ExportFormat.CSV to stringResource(R.string.settings_export_csv),
-                            ExportFormat.XML to stringResource(R.string.settings_export_xml)
+                            ExportFormat.JSON to translatedString(R.string.settings_export_json),
+                            ExportFormat.CSV to translatedString(R.string.settings_export_csv),
+                            ExportFormat.XML to translatedString(R.string.settings_export_xml)
                         ),
                         selectedOption = uiState.exportFormat,
                         onOptionSelected = viewModel::setExportFormat
@@ -176,8 +220,8 @@ fun SettingsScreen(
                     
                     if (uiState.exportFormat == ExportFormat.JSON) {
                         SwitchSettingItem(
-                            title = stringResource(R.string.settings_pretty_print),
-                            subtitle = stringResource(R.string.settings_pretty_print_subtitle),
+                            title = translatedString(R.string.settings_pretty_print),
+                            subtitle = translatedString(R.string.settings_pretty_print_subtitle),
                             checked = uiState.prettyPrintJson,
                             onCheckedChange = viewModel::setPrettyPrintJson
                         )
@@ -187,16 +231,16 @@ fun SettingsScreen(
             
             // About Section
             item {
-                SettingsSection(title = stringResource(R.string.settings_section_about)) {
+                SettingsSection(title = translatedString(R.string.settings_section_about)) {
                     ClickableSettingItem(
-                        title = stringResource(R.string.settings_about),
-                        subtitle = stringResource(R.string.settings_about_subtitle),
+                        title = translatedString(R.string.settings_about),
+                        subtitle = translatedString(R.string.settings_about_subtitle),
                         onClick = { showAboutDialog = true }
                     )
                     
                     ClickableSettingItem(
-                        title = stringResource(R.string.settings_github),
-                        subtitle = stringResource(R.string.settings_github_subtitle),
+                        title = translatedString(R.string.settings_github),
+                        subtitle = translatedString(R.string.settings_github_subtitle),
                         onClick = { showAboutDialog = true }
                     )
                 }
@@ -216,8 +260,8 @@ fun SettingsScreen(
     if (showChangeServerDialog) {
         AlertDialog(
             onDismissRequest = { showChangeServerDialog = false },
-            title = { Text(stringResource(R.string.settings_change_server)) },
-            text = { Text(stringResource(R.string.settings_change_server_dialog_message)) },
+            title = { Text(translatedString(R.string.settings_change_server)) },
+            text = { Text(translatedString(R.string.settings_change_server_dialog_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -226,12 +270,12 @@ fun SettingsScreen(
                         onRestartConnection()
                     }
                 ) {
-                    Text(stringResource(R.string.continue_button))
+                    Text(translatedString(R.string.continue_button))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showChangeServerDialog = false }) {
-                    Text(stringResource(R.string.cancel))
+                    Text(translatedString(R.string.cancel))
                 }
             }
         )

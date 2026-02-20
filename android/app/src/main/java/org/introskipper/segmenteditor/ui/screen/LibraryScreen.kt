@@ -38,7 +38,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,6 +49,7 @@ import coil.compose.AsyncImage
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import org.introskipper.segmenteditor.R
+import org.introskipper.segmenteditor.ui.component.translatedString
 import org.introskipper.segmenteditor.ui.state.ThemeState
 import org.introskipper.segmenteditor.ui.util.getDominantColor
 import org.introskipper.segmenteditor.ui.viewmodel.Library
@@ -83,12 +83,12 @@ fun LibraryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.library_select)) },
+                title = { Text(translatedString(R.string.library_select)) },
                 actions = {
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.home_settings)
+                            contentDescription = translatedString(R.string.home_settings)
                         )
                     }
                 }
@@ -115,7 +115,7 @@ fun LibraryScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = stringResource(R.string.library_no_libraries),
+                            text = translatedString(R.string.library_no_libraries),
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
@@ -153,12 +153,13 @@ fun LibraryScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = "Error: ${state.message}",
+                                text = translatedString(R.string.error_prefix, state.message),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.error
+                                
                             )
                             Button(onClick = { viewModel.refresh() }) {
-                                Text(stringResource(R.string.retry))
+                                Text(translatedString(R.string.retry))
                             }
                         }
                     }

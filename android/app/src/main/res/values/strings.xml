@@ -25,7 +25,12 @@
     <string name="delete">Delete</string>
     <string name="save">Save</string>
     <string name="create">Create</string>
+    <string name="success">Success</string>
     <string name="error_prefix">Error: %1$s</string>
+    <string name="common_loading">Loading…</string>
+    <string name="disabled">Disabled</string>
+    <string name="none">None</string>
+    <string name="ellipsis">…</string>
 
     <!-- Settings Screen -->
     <string name="settings">Settings</string>
@@ -35,7 +40,13 @@
     <string name="settings_theme_light">☀️ Light</string>
     <string name="settings_theme_dark">🌙 Dark</string>
     <string name="settings_theme_system">📱 System Default</string>
-    
+
+    <string name="settings_language">Language</string>
+    <string name="settings_language_subtitle">Choose app language</string>
+    <string name="settings_language_system">System Default</string>
+    <string name="settings_dynamic_translation">Dynamic Translation</string>
+    <string name="settings_dynamic_translation_subtitle">Use ML Kit to translate UI</string>
+
     <string name="settings_section_playback">Playback</string>
     <string name="settings_prefer_direct_play">Use Direct Play</string>
     <string name="settings_prefer_direct_play_subtitle">Play media directly without transcoding</string>
@@ -87,11 +98,20 @@
     <string name="auth_password_hide">Hide password</string>
     <string name="auth_password_show">Show password</string>
     <string name="auth_sign_in_button">Sign In</string>
+    <string name="auth_api_key_help">You can generate an API key from your Jellyfin dashboard under Settings > Dashboard > API Keys.</string>
+    <string name="auth_signed_in_as">Signed in as %1$s</string>
+    <string name="auth_connected_to">Connected to %1$s</string>
+    <string name="auth_authenticating">Authenticating…</string>
 
     <!-- Server Entry Screen -->
     <string name="server_url">Server URL</string>
     <string name="server_url_placeholder">https://jellyfin.example.com</string>
     <string name="server_connect">Connect</string>
+    <string name="server_enter_url_title">Enter your Jellyfin server URL</string>
+    <string name="server_url_example">Example: https://jellyfin.local:8096 or http://192.168.1.100:8096</string>
+
+    <!-- Server Card -->
+    <string name="server_version">Version: %1$s</string>
 
     <!-- Connection Wizard Screen -->
     <string name="connection_wizard_title">Connect to Jellyfin</string>
@@ -106,6 +126,7 @@
     <string name="server_discovery_help_text">Make sure your Jellyfin server is running and accessible on your network</string>
     <string name="server_discovery_try_again">Try Again</string>
     <string name="server_discovery_manual">Enter URL Manually</string>
+    <string name="server_discovery_searching">Searching for Jellyfin servers on your network…</string>
 
     <!-- Home Screen -->
     <string name="home_tv_shows">TV Shows</string>
@@ -113,6 +134,7 @@
     <string name="home_media">Media</string>
     <string name="home_settings">Settings</string>
     <string name="home_no_media">No media items found</string>
+    <string name="home_showing_all">Showing all %1$d items</string>
 
     <!-- Player Screen -->
     <string name="player_title">Player</string>
@@ -128,22 +150,29 @@
     <string name="player_fast_forward">Fast-forward</string>
     <string name="player_pause">Pause</string>
     <string name="player_play">Play</string>
-    <string name="player_playback_speed">%1$.1fx</string>
+    <string name="player_playback_speed">%1$gx</string>
     <string name="player_direct_play_failed_title">Playback Failed</string>
     <string name="player_direct_play_failed_message">Your device cannot play this video in direct play mode. Would you like to switch to HLS streaming instead?</string>
     <string name="player_switch_to_hls">Switch to HLS</string>
     <string name="player_unknown">Unknown</string>
     <string name="player_audio_track_label">Audio %1$d</string>
     <string name="player_subtitle_track_label">Subtitle %1$d</string>
+    <string name="player_no_segments">No segments found for this media item. Use the + button to create one.</string>
     <string name="skip_segment">Skip %1$s</string>
 
     <!-- Library Screen -->
     <string name="library_select">Select Library</string>
     <string name="library_no_libraries">No libraries found</string>
+    <string name="library_type_format">(%1$s)</string>
 
     <!-- Series Screen -->
     <string name="series_title">Series</string>
     <string name="series_unknown">Unknown Series</string>
+    <string name="series_no_episodes">No episodes found</string>
+    <string name="series_season_format">Season %1$d</string>
+
+    <!-- Episode Card -->
+    <string name="episode_duration_minutes">%1$d min</string>
 
     <!-- Album Screen -->
     <string name="album_title">Album</string>
@@ -156,6 +185,9 @@
     <string name="artist_tracks">Tracks</string>
     <string name="artist_no_albums">No albums found</string>
 
+    <!-- Track Selection Sheet -->
+    <string name="tracks_none_available">No tracks available</string>
+
     <!-- Connection Success Screen -->
     <string name="connection_success_title">Connected Successfully</string>
 
@@ -166,6 +198,7 @@
     <string name="about_coding">Vibe Coded with ❤️ for the Jellyfin community</string>
     <string name="about_view_github">View on GitHub</string>
     <string name="about_licenses">Open Source Licenses</string>
+    <string name="about_version">Version %1$s (%2$s)</string>
 
     <!-- Collection Filter Sheet -->
     <string name="filter_collections">Filter Collections</string>
@@ -174,6 +207,11 @@
 
     <!-- Search Bar -->
     <string name="search_placeholder">Search media…</string>
+
+    <!-- Pagination Controls -->
+    <string name="pagination_page_info">Page %1$d of %2$d</string>
+    <string name="pagination_previous">Previous page</string>
+    <string name="pagination_next">Next page</string>
 
     <!-- Time Input Field -->
     <string name="time_format_hint">MM:SS or HH:MM:SS</string>
@@ -188,6 +226,7 @@
 
     <!-- Playback Speed Dialog -->
     <string name="playback_speed_title">Playback Speed</string>
+    <string name="playback_speed_value">%1$gx</string>
 
     <!-- Segment Validation Errors -->
     <string name="validation_error_start_negative">Start time cannot be negative</string>
@@ -197,11 +236,23 @@
     <string name="validation_error_start_exceeds_duration">Start time exceeds video duration</string>
     <string name="validation_error_overlaps">Overlaps with existing segment(s): %1$s</string>
 
+    <!-- Segment Editor -->
+    <string name="segment_copy_description">Copy Segment</string>
+    <string name="segment_save_description">Save Segment</string>
+    <string name="segment_delete_description">Delete Segment</string>
+    <string name="start_label">Start</string>
+    <string name="end_label">End</string>
+    <string name="seek_to">Seek to %1$s</string>
+    <string name="set_from_player">Set %1$s from player</string>
+    <string name="segment_info_format">%1$s: %2$s - %3$s</string>
+
     <!-- Segment Editor Actions -->
     <string name="segment_set_start_from_player">Set start from player</string>
     <string name="segment_set_end_from_player">Set end from player</string>
-    <string name="segment_save">Save segment</string>
     <string name="segment_save_all">Save All</string>
     <string name="segment_saved">Segment saved successfully</string>
     <string name="segment_all_saved">All segments saved successfully</string>
+
+    <!-- Preview -->
+    <string name="preview_description">Video preview at %1$s</string>
 </resources>

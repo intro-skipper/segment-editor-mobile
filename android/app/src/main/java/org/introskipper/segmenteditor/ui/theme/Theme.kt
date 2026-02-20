@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import org.introskipper.segmenteditor.ui.state.AppTheme
+import org.introskipper.segmenteditor.utils.TranslationService
 
 private val DarkColorScheme = darkColorScheme(
     primary = PrimaryDark,
@@ -39,10 +40,12 @@ data class DynamicColorsOptions(
 )
 
 val LocalAppTheme = compositionLocalOf { AppTheme.SYSTEM }
+val LocalTranslationService = compositionLocalOf<TranslationService?> { null }
 
 @Composable
 fun SegmentEditorTheme(
     appTheme: AppTheme = LocalAppTheme.current,
+    translationService: TranslationService? = LocalTranslationService.current,
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     dynamicColorsOptions: DynamicColorsOptions = DynamicColorsOptions(),
@@ -152,7 +155,10 @@ fun SegmentEditorTheme(
         }
     }
 
-    CompositionLocalProvider(LocalAppTheme provides appTheme) {
+    CompositionLocalProvider(
+        LocalAppTheme provides appTheme,
+        LocalTranslationService provides translationService
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,

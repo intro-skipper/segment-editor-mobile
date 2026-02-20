@@ -6,11 +6,13 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.data.repository.JellyfinRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.state.AppTheme
 import org.introskipper.segmenteditor.ui.state.ExportFormat
+import org.introskipper.segmenteditor.utils.TranslationService
 import javax.inject.Inject
 
 data class SettingsUiState(
@@ -23,7 +25,8 @@ data class SettingsUiState(
     val itemsPerPage: Int = 20,
     val hiddenLibraryIds: Set<String> = emptySet(),
     val availableLibraries: List<LibraryInfo> = emptyList(),
-    val isLoadingLibraries: Boolean = false
+    val isLoadingLibraries: Boolean = false,
+    val currentLocaleName: String = ""
 )
 
 data class LibraryInfo(
@@ -34,7 +37,8 @@ data class LibraryInfo(
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val securePreferences: SecurePreferences,
-    private val jellyfinRepository: JellyfinRepository
+    private val jellyfinRepository: JellyfinRepository,
+    private val translationService: TranslationService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -43,9 +47,16 @@ class SettingsViewModel @Inject constructor(
     init {
         loadPreferences()
         loadAvailableLibraries()
+        
+        // Keep UI state in sync with translation service
+        viewModelScope.launch {
+            translationService.isDynamicTranslationEnabled.collectLatest { enabled ->
+                _uiState.value = _uiState.value.copy(dynamicTranslationEnabled = enabled)
+            }
+        }
     }
 
-    private fun loadPreferences() {
+    fun loadPreferences() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 theme = securePreferences.getTheme(),
@@ -55,7 +66,8 @@ class SettingsViewModel @Inject constructor(
                 exportFormat = securePreferences.getExportFormat(),
                 prettyPrintJson = securePreferences.getPrettyPrintJson(),
                 itemsPerPage = securePreferences.getItemsPerPage(),
-                hiddenLibraryIds = securePreferences.getHiddenLibraryIds()
+                hiddenLibraryIds = securePreferences.getHiddenLibraryIds(),
+                currentLocaleName = translationService.getCurrentLocaleName()
             )
         }
     }
@@ -88,8 +100,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setDynamicTranslationEnabled(enabled: Boolean) {
-        securePreferences.setDynamicTranslationEnabled(enabled)
-        _uiState.value = _uiState.value.copy(dynamicTranslationEnabled = enabled)
+        translationService.setDynamicTranslationEnabled(enabled)
     }
 
     fun setPreferDirectPlay(enabled: Boolean) {

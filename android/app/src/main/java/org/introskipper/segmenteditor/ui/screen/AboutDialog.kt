@@ -22,11 +22,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.introskipper.segmenteditor.BuildConfig
 import org.introskipper.segmenteditor.R
+import org.introskipper.segmenteditor.ui.component.translatedString
 import org.introskipper.segmenteditor.webkit.ChromeIntegration
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,13 +56,13 @@ fun AboutDialog(
                     IconButton(onClick = onDismiss) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.cancel)
+                            contentDescription = translatedString(R.string.cancel)
                         )
                     }
                 }
                 
                 Text(
-                    text = stringResource(R.string.about_title),
+                    text = translatedString(R.string.about_title),
                     style = MaterialTheme.typography.headlineMedium,
                     textAlign = TextAlign.Center
                 )
@@ -70,7 +70,7 @@ fun AboutDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 Text(
-                    text = "Version ${BuildConfig.VERSION_NAME} (${BuildConfig.COMMIT})",
+                    text = translatedString(R.string.about_version, BuildConfig.VERSION_NAME, BuildConfig.COMMIT),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -79,7 +79,7 @@ fun AboutDialog(
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 Text(
-                    text = stringResource(R.string.about_body),
+                    text = translatedString(R.string.about_body),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
                 )
@@ -87,7 +87,7 @@ fun AboutDialog(
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 Text(
-                    text = stringResource(R.string.about_credits),
+                    text = translatedString(R.string.about_credits),
                     style = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center
                 )
@@ -95,7 +95,7 @@ fun AboutDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 Text(
-                    text = stringResource(R.string.about_coding),
+                    text = translatedString(R.string.about_coding),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -112,7 +112,7 @@ fun AboutDialog(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(stringResource(R.string.about_view_github))
+                    Text(translatedString(R.string.about_view_github))
                 }
                 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -126,7 +126,7 @@ fun AboutDialog(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(stringResource(R.string.about_licenses))
+                    Text(translatedString(R.string.about_licenses))
                 }
             }
         }

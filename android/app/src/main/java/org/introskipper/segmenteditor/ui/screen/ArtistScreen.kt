@@ -12,7 +12,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,7 +33,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -45,6 +44,7 @@ import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.component.MediaCard
 import org.introskipper.segmenteditor.ui.component.MediaHeader
 import org.introskipper.segmenteditor.ui.component.TrackCard
+import org.introskipper.segmenteditor.ui.component.translatedString
 import org.introskipper.segmenteditor.ui.state.ArtistTab
 import org.introskipper.segmenteditor.ui.state.ArtistUiState
 import org.introskipper.segmenteditor.ui.viewmodel.ArtistViewModel
@@ -68,10 +68,10 @@ fun ArtistScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.artist_title)) },
+                title = { Text(translatedString(R.string.artist_title)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = translatedString(R.string.back))
                     }
                 }
             )
@@ -101,12 +101,12 @@ fun ArtistScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = "Error: ${state.message}",
+                                text = translatedString(R.string.error_prefix, state.message),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.error
                             )
                             Button(onClick = { viewModel.refresh(artistId) }) {
-                                Text(stringResource(R.string.retry))
+                                Text(translatedString(R.string.retry))
                             }
                         }
                     }
@@ -123,16 +123,16 @@ fun ArtistScreen(
                         }
 
                         MediaHeader(
-                            title = artist.name ?: stringResource(R.string.artist_unknown),
+                            title = artist.name ?: translatedString(R.string.artist_unknown),
                             subtitle = buildString {
                                 val albumCount = state.albums.size
                                 val trackCount = state.tracks.size
                                 if (albumCount > 0) {
-                                    append("$albumCount albums")
+                                    append("$albumCount ${translatedString(R.string.artist_albums).lowercase()}")
                                 }
                                 if (trackCount > 0) {
                                     if (isNotEmpty()) append(" • ")
-                                    append("$trackCount tracks")
+                                    append("$trackCount ${translatedString(R.string.artist_tracks).lowercase()}")
                                 }
                             },
                             imageUrl = imageUrl,
@@ -144,12 +144,12 @@ fun ArtistScreen(
                             Tab(
                                 selected = selectedTab == ArtistTab.ALBUMS,
                                 onClick = { selectedTab = ArtistTab.ALBUMS },
-                                text = { Text(stringResource(R.string.artist_albums)) }
+                                text = { Text(translatedString(R.string.artist_albums)) }
                             )
                             Tab(
                                 selected = selectedTab == ArtistTab.TRACKS,
                                 onClick = { selectedTab = ArtistTab.TRACKS },
-                                text = { Text(stringResource(R.string.artist_tracks)) }
+                                text = { Text(translatedString(R.string.artist_tracks)) }
                             )
                         }
 
@@ -162,7 +162,7 @@ fun ArtistScreen(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            text = stringResource(R.string.artist_no_albums),
+                                            text = translatedString(R.string.artist_no_albums),
                                             style = MaterialTheme.typography.bodyLarge
                                         )
                                     }
@@ -197,7 +197,7 @@ fun ArtistScreen(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            text = "No tracks found",
+                                            text = translatedString(R.string.artist_tracks),
                                             style = MaterialTheme.typography.bodyLarge
                                         )
                                     }

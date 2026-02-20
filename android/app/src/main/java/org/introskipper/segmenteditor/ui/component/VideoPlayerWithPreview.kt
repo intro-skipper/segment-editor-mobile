@@ -13,7 +13,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -41,6 +40,7 @@ import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.SegmentEditorApplication
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.viewmodel.PlayerViewModel
+import org.introskipper.segmenteditor.utils.getTranslatedString
 import kotlin.time.Duration.Companion.seconds
 
 // Minimum position to restore when reloading stream (avoids restoring during initial load)
@@ -237,7 +237,7 @@ fun VideoPlayerWithPreview(
             override fun onTracksChanged(tracks: Tracks) {
                 Log.d("VideoPlayerWithPreview", "onTracksChanged: ${tracks.groups.size} track groups")
                 
-                val unknownStr = context.getString(R.string.player_unknown)
+                val unknownStr = context.getTranslatedString(R.string.player_unknown)
                 
                 // Extract available audio tracks from ExoPlayer
                 val availableAudioTracks = mutableListOf<Pair<Int, String>>()
@@ -247,7 +247,7 @@ fun VideoPlayerWithPreview(
                         for (trackIndex in 0 until group.length) {
                             val format = group.getTrackFormat(trackIndex)
                             val language = format.language ?: unknownStr
-                            val label = format.label ?: context.getString(R.string.player_audio_track_label, trackIndex + 1)
+                            val label = format.label ?: context.getTranslatedString(R.string.player_audio_track_label, trackIndex + 1)
                             val info = "$label ($language)"
                             availableAudioTracks.add(Pair(trackIndex, info))
                             Log.d("VideoPlayerWithPreview", "    Track $trackIndex: $info, codec=${format.sampleMimeType}")
@@ -263,7 +263,7 @@ fun VideoPlayerWithPreview(
                         for (trackIndex in 0 until group.length) {
                             val format = group.getTrackFormat(trackIndex)
                             val language = format.language ?: unknownStr
-                            val label = format.label ?: context.getString(R.string.player_subtitle_track_label, trackIndex + 1)
+                            val label = format.label ?: context.getTranslatedString(R.string.player_subtitle_track_label, trackIndex + 1)
                             val info = "$label ($language)"
                             availableSubtitleTracks.add(Pair(trackIndex, info))
                             Log.d("VideoPlayerWithPreview", "    Track $trackIndex: $info, codec=${format.sampleMimeType}")

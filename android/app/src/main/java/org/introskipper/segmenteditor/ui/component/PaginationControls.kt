@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.introskipper.segmenteditor.R
 
 // Constants for pagination display
 private const val MAX_PAGES_WITHOUT_ELLIPSIS = 7
@@ -53,7 +54,7 @@ fun PaginationControls(
                 ) {
                     Icon(
                         imageVector = Icons.Default.NavigateBefore,
-                        contentDescription = "Previous page"
+                        contentDescription = translatedString(R.string.pagination_previous)
                     )
                 }
 
@@ -70,7 +71,7 @@ fun PaginationControls(
                 ) {
                     Icon(
                         imageVector = Icons.Default.NavigateNext,
-                        contentDescription = "Next page"
+                        contentDescription = translatedString(R.string.pagination_next)
                     )
                 }
             }
@@ -87,12 +88,12 @@ fun PaginationControls(
                 ) {
                     Icon(
                         imageVector = Icons.Default.NavigateBefore,
-                        contentDescription = "Previous page"
+                        contentDescription = translatedString(R.string.pagination_previous)
                     )
                 }
 
                 Text(
-                    text = "Page $currentPage of $totalPages",
+                    text = translatedString(R.string.pagination_page_info, currentPage, totalPages),
                     style = MaterialTheme.typography.bodyMedium
                 )
 
@@ -102,7 +103,7 @@ fun PaginationControls(
                 ) {
                     Icon(
                         imageVector = Icons.Default.NavigateNext,
-                        contentDescription = "Next page"
+                        contentDescription = translatedString(R.string.pagination_next)
                     )
                 }
             }

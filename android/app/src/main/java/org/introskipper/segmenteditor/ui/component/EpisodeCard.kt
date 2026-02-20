@@ -20,6 +20,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.state.EpisodeWithSegments
 
 @Composable
@@ -85,7 +86,7 @@ fun EpisodeCard(
                 }
 
                 Text(
-                    text = episode.episode.name ?: "Unknown Episode",
+                    text = episode.episode.name ?: translatedString(R.string.player_unknown),
                     style = MaterialTheme.typography.titleSmall,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -96,7 +97,7 @@ fun EpisodeCard(
                 episode.episode.getRuntimeSeconds()?.let { seconds ->
                     val minutes = (seconds / 60).toInt()
                     Text(
-                        text = "$minutes min",
+                        text = translatedString(R.string.episode_duration_minutes, minutes),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

@@ -25,7 +25,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -40,6 +39,7 @@ import org.introskipper.segmenteditor.ui.component.PaginationControls
 import org.introskipper.segmenteditor.ui.component.SearchBar
 import org.introskipper.segmenteditor.ui.viewmodel.HomeUiState
 import org.introskipper.segmenteditor.ui.viewmodel.HomeViewModel
+import org.introskipper.segmenteditor.ui.component.translatedString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,9 +90,9 @@ fun HomeScreen(
             TopAppBar(
                 title = { 
                     val title = when (collectionType) {
-                        "movies" -> stringResource(R.string.home_movies)
-                        "tvshows" -> stringResource(R.string.home_tv_shows)
-                        else -> stringResource(R.string.home_media)
+                        "movies" -> translatedString(R.string.home_movies)
+                        "tvshows" -> translatedString(R.string.home_tv_shows)
+                        else -> translatedString(R.string.home_media)
                     }
                     Text(title)
                 },
@@ -100,7 +100,7 @@ fun HomeScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back)
+                            contentDescription = translatedString(R.string.back)
                         )
                     }
                 },
@@ -108,7 +108,7 @@ fun HomeScreen(
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.home_settings)
+                            contentDescription = translatedString(R.string.home_settings)
                         )
                     }
                 }
@@ -148,7 +148,7 @@ fun HomeScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = stringResource(R.string.home_no_media),
+                                text = translatedString(R.string.home_no_media),
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         }
@@ -173,7 +173,7 @@ fun HomeScreen(
                             if (isShowingAll) {
                                 // Show count when displaying all items
                                 Text(
-                                    text = "Showing all ${state.totalItems} items",
+                                    text = translatedString(R.string.home_showing_all, state.totalItems),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -200,12 +200,12 @@ fun HomeScreen(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(
-                                    text = "Error: ${state.message}",
+                                    text = translatedString(R.string.error_prefix, state.message),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.error
                                 )
                                 Button(onClick = { viewModel.refresh() }) {
-                                    Text(stringResource(R.string.retry))
+                                    Text(translatedString(R.string.retry))
                                 }
                             }
                         }

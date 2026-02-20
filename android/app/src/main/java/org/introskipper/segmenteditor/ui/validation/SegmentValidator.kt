@@ -3,6 +3,7 @@ package org.introskipper.segmenteditor.ui.validation
 import android.content.Context
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.Segment
+import org.introskipper.segmenteditor.utils.getTranslatedString
 
 data class ValidationResult(
     val isValid: Boolean,
@@ -27,25 +28,25 @@ object SegmentValidator {
     ): ValidationResult {
         // Check for negative times
         if (startTime < 0) {
-            return ValidationResult(false, context.getString(R.string.validation_error_start_negative))
+            return ValidationResult(false, context.getTranslatedString(R.string.validation_error_start_negative))
         }
         
         if (endTime < 0) {
-            return ValidationResult(false, context.getString(R.string.validation_error_end_negative))
+            return ValidationResult(false, context.getTranslatedString(R.string.validation_error_end_negative))
         }
         
         // Check start < end
         if (startTime >= endTime) {
-            return ValidationResult(false, context.getString(R.string.validation_error_start_after_end))
+            return ValidationResult(false, context.getTranslatedString(R.string.validation_error_start_after_end))
         }
         
         // Check within video duration
         if (endTime > duration) {
-            return ValidationResult(false, context.getString(R.string.validation_error_end_exceeds_duration))
+            return ValidationResult(false, context.getTranslatedString(R.string.validation_error_end_exceeds_duration))
         }
         
         if (startTime > duration) {
-            return ValidationResult(false, context.getString(R.string.validation_error_start_exceeds_duration))
+            return ValidationResult(false, context.getTranslatedString(R.string.validation_error_start_exceeds_duration))
         }
         
         return ValidationResult(true)
@@ -81,7 +82,7 @@ object SegmentValidator {
             val types = overlaps.joinToString(", ") { it.type }
             return ValidationResult(
                 false, 
-                context.getString(R.string.validation_error_overlaps, types)
+                context.getTranslatedString(R.string.validation_error_overlaps, types)
             )
         }
         

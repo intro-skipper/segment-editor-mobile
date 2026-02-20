@@ -23,7 +23,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.component.PrimaryButton
+import org.introskipper.segmenteditor.ui.component.translatedString
 import org.introskipper.segmenteditor.ui.navigation.Screen
 import org.introskipper.segmenteditor.ui.viewmodel.AuthViewModel
 
@@ -50,7 +52,7 @@ fun ConnectionSuccessScreen(
         ) {
             Icon(
                 imageVector = Icons.Default.CheckCircle,
-                contentDescription = "Success",
+                contentDescription = translatedString(R.string.success),
                 modifier = Modifier.size(120.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
@@ -58,7 +60,7 @@ fun ConnectionSuccessScreen(
             Spacer(modifier = Modifier.height(32.dp))
             
             Text(
-                text = "Connection Successful!",
+                text = translatedString(R.string.connection_success_title),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
@@ -68,7 +70,7 @@ fun ConnectionSuccessScreen(
             
             if (state.user != null) {
                 Text(
-                    text = "Signed in as ${state.user!!.name}",
+                    text = translatedString(R.string.auth_signed_in_as, state.user!!.name),
                     style = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -78,7 +80,7 @@ fun ConnectionSuccessScreen(
             
             if (state.serverName.isNotBlank()) {
                 Text(
-                    text = "Connected to ${state.serverName}",
+                    text = translatedString(R.string.auth_connected_to, state.serverName),
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -88,7 +90,7 @@ fun ConnectionSuccessScreen(
             Spacer(modifier = Modifier.height(48.dp))
             
             PrimaryButton(
-                text = "Continue",
+                text = translatedString(R.string.continue_button),
                 onClick = {
                     navController.navigate(Screen.Main.route) {
                         popUpTo(0) { inclusive = true }

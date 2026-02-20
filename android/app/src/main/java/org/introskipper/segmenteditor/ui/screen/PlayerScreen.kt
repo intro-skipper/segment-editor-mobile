@@ -14,10 +14,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -55,7 +57,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -70,6 +71,7 @@ import org.introskipper.segmenteditor.ui.component.SegmentSlider
 import org.introskipper.segmenteditor.ui.component.SegmentTimeline
 import org.introskipper.segmenteditor.ui.component.TrackSelectionSheet
 import org.introskipper.segmenteditor.ui.component.VideoPlayerWithPreview
+import org.introskipper.segmenteditor.ui.component.translatedString
 import org.introskipper.segmenteditor.ui.navigation.Screen
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.state.PlayerEvent
@@ -270,12 +272,12 @@ fun PlayerScreen(
         topBar = {
             if (!uiState.isFullscreen && !uiState.isUserLandscape) {
                 TopAppBar(
-                    title = { Text(uiState.mediaItem?.name ?: stringResource(R.string.player_title)) },
+                    title = { Text(uiState.mediaItem?.name ?: translatedString(R.string.player_title)) },
                     navigationIcon = {
                         IconButton(onClick = { 
                             navigateBack(navController, uiState.mediaItem)
                         }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, translatedString(R.string.back))
                         }
                     },
                     actions = {
@@ -284,7 +286,7 @@ fun PlayerScreen(
                         }) {
                             Icon(
                                 imageVector = Icons.Default.Settings,
-                                contentDescription = stringResource(R.string.home_settings)
+                                contentDescription = translatedString(R.string.home_settings)
                             )
                         }
                     }
@@ -299,7 +301,7 @@ fun PlayerScreen(
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.player_create_segment))
+                        Icon(Icons.Default.Add, contentDescription = translatedString(R.string.player_create_segment))
                     }
                     
                     androidx.compose.material3.DropdownMenu(
@@ -353,12 +355,12 @@ fun PlayerScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
-                        text = "Error: ${uiState.error}",
+                        text = translatedString(R.string.error_prefix, uiState.error!!),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.error
                     )
                     Button(onClick = { viewModel.loadMediaItem(itemId) }) {
-                        Text(stringResource(R.string.retry))
+                        Text(translatedString(R.string.retry))
                     }
                 }
             }
@@ -539,7 +541,7 @@ fun PlayerScreen(
     // Audio track selection sheet
     if (showAudioTracks) {
         TrackSelectionSheet(
-            title = stringResource(R.string.player_audio_tracks),
+            title = translatedString(R.string.player_audio_tracks),
             tracks = uiState.audioTracks,
             selectedTrackIndex = uiState.selectedAudioTrack,
             onTrackSelected = { trackIndex ->
@@ -553,7 +555,7 @@ fun PlayerScreen(
     // Subtitle track selection sheet
     if (showSubtitleTracks) {
         TrackSelectionSheet(
-            title = stringResource(R.string.player_subtitle_tracks),
+            title = translatedString(R.string.player_subtitle_tracks),
             tracks = uiState.subtitleTracks,
             selectedTrackIndex = uiState.selectedSubtitleTrack,
             onTrackSelected = { trackIndex ->
@@ -581,9 +583,9 @@ fun PlayerScreen(
                 segmentToDelete = null
             },
             icon = { Icon(Icons.Default.Delete, contentDescription = null) },
-            title = { Text(stringResource(R.string.segment_delete_title)) },
+            title = { Text(translatedString(R.string.segment_delete_title)) },
             text = { 
-                Text(stringResource(R.string.segment_delete_message, segmentToDelete?.type ?: ""))
+                Text(translatedString(R.string.segment_delete_message, segmentToDelete?.type ?: ""))
             },
             confirmButton = {
                 TextButton(
@@ -598,7 +600,7 @@ fun PlayerScreen(
                         contentColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text(stringResource(R.string.delete))
+                    Text(translatedString(R.string.delete))
                 }
             },
             dismissButton = {
@@ -606,7 +608,7 @@ fun PlayerScreen(
                     showDeleteConfirmation = false
                     segmentToDelete = null
                 }) {
-                    Text(stringResource(R.string.cancel))
+                    Text(translatedString(R.string.cancel))
                 }
             }
         )
@@ -618,9 +620,9 @@ fun PlayerScreen(
             onDismissRequest = { 
                 showDirectPlayFailedDialog = false
             },
-            title = { Text(stringResource(R.string.player_direct_play_failed_title)) },
+            title = { Text(translatedString(R.string.player_direct_play_failed_title)) },
             text = { 
-                Text(stringResource(R.string.player_direct_play_failed_message))
+                Text(translatedString(R.string.player_direct_play_failed_message))
             },
             confirmButton = {
                 Button(
@@ -629,14 +631,14 @@ fun PlayerScreen(
                         showDirectPlayFailedDialog = false
                     }
                 ) {
-                    Text(stringResource(R.string.player_switch_to_hls))
+                    Text(translatedString(R.string.player_switch_to_hls))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { 
                     showDirectPlayFailedDialog = false
                 }) {
-                    Text(stringResource(R.string.cancel))
+                    Text(translatedString(R.string.cancel))
                 }
             }
         )
@@ -736,7 +738,7 @@ private fun PlayerContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = stringResource(R.string.player_error_load),
+                        text = translatedString(R.string.player_error_load),
                         color = Color.White
                     )
                 }
@@ -822,7 +824,7 @@ private fun PlayerContent(
                 } else {
                     item {
                         Text(
-                            text = "No segments found for this media item. Use the + button to create one.",
+                            text = translatedString(R.string.player_no_segments),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 8.dp)
@@ -842,7 +844,7 @@ private fun PlayerContent(
                         ) {
                             Icon(Icons.Default.Save, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.segment_save_all))
+                            Text(translatedString(R.string.segment_save_all))
                         }
                     }
                 }
@@ -868,7 +870,7 @@ private fun PlayerControlsRow(
         ) {
             Icon(Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text(stringResource(R.string.player_playback_speed, playbackSpeed))
+            Text(translatedString(R.string.player_playback_speed, playbackSpeed))
         }
         
         OutlinedButton(
@@ -877,7 +879,7 @@ private fun PlayerControlsRow(
         ) {
             Icon(Icons.Default.Audiotrack, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text(stringResource(R.string.player_audio))
+            Text(translatedString(R.string.player_audio))
         }
         
         OutlinedButton(
@@ -886,7 +888,7 @@ private fun PlayerControlsRow(
         ) {
             Icon(Icons.Default.Subtitles, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text(stringResource(R.string.player_subtitles))
+            Text(translatedString(R.string.player_subtitles))
         }
     }
 }
