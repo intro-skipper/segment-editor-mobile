@@ -177,11 +177,12 @@ fun PlayerScreen(
         }
     }
     
-    // Sync editing segments from server when data changes
+    // Sync editing segments from server when data changes.
+    // Only update local state when there are no unsaved changes to avoid overwriting
+    // in-flight edits during server refreshes (e.g. triggered by a single-segment save).
     LaunchedEffect(uiState.segments) {
-        if (editingSegments.isEmpty() || uiState.segments != editingSegments) {
-            editingSegments = uiState.segments
-            segmentHasChanges = emptyMap()
+        if (segmentHasChanges.isEmpty()) {
+            editingSegments = uiState.segments.sortedBy { it.startTicks }
         }
     }
     
@@ -321,8 +322,9 @@ fun PlayerScreen(
                                         startTicks = 0L,
                                         endTicks = Segment.secondsToTicks(durationSeconds)
                                     )
-                                    editingSegments = editingSegments + newSegment
-                                    activeSegmentIndex = editingSegments.size - 1
+                                    val updated = (editingSegments + newSegment).sortedBy { it.startTicks }
+                                    editingSegments = updated
+                                    activeSegmentIndex = updated.indexOfFirst { it === newSegment }.coerceAtLeast(0)
                                     // Mark new segment as having changes using stable key
                                     val key = getSegmentKey(newSegment)
                                     segmentHasChanges = segmentHasChanges + (key to true)
@@ -376,6 +378,7 @@ fun PlayerScreen(
                 segmentHasChanges = segmentHasChanges,
                 segmentKeys = segmentKeys,
                 useDirectPlay = useDirectPlay,
+                isSaving = uiState.isBatchSaving,
                 onPlayerReady = { player = it },
                 onAudioTracksClick = { showAudioTracks = true },
                 onSubtitleTracksClick = { showSubtitleTracks = true },
@@ -435,20 +438,23 @@ fun PlayerScreen(
                     }
                 },
                 onSaveAll = {
-                    // Save all segments with changes
-                    viewModel.saveAllSegments(editingSegments, uiState.segments) { result ->
-                        result.fold(
-                            onSuccess = { savedSegments ->
-                                // Clear all change flags
-                                segmentHasChanges = emptyMap()
-                                
-                                // Refresh from server
-                                viewModel.refreshSegments(itemId)
-                            },
-                            onFailure = { error ->
-                                Log.e("PlayerScreen", "Failed to save all segments", error)
-                            }
-                        )
+                    // Save all segments with changes; isBatchSaving from ViewModel prevents
+                    // concurrent saves and is reset via finally even if the job is cancelled
+                    if (!uiState.isBatchSaving) {
+                        viewModel.saveAllSegments(editingSegments, uiState.segments) { result ->
+                            result.fold(
+                                onSuccess = { savedSegments ->
+                                    // Clear all change flags
+                                    segmentHasChanges = emptyMap()
+                                    
+                                    // Refresh from server
+                                    viewModel.refreshSegments(itemId)
+                                },
+                                onFailure = { error ->
+                                    Log.e("PlayerScreen", "Failed to save all segments", error)
+                                }
+                            )
+                        }
                     }
                 },
                 onDeleteSegment = { segment ->
@@ -500,9 +506,12 @@ fun PlayerScreen(
                                 startTicks = Segment.secondsToTicks(positionMs / 1000.0)
                             )
                             transferSegmentKey(segment, updatedSegment)
-                            editingSegments = editingSegments.toMutableList().apply {
+                            // Re-sort after start time change to keep list in chronological order
+                            val updated = editingSegments.toMutableList().apply {
                                 set(index, updatedSegment)
-                            }
+                            }.sortedBy { it.startTicks }
+                            editingSegments = updated
+                            activeSegmentIndex = updated.indexOfFirst { it === updatedSegment }.coerceAtLeast(0)
                             // Mark as having changes
                             segmentHasChanges = segmentHasChanges + (key to true)
                         }
@@ -591,6 +600,17 @@ fun PlayerScreen(
                 TextButton(
                     onClick = {
                         segmentToDelete?.let { segment ->
+                            // Optimistically remove from local editing state so the UI
+                            // reflects the deletion immediately, regardless of whether other
+                            // segments have pending unsaved changes.
+                            val key = segment.id ?: getSegmentKey(segment)
+                            editingSegments = editingSegments.filter {
+                                if (segment.id != null) it.id != segment.id else it !== segment
+                            }
+                            segmentHasChanges = segmentHasChanges - key
+                            if (activeSegmentIndex >= editingSegments.size) {
+                                activeSegmentIndex = (editingSegments.size - 1).coerceAtLeast(0)
+                            }
                             viewModel.deleteSegment(segment)
                             showDeleteConfirmation = false
                             segmentToDelete = null
@@ -675,6 +695,7 @@ private fun PlayerContent(
     segmentHasChanges: Map<String, Boolean>,
     segmentKeys: Map<Segment, String>,
     useDirectPlay: Boolean,
+    isSaving: Boolean = false,
     onPlayerReady: (ExoPlayer) -> Unit,
     onAudioTracksClick: () -> Unit,
     onSubtitleTracksClick: () -> Unit,
@@ -837,6 +858,7 @@ private fun PlayerContent(
                     item {
                         Button(
                             onClick = onSaveAll,
+                            enabled = !isSaving,
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary

@@ -37,7 +37,10 @@ data class PlayerUiState(
     val capturedEndTime: Long? = null,
 
     // Auto Play
-    val nextItemId: String? = null
+    val nextItemId: String? = null,
+
+    // Batch save in progress (used to disable Save All while a save is running)
+    val isBatchSaving: Boolean = false
 )
 
 data class TrackInfo(

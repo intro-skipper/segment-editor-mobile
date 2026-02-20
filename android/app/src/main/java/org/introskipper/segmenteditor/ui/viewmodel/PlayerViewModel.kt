@@ -12,6 +12,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import org.introskipper.segmenteditor.data.model.MediaItem
@@ -38,6 +43,9 @@ class PlayerViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
+
+    // Tracks an in-flight batch save so it can be cancelled before starting a new one
+    private var saveJob: Job? = null
 
     // Get the preferDirectPlay setting (when true, use direct play instead of HLS)
     fun shouldUseDirectPlay(): Boolean {
@@ -668,52 +676,71 @@ class PlayerViewModel @Inject constructor(
     }
 
     /**
-     * Saves all segments with changes (batch save)
+     * Saves all segments using a delete-all-then-create-all batch pattern with parallel
+     * operations. Any previously in-flight save is cancelled before starting a new one.
      */
     fun saveAllSegments(
         segments: List<Segment>,
         existingSegments: List<Segment>,
         onComplete: (Result<List<Segment>>) -> Unit
     ) {
-        viewModelScope.launch {
+        // Cancel any previous in-flight save to prevent concurrent operations
+        saveJob?.cancel()
+        saveJob = viewModelScope.launch {
+            _uiState.update { it.copy(isBatchSaving = true) }
             try {
-                val results = mutableListOf<Segment>()
-                var failedCount = 0
-                
-                // Save each segment
-                for (segment in segments) {
-                    val savedSegment = saveSegmentInternal(segment)
-                    if (savedSegment != null) {
-                        results.add(savedSegment)
-                    } else {
-                        failedCount++
-                        Log.w(TAG, "Failed to save segment ${segment.type} (ID: ${segment.id})")
-                    }
+                // Step 1: Delete all existing server-side segments in parallel.
+                // Continue on partial failure (same as web's Promise.allSettled pattern).
+                coroutineScope {
+                    existingSegments
+                        .filter { it.id != null }
+                        .map { segment ->
+                            async {
+                                segmentRepository.deleteSegmentResult(
+                                    segmentId = segment.id!!,
+                                    itemId = segment.itemId,
+                                    segmentType = segment.type
+                                ).onFailure { e ->
+                                    Log.w(TAG, "Failed to delete segment ${segment.type} (ID: ${segment.id}) during batch save", e)
+                                }
+                            }
+                        }
+                        .awaitAll()
                 }
-                
-                // Delete segments that were removed (exist in existingSegments but not in segments)
-                val segmentsToDelete = existingSegments.filter { existing ->
-                    existing.id != null && segments.none { it.id == existing.id }
+
+                // Bail out early if this job was cancelled while deletes were running
+                ensureActive()
+
+                // Step 2: Create all new segments in parallel
+                val createResults = coroutineScope {
+                    segments.map { segment ->
+                        async {
+                            val segmentRequest = org.introskipper.segmenteditor.data.model.SegmentCreateRequest(
+                                itemId = segment.itemId,
+                                type = org.introskipper.segmenteditor.data.model.SegmentType.stringToApiValue(segment.type),
+                                startTicks = segment.startTicks,
+                                endTicks = segment.endTicks
+                            )
+                            segmentRepository.createSegmentResult(segment.itemId, segmentRequest).getOrNull()
+                        }
+                    }.awaitAll()
                 }
-                
-                for (segment in segmentsToDelete) {
-                    segment.id?.let { id ->
-                        segmentRepository.deleteSegmentResult(
-                            segmentId = id,
-                            itemId = segment.itemId,
-                            segmentType = segment.type
-                        )
-                    }
-                }
-                
-                // Report result with information about failures
+
+                val saved = createResults.filterNotNull()
+                val failedCount = segments.size - saved.size
                 if (failedCount > 0) {
                     Log.w(TAG, "Batch save completed with $failedCount failures out of ${segments.size} segments")
                 }
-                onComplete(Result.success(results))
+                onComplete(Result.success(saved))
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // Job was cancelled (e.g. a newer save started); propagate so coroutine is torn down
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Exception in batch save", e)
                 onComplete(Result.failure(e))
+            } finally {
+                // Always clear the saving flag, even on cancellation, so the UI is never stuck
+                _uiState.update { it.copy(isBatchSaving = false) }
             }
         }
     }
