@@ -104,7 +104,7 @@ fun MediaControls(
         }
     }
     
-    // Auto-hide controls after 3 seconds of playback
+    // Auto-hide controls after 5 seconds of playback
     LaunchedEffect(showControls, isPlaying) {
         if (showControls && isPlaying) {
             delay(5000)
@@ -172,7 +172,7 @@ fun MediaControls(
             }
         }
         
-        // Play/Pause button centered in the player
+        // Play/Pause and seek buttons centered in the player
         AnimatedVisibility(
             visible = showControls,
             enter = fadeIn(),
@@ -189,6 +189,7 @@ fun MediaControls(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(if (isLandscape) 16.dp else 8.dp)
             ) {
+                // Rewind Button
                 IconButton(
                     onClick = {  },
                     modifier = Modifier.size(sideButtonSize)
@@ -196,16 +197,21 @@ fun MediaControls(
                             Color.Black.copy(alpha = 0.5f),
                             shape = androidx.compose.foundation.shape.CircleShape
                         )
+                        .onTouchHeldAnimated(
+                            onTouchHeld = {
+                                player?.seekBack()
+                            }
+                        )
                 ) {
                     Icon(
                         imageVector = Icons.Default.FastRewind,
                         contentDescription = "Rewind",
                         tint = Color.White,
-                        modifier = Modifier.size(sideIconSize).onTouchHeldAnimated(
-                            onTouchHeld = { player?.seekBack() }
-                        )
+                        modifier = Modifier.size(sideIconSize)
                     )
                 }
+
+                // Play/Pause Button
                 IconButton(
                     onClick = {
                         player?.let {
@@ -230,6 +236,8 @@ fun MediaControls(
                         modifier = Modifier.size(playIconSize)
                     )
                 }
+
+                // Fast-forward Button
                 IconButton(
                     onClick = {  },
                     modifier = Modifier.size(sideButtonSize)
@@ -237,14 +245,17 @@ fun MediaControls(
                             Color.Black.copy(alpha = 0.5f),
                             shape = androidx.compose.foundation.shape.CircleShape
                         )
+                        .onTouchHeldAnimated(
+                            onTouchHeld = {
+                                player?.seekForward()
+                            }
+                        )
                 ) {
                     Icon(
                         imageVector = Icons.Default.FastForward,
                         contentDescription = "Fast-forward",
                         tint = Color.White,
-                        modifier = Modifier.size(sideIconSize).onTouchHeldAnimated(
-                            onTouchHeld = { player?.seekForward() }
-                        )
+                        modifier = Modifier.size(sideIconSize)
                     )
                 }
             }
@@ -361,11 +372,16 @@ private fun formatTime(timeMs: Long): String {
     }
 }
 
+/**
+ * Custom modifier that triggers an action immediately on touch down, 
+ * and repeats it periodically while held, with optional acceleration.
+ */
 fun Modifier.onTouchHeldAnimated(
     easing: Easing = FastOutSlowInEasing,
     pollDelay: Duration = 1.seconds,
-    targetPollDelay: Duration = 1.milliseconds,
-    animationDuration: Duration = 10.seconds,
+    targetPollDelay: Duration = 50.milliseconds,
+    accelerationDelay: Duration = 3.seconds,
+    animationDuration: Duration = 5.seconds,
     onTouchHeld: () -> Unit
 ) = composed {
     val scope = rememberCoroutineScope()
@@ -376,24 +392,31 @@ fun Modifier.onTouchHeldAnimated(
             easing
         )
         awaitEachGesture {
-            val initialDown = awaitFirstDown(requireUnconsumed = false)
-            val initialTouchHeldJob = scope.launch {
-                var currentPlayTime = 0.milliseconds
-                var delay = pollDelay
-                while (initialDown.pressed) {
+            awaitFirstDown(requireUnconsumed = false)
+            val job = scope.launch {
+                var totalTime = 0.milliseconds
+                while (isActive) {
                     onTouchHeld()
-                    delay(delay.inWholeMilliseconds)
-                    currentPlayTime += delay
-                    delay = animationSpec.getValueFromNanos(
-                        currentPlayTime.inWholeNanoseconds,
-                        pollDelay.inWholeMilliseconds.toFloat(),
-                        targetPollDelay.inWholeMilliseconds.toFloat(),
-                        0F
-                    ).toInt().milliseconds
+                    
+                    val currentDelay = if (totalTime < accelerationDelay) {
+                        pollDelay
+                    } else {
+                        val acceleratedTime = totalTime - accelerationDelay
+                        val delayMs = animationSpec.getValueFromNanos(
+                            acceleratedTime.inWholeNanoseconds,
+                            pollDelay.inWholeMilliseconds.toFloat(),
+                            targetPollDelay.inWholeMilliseconds.toFloat(),
+                            0F
+                        )
+                        delayMs.toLong().milliseconds
+                    }
+                    
+                    delay(currentDelay.inWholeMilliseconds)
+                    totalTime += currentDelay
                 }
             }
             waitForUpOrCancellation()
-            initialTouchHeldJob.cancel()
+            job.cancel()
         }
     }
 }
