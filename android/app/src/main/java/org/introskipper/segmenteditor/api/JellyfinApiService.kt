@@ -1,6 +1,5 @@
 package org.introskipper.segmenteditor.api
 
-import android.net.Uri
 import androidx.core.net.toUri
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -21,17 +20,11 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
-class JellyfinApiService {
+class JellyfinApiService(private val securePreferences: SecurePreferences) {
     private var api: JellyfinApi? = null
-    private var securePreferences: SecurePreferences? = null
     private var currentBaseUrl: String? = null
     
-    constructor(baseUrl: String, apiKey: String) {
-        initializeApi(baseUrl)
-    }
-    
-    constructor(securePreferences: SecurePreferences) {
-        this.securePreferences = securePreferences
+    init {
         val serverUrl = securePreferences.getServerUrl()
         if (!serverUrl.isNullOrBlank()) {
             initializeApi(serverUrl)
@@ -79,12 +72,12 @@ class JellyfinApiService {
     }
     
     private fun getApiKey(): String {
-        return securePreferences?.getApiKey() ?: ""
+        return securePreferences.getApiKey() ?: ""
     }
     
     private fun ensureInitialized() {
         if (api == null) {
-            val serverUrl = securePreferences?.getServerUrl()
+            val serverUrl = securePreferences.getServerUrl()
             if (!serverUrl.isNullOrBlank()) {
                 initializeApi(serverUrl)
             } else {
@@ -230,119 +223,6 @@ class JellyfinApiService {
             }
             .build()
         return uri.toString()
-    }
-    
-    /**
-     * Gets the backdrop image URL for an item
-     */
-    fun getBackdropUrl(itemId: String, backdropIndex: Int = 0, maxWidth: Int? = null, maxHeight: Int? = null): String {
-        val baseUrl = currentBaseUrl ?: throw IllegalStateException("Base URL not set")
-        val uri = Uri.parse(baseUrl)
-            .buildUpon()
-            .appendPath("Items")
-            .appendPath(itemId)
-            .appendPath("Images")
-            .appendPath("Backdrop")
-            .appendPath(backdropIndex.toString())
-            .apply {
-                maxWidth?.let { appendQueryParameter("maxWidth", it.toString()) }
-                maxHeight?.let { appendQueryParameter("maxHeight", it.toString()) }
-            }
-            .build()
-        return uri.toString()
-    }
-    
-    /**
-     * Gets the user avatar image URL
-     */
-    fun getUserImageUrl(userId: String, imageTag: String, maxWidth: Int? = null, maxHeight: Int? = null): String {
-        val baseUrl = currentBaseUrl ?: throw IllegalStateException("Base URL not set")
-        val uri = Uri.parse(baseUrl)
-            .buildUpon()
-            .appendPath("Users")
-            .appendPath(userId)
-            .appendPath("Images")
-            .appendPath("Primary")
-            .apply {
-                appendQueryParameter("tag", imageTag)
-                maxWidth?.let { appendQueryParameter("maxWidth", it.toString()) }
-                maxHeight?.let { appendQueryParameter("maxHeight", it.toString()) }
-            }
-            .build()
-        return uri.toString()
-    }
-    
-    // ========== Streaming URL Builders ==========
-    
-    /**
-     * Gets the direct play URL for a media item
-     */
-    fun getDirectPlayUrl(itemId: String, mediaSourceId: String? = null, container: String? = null): String {
-        val baseUrl = currentBaseUrl ?: throw IllegalStateException("Base URL not set")
-        val uri = Uri.parse(baseUrl)
-            .buildUpon()
-            .appendPath("Videos")
-            .appendPath(itemId)
-            .appendPath("stream")
-            .apply {
-                appendQueryParameter("Static", "true")
-                appendQueryParameter("api_key", getApiKey())
-                mediaSourceId?.let { appendQueryParameter("MediaSourceId", it) }
-                container?.let { appendQueryParameter("Container", it) }
-            }
-            .build()
-        return uri.toString()
-    }
-    
-    /**
-     * Gets the HLS playlist URL for a media item
-     */
-    fun getHlsPlaylistUrl(
-        itemId: String,
-        mediaSourceId: String? = null,
-        deviceId: String = "segment-editor-android",
-        maxStreamingBitrate: Int = 140000000
-    ): String {
-        val baseUrl = currentBaseUrl ?: throw IllegalStateException("Base URL not set")
-        val uri = Uri.parse(baseUrl)
-            .buildUpon()
-            .appendPath("Videos")
-            .appendPath(itemId)
-            .appendPath("master.m3u8")
-            .apply {
-                appendQueryParameter("api_key", getApiKey())
-                appendQueryParameter("DeviceId", deviceId)
-                appendQueryParameter("MaxStreamingBitrate", maxStreamingBitrate.toString())
-                mediaSourceId?.let { appendQueryParameter("MediaSourceId", it) }
-            }
-            .build()
-        return uri.toString()
-    }
-    
-    /**
-     * Gets the direct stream URL for a media item
-     */
-    fun getDirectStreamUrl(itemId: String, mediaSourceId: String? = null, container: String? = null): String {
-        val baseUrl = currentBaseUrl ?: throw IllegalStateException("Base URL not set")
-        val uri = Uri.parse(baseUrl)
-            .buildUpon()
-            .appendPath("Videos")
-            .appendPath(itemId)
-            .appendPath("stream")
-            .apply {
-                appendQueryParameter("Static", "false")
-                appendQueryParameter("api_key", getApiKey())
-                mediaSourceId?.let { appendQueryParameter("MediaSourceId", it) }
-                container?.let { appendQueryParameter("Container", it) }
-            }
-            .build()
-        return uri.toString()
-    }
-    
-    // ========== Connection Testing ==========
-    
-    suspend fun testConnection(): Response<ServerInfo> {
-        return getSystemInfo()
     }
     
     // ========== Helper Methods ==========

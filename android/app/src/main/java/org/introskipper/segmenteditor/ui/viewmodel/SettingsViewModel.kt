@@ -1,13 +1,17 @@
 package org.introskipper.segmenteditor.ui.viewmodel
 
+import android.media.MediaCodecList
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.introskipper.segmenteditor.data.repository.AuthRepository
 import org.introskipper.segmenteditor.data.repository.JellyfinRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.state.AppTheme
@@ -27,7 +31,12 @@ data class SettingsUiState(
     val hiddenLibraryIds: Set<String> = emptySet(),
     val availableLibraries: List<LibraryInfo> = emptyList(),
     val isLoadingLibraries: Boolean = false,
-    val currentLocaleName: String = ""
+    val currentLocaleName: String = "",
+    val serverUrl: String = "",
+    val serverVersion: String = "",
+    val serverName: String = "",
+    val supportedVideoCodecs: List<String> = emptyList(),
+    val supportedAudioCodecs: List<String> = emptyList()
 )
 
 data class LibraryInfo(
@@ -39,6 +48,7 @@ data class LibraryInfo(
 class SettingsViewModel @Inject constructor(
     private val securePreferences: SecurePreferences,
     private val jellyfinRepository: JellyfinRepository,
+    private val authRepository: AuthRepository,
     private val translationService: TranslationService
 ) : ViewModel() {
 
@@ -48,6 +58,8 @@ class SettingsViewModel @Inject constructor(
     init {
         loadPreferences()
         loadAvailableLibraries()
+        loadServerInfo()
+        loadSupportedCodecs()
         
         // Keep UI state in sync with translation service
         viewModelScope.launch {
@@ -74,7 +86,61 @@ class SettingsViewModel @Inject constructor(
                 prettyPrintJson = securePreferences.getPrettyPrintJson(),
                 itemsPerPage = securePreferences.getItemsPerPage(),
                 hiddenLibraryIds = securePreferences.getHiddenLibraryIds(),
-                currentLocaleName = translationService.getCurrentLocaleName()
+                currentLocaleName = translationService.getCurrentLocaleName(),
+                serverUrl = securePreferences.getServerUrl() ?: ""
+            )
+        }
+    }
+
+    private fun loadServerInfo() {
+        viewModelScope.launch {
+            try {
+                val response = authRepository.getServerInfo()
+                if (response.isSuccessful) {
+                    response.body()?.let { info ->
+                        _uiState.value = _uiState.value.copy(
+                            serverVersion = info.version,
+                            serverName = info.serverName
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                // Ignore errors, info will just be empty
+            }
+        }
+    }
+
+    private fun loadSupportedCodecs() {
+        viewModelScope.launch {
+            val (video, audio) = withContext(Dispatchers.Default) {
+                val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
+                val codecInfos = codecList.codecInfos
+                
+                val videoMimes = mutableSetOf<String>()
+                val audioMimes = mutableSetOf<String>()
+                
+                for (info in codecInfos) {
+                    if (info.isEncoder) continue
+                    
+                    for (type in info.supportedTypes) {
+                        if (type.startsWith("video/")) {
+                            videoMimes.add(type.substringAfter("video/"))
+                        } else if (type.startsWith("audio/")) {
+                            audioMimes.add(type.substringAfter("audio/"))
+                        }
+                    }
+                }
+                
+                // Map to friendly names and sort
+                val videoFriendly = videoMimes.map { it.uppercase() }.sorted()
+                val audioFriendly = audioMimes.map { it.uppercase() }.sorted()
+                
+                videoFriendly to audioFriendly
+            }
+            
+            _uiState.value = _uiState.value.copy(
+                supportedVideoCodecs = video,
+                supportedAudioCodecs = audio
             )
         }
     }

@@ -4,6 +4,10 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -31,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -39,6 +45,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.component.settings.ClickableSettingItem
 import org.introskipper.segmenteditor.ui.component.settings.DropdownSettingsItem
+import org.introskipper.segmenteditor.ui.component.settings.SettingItem
 import org.introskipper.segmenteditor.ui.component.settings.SettingsSection
 import org.introskipper.segmenteditor.ui.component.settings.SwitchSettingItem
 import org.introskipper.segmenteditor.ui.state.AppTheme
@@ -96,6 +103,22 @@ fun SettingsScreen(
             // Connection Section
             item {
                 SettingsSection(title = translatedString(R.string.settings_section_connection)) {
+                    if (uiState.serverName.isNotEmpty()) {
+                        SettingItem(
+                            title = translatedString(R.string.settings_server_info, uiState.serverName),
+                            subtitle = if (uiState.serverVersion.isNotEmpty()) {
+                                translatedString(R.string.settings_server_version, uiState.serverVersion)
+                            } else {
+                                uiState.serverUrl
+                            }
+                        )
+                    } else if (uiState.serverUrl.isNotEmpty()) {
+                        SettingItem(
+                            title = uiState.serverUrl,
+                            subtitle = null
+                        )
+                    }
+
                     ClickableSettingItem(
                         title = translatedString(R.string.settings_change_server),
                         subtitle = translatedString(R.string.settings_change_server_subtitle),
@@ -239,6 +262,16 @@ fun SettingsScreen(
                 }
             }
             
+            // Codecs Section
+            item {
+                SettingsSection(title = translatedString(R.string.settings_section_codecs)) {
+                    CodecTable(
+                        videoCodecs = uiState.supportedVideoCodecs,
+                        audioCodecs = uiState.supportedAudioCodecs
+                    )
+                }
+            }
+            
             // About Section
             item {
                 SettingsSection(title = translatedString(R.string.settings_section_about)) {
@@ -289,5 +322,63 @@ fun SettingsScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+fun CodecTable(videoCodecs: List<String>, audioCodecs: List<String>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.small)
+    ) {
+        // Header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .padding(8.dp)
+        ) {
+            Text(
+                text = translatedString(R.string.settings_video_codecs),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = translatedString(R.string.settings_audio_codecs),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        val maxRows = maxOf(videoCodecs.size, audioCodecs.size)
+        if (maxRows == 0) {
+            Row(modifier = Modifier.padding(8.dp)) {
+                Text(translatedString(R.string.none), style = MaterialTheme.typography.bodyMedium)
+            }
+        } else {
+            for (i in 0 until maxRows) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                ) {
+                    Text(
+                        text = videoCodecs.getOrNull(i) ?: "",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = audioCodecs.getOrNull(i) ?: "",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
     }
 }

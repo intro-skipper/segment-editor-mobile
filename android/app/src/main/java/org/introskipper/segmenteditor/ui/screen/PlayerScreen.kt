@@ -76,6 +76,7 @@ import org.introskipper.segmenteditor.ui.navigation.Screen
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.state.PlayerEvent
 import org.introskipper.segmenteditor.ui.viewmodel.PlayerViewModel
+import java.util.Locale
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
@@ -892,7 +893,10 @@ private fun PlayerControlsRow(
         ) {
             Icon(Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text(translatedString(R.string.player_playback_speed, playbackSpeed))
+            Text(translatedString(
+                R.string.player_playback_speed,
+                String.format(Locale.ROOT, "%.2f",playbackSpeed)
+            ))
         }
         
         OutlinedButton(

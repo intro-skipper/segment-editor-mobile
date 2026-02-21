@@ -10,6 +10,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.introskipper.segmenteditor.BuildConfig
 import org.introskipper.segmenteditor.api.JellyfinApiService
+import org.introskipper.segmenteditor.data.repository.AuthRepository
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
@@ -79,5 +80,13 @@ object AppModule {
         apiService: JellyfinApiService
     ): SegmentRepository {
         return SegmentRepository(apiService)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAuthRepository(
+        apiService: JellyfinApiService
+    ): AuthRepository {
+        return AuthRepository(apiService)
     }
 }
