@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.NavigateBefore
 import androidx.compose.material.icons.filled.NavigateNext
@@ -129,7 +129,12 @@ private fun PageNumberChips(
         verticalAlignment = Alignment.CenterVertically,
         contentPadding = PaddingValues(horizontal = 8.dp)
     ) {
-        items(pageNumbers, key = { it }) { pageNumber ->
+        itemsIndexed(
+            items = pageNumbers,
+            key = { index, pageNumber -> 
+                if (pageNumber == ELLIPSIS_PLACEHOLDER) "ellipsis_$index" else pageNumber 
+            }
+        ) { _, pageNumber ->
             when (pageNumber) {
                 ELLIPSIS_PLACEHOLDER -> {
                     // Ellipsis
