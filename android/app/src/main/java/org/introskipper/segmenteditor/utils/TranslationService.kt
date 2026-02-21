@@ -36,6 +36,9 @@ class TranslationService @Inject constructor(
     private val _isDynamicTranslationEnabled = MutableStateFlow(securePreferences.isDynamicTranslationEnabled())
     val isDynamicTranslationEnabled: StateFlow<Boolean> = _isDynamicTranslationEnabled.asStateFlow()
 
+    private val _isDownloadingModel = MutableStateFlow(false)
+    val isDownloadingModel: StateFlow<Boolean> = _isDownloadingModel.asStateFlow()
+
     fun setDynamicTranslationEnabled(enabled: Boolean) {
         securePreferences.setDynamicTranslationEnabled(enabled)
         _isDynamicTranslationEnabled.value = enabled
@@ -141,7 +144,12 @@ class TranslationService @Inject constructor(
             .requireWifi()
             .build()
         
-        newTranslator.downloadModelIfNeeded(conditions).await()
+        try {
+            _isDownloadingModel.value = true
+            newTranslator.downloadModelIfNeeded(conditions).await()
+        } finally {
+            _isDownloadingModel.value = false
+        }
         
         translator = newTranslator
         currentTargetLanguage = targetLanguage

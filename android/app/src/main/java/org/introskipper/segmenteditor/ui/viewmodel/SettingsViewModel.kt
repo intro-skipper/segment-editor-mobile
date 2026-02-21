@@ -18,6 +18,7 @@ import javax.inject.Inject
 data class SettingsUiState(
     val theme: AppTheme = AppTheme.SYSTEM,
     val dynamicTranslationEnabled: Boolean = false,
+    val isDownloadingModel: Boolean = false,
     val preferDirectPlay: Boolean = true,
     val autoPlayNextEpisode: Boolean = true,
     val exportFormat: ExportFormat = ExportFormat.JSON,
@@ -52,6 +53,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             translationService.isDynamicTranslationEnabled.collectLatest { enabled ->
                 _uiState.value = _uiState.value.copy(dynamicTranslationEnabled = enabled)
+            }
+        }
+        
+        viewModelScope.launch {
+            translationService.isDownloadingModel.collectLatest { isDownloading ->
+                _uiState.value = _uiState.value.copy(isDownloadingModel = isDownloading)
             }
         }
     }
