@@ -174,26 +174,6 @@ fun SettingsScreen(
                     )
                 }
             }
-
-            // Pagination Section
-            item {
-                SettingsSection(title = translatedString(R.string.settings_section_browsing)) {
-                    DropdownSettingsItem(
-                        title = translatedString(R.string.settings_items_per_page),
-                        subtitle = translatedString(R.string.settings_items_per_page_subtitle),
-                        options = listOf(
-                            10 to "10",
-                            20 to "20",
-                            30 to "30",
-                            50 to "50",
-                            100 to "100",
-                            Int.MAX_VALUE to translatedString(R.string.settings_show_all)
-                        ),
-                        selectedOption = uiState.itemsPerPage,
-                        onOptionSelected = viewModel::setItemsPerPage
-                    )
-                }
-            }
             
             // Hidden Libraries Section
             item {
@@ -214,6 +194,26 @@ fun SettingsScreen(
                             )
                         }
                     }
+                }
+            }
+
+            // Pagination Section
+            item {
+                SettingsSection(title = translatedString(R.string.settings_section_browsing)) {
+                    DropdownSettingsItem(
+                        title = translatedString(R.string.settings_items_per_page),
+                        subtitle = translatedString(R.string.settings_items_per_page_subtitle),
+                        options = listOf(
+                            10 to "10",
+                            20 to "20",
+                            30 to "30",
+                            50 to "50",
+                            100 to "100",
+                            Int.MAX_VALUE to translatedString(R.string.settings_show_all)
+                        ),
+                        selectedOption = uiState.itemsPerPage,
+                        onOptionSelected = viewModel::setItemsPerPage
+                    )
                 }
             }
             
