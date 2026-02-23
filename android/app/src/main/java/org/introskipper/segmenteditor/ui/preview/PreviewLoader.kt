@@ -28,6 +28,12 @@ interface PreviewLoader {
     fun getPreviewInterval(): Long
     
     /**
+     * Whether this loader benefits from a warmup call at position 0 before the user scrubs.
+     * Should return true only for remote sources (e.g. Trickplay) that benefit from pre-fetching.
+     */
+    val requiresWarmup: Boolean get() = false
+
+    /**
      * Cleans up any resources used by the loader
      */
     fun release()

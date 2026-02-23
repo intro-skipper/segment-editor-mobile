@@ -35,6 +35,8 @@ class TrickplayPreviewLoader(
     private val previewCache = LruCache<Long, Bitmap>(MAX_PREVIEW_CACHE_SIZE)
     private val tileSheetCache = LruCache<Int, Bitmap>(MAX_TILE_SHEET_CACHE_SIZE)
     
+    override val requiresWarmup: Boolean get() = true
+
     companion object {
         private const val TAG = "TrickplayPreviewLoader"
         private const val DEFAULT_INTERVAL_MS = 10000L // 10 seconds

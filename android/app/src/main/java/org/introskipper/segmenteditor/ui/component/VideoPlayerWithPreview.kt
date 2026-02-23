@@ -419,8 +419,10 @@ fun VideoPlayerWithPreview(
         )
 
         LaunchedEffect(previewLoader) {
-            previewLoader?.loadPreview(0)
-            previewLoader?.preloadPreviews(0, count = 3)
+            if (previewLoader?.requiresWarmup == true) {
+                previewLoader.loadPreview(0)
+                previewLoader.preloadPreviews(0, count = 3)
+            }
         }
 
     }
