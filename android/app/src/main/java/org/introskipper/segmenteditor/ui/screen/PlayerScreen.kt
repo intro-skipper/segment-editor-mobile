@@ -14,12 +14,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -63,6 +61,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
+import org.introskipper.segmenteditor.framecapture.PreviewFrames.onReleasePreviews
 import kotlinx.coroutines.delay
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.Segment
@@ -106,7 +105,8 @@ fun PlayerScreen(
     
     // Preview loader
     val previewLoader = remember {
-        viewModel.createPreviewLoader(itemId)
+        viewModel.createPreviewLoader(itemId, streamUrl)
+
     }
     
     // Handle events from ViewModel
@@ -131,6 +131,7 @@ fun PlayerScreen(
     DisposableEffect(previewLoader) {
         onDispose {
             previewLoader?.release()
+            onReleasePreviews()
         }
     }
     

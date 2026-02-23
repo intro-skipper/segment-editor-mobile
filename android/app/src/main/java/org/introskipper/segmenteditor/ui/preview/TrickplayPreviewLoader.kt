@@ -3,6 +3,7 @@ package org.introskipper.segmenteditor.ui.preview
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
+import org.introskipper.segmenteditor.framecapture.PreviewFrames.loadPreviewFrame
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -21,10 +22,12 @@ class TrickplayPreviewLoader(
     private val apiKey: String,
     private val userId: String,
     private val itemId: String,
-    private val httpClient: OkHttpClient
+    private val httpClient: OkHttpClient,
+    private val useFallback: Boolean
 ) : PreviewLoader {
     
     private var trickplayInfo: TrickplayInfo? = null
+    private var isInitialized = false
     private val previewCache = LinkedHashMap<Long, Bitmap>(100, 0.75f, true) // LRU cache
     private val tileSheetCache = LinkedHashMap<Int, Bitmap>(10, 0.75f, true) // Cache tile sheets
     
@@ -47,43 +50,43 @@ class TrickplayPreviewLoader(
     )
     
     override suspend fun loadPreview(positionMs: Long): Bitmap? = withContext(Dispatchers.IO) {
+        // Initialize on first load, and only if not already initialized
+        if (!isInitialized) {
+            trickplayInfo = loadTrickplayInfo()
+            isInitialized = true
+        }
+
+        val info =
+            trickplayInfo ?: // Fallback to local frame extraction if trickplay is not available
+            return@withContext if (useFallback) loadPreviewFrame(positionMs) else null
+
         try {
-            // Load trickplay info if not already loaded
-            if (trickplayInfo == null) {
-                trickplayInfo = loadTrickplayInfo()
-            }
-            
-            val info = trickplayInfo ?: run {
-                Log.w(TAG, "Trickplay info not available")
-                return@withContext null
-            }
-            
             // Round position to nearest interval boundary for better cache hits
             val roundedPositionMs = (positionMs / info.interval) * info.interval.toLong()
-            
+
             // Check cache first with rounded position
             previewCache[roundedPositionMs]?.let { return@withContext it }
-            
+
             // Calculate which tile image and position within the tile
             // Note: info.interval is in milliseconds (per Jellyfin API spec)
             val thumbnailIndex = (roundedPositionMs / info.interval).toInt()
             val tilesPerImage = info.tileWidth * info.tileHeight
             val imageIndex = thumbnailIndex / tilesPerImage
             val tileIndexInImage = thumbnailIndex % tilesPerImage
-            
+
             // Load the tile sheet image (with caching)
             val tileSheet = loadTileSheet(imageIndex, info.width, info.mediaSourceId)
             tileSheet ?: run {
                 Log.w(TAG, "Failed to load tile sheet $imageIndex")
-                return@withContext null
+                return@withContext if (useFallback) loadPreviewFrame(positionMs) else null
             }
-            
+
             // Extract the specific thumbnail from the tile sheet
             val tileX = tileIndexInImage % info.tileWidth
             val tileY = tileIndexInImage / info.tileWidth
             val thumbnailWidth = tileSheet.width / info.tileWidth
             val thumbnailHeight = tileSheet.height / info.tileHeight
-            
+
             val thumbnail = Bitmap.createBitmap(
                 tileSheet,
                 tileX * thumbnailWidth,
@@ -91,10 +94,10 @@ class TrickplayPreviewLoader(
                 thumbnailWidth,
                 thumbnailHeight
             )
-            
+
             // Cache the result with rounded position
             previewCache[roundedPositionMs] = thumbnail
-            
+
             // Limit cache size using LRU eviction
             if (previewCache.size > MAX_PREVIEW_CACHE_SIZE) {
                 val iterator = previewCache.entries.iterator()
@@ -105,11 +108,11 @@ class TrickplayPreviewLoader(
                     }
                 }
             }
-            
+
             thumbnail
         } catch (e: Exception) {
             Log.e(TAG, "Error loading preview for position $positionMs", e)
-            null
+            if (useFallback) loadPreviewFrame(positionMs) else null
         }
     }
     

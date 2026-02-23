@@ -1,13 +1,13 @@
 package org.introskipper.segmenteditor.ui.viewmodel
 
-import android.content.Context
 import android.util.Log
 import androidx.compose.ui.layout.ContentScale
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.C
+import org.introskipper.segmenteditor.framecapture.PreviewFrames.onPreviewsRequested
+import org.introskipper.segmenteditor.framecapture.PreviewFrames.onReleasePreviews
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,7 +34,6 @@ import javax.inject.Inject
 
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
     private val mediaRepository: MediaRepository,
     private val segmentRepository: SegmentRepository,
     private val securePreferences: SecurePreferences,
@@ -767,21 +766,32 @@ class PlayerViewModel @Inject constructor(
         _events.value = null
     }
 
-    fun createPreviewLoader(itemId: String): PreviewLoader? {
+    fun createPreviewLoader(itemId: String, streamUrl: String?): PreviewLoader? {
         val serverUrl = securePreferences.getServerUrl()
         val apiKey = securePreferences.getApiKey()
         val userId = securePreferences.getUserId()
 
+        if (streamUrl != null) {
+            onPreviewsRequested(streamUrl)
+        }
+
         if (serverUrl != null && apiKey != null && userId != null) {
             try {
-                return TrickplayPreviewLoader(serverUrl, apiKey, userId, itemId, httpClient)
+                return TrickplayPreviewLoader(serverUrl, apiKey, userId, itemId, httpClient, streamUrl != null)
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to create TrickplayPreviewLoader", e)
             }
-        } else {
-            Log.d(TAG, "Server URL, API key, or User ID not available, cannot create preview loader")
         }
-        return null
+        
+        // Return a basic loader that only does local extraction if Jellyfin credentials are missing
+        return if (streamUrl != null) {
+            object : PreviewLoader {
+                override suspend fun loadPreview(positionMs: Long): android.graphics.Bitmap? = 
+                    org.introskipper.segmenteditor.framecapture.PreviewFrames.loadPreviewFrame(positionMs)
+                override fun getPreviewInterval(): Long = 1000L
+                override fun release() = onReleasePreviews()
+            }
+        } else null
     }
 
     companion object {
