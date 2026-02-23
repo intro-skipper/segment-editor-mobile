@@ -63,7 +63,7 @@ object PreviewFrames {
 
             val mediaInfoJob = async {
                 try {
-                    MediaInfoBuilder().from(streamUrl).build().takeIf { it.supportsFrameLoading }
+                    MediaInfoBuilder().from(streamUrl).build().takeIf { it?.supportsFrameLoading == true }
                 } catch (_: Exception) { null }
             }
 
