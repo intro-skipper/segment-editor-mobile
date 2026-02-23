@@ -5,6 +5,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.C
+import org.introskipper.segmenteditor.framecapture.PreviewFrames.loadPreviewFrame
 import org.introskipper.segmenteditor.framecapture.PreviewFrames.onPreviewsRequested
 import org.introskipper.segmenteditor.framecapture.PreviewFrames.onReleasePreviews
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -766,32 +767,41 @@ class PlayerViewModel @Inject constructor(
         _events.value = null
     }
 
-    fun createPreviewLoader(itemId: String, streamUrl: String?): PreviewLoader? {
+    fun createPreviewLoader(itemId: String): PreviewLoader? {
+        // Local generation preferred: skip trickplay
+        if (securePreferences.getPreferLocalPreviews()) {
+            return object : PreviewLoader {
+                override suspend fun loadPreview(positionMs: Long): android.graphics.Bitmap? =
+                    loadPreviewFrame(positionMs)
+                override fun getPreviewInterval(): Long = 1000L
+                override fun release() = onReleasePreviews()
+            }
+        }
+
         val serverUrl = securePreferences.getServerUrl()
         val apiKey = securePreferences.getApiKey()
         val userId = securePreferences.getUserId()
 
-        if (streamUrl != null) {
-            onPreviewsRequested(streamUrl)
-        }
-
         if (serverUrl != null && apiKey != null && userId != null) {
             try {
-                return TrickplayPreviewLoader(serverUrl, apiKey, userId, itemId, httpClient, streamUrl != null)
+                return TrickplayPreviewLoader(serverUrl, apiKey, userId, itemId, httpClient, true)
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to create TrickplayPreviewLoader", e)
             }
         }
-        
-        // Return a basic loader that only does local extraction if Jellyfin credentials are missing
-        return if (streamUrl != null) {
-            object : PreviewLoader {
-                override suspend fun loadPreview(positionMs: Long): android.graphics.Bitmap? = 
-                    org.introskipper.segmenteditor.framecapture.PreviewFrames.loadPreviewFrame(positionMs)
-                override fun getPreviewInterval(): Long = 1000L
-                override fun release() = onReleasePreviews()
-            }
-        } else null
+
+        // No Jellyfin credentials: local frame extraction only
+        return object : PreviewLoader {
+            override suspend fun loadPreview(positionMs: Long): android.graphics.Bitmap? =
+                loadPreviewFrame(positionMs)
+            override fun getPreviewInterval(): Long = 1000L
+            override fun release() = onReleasePreviews()
+        }
+    }
+
+    // Exposes onPreviewsRequested (a PreviewFrames extension on PlayerViewModel) to the UI layer
+    fun setupFallbackPreviews(streamUrl: String) {
+        onPreviewsRequested(streamUrl)
     }
 
     companion object {

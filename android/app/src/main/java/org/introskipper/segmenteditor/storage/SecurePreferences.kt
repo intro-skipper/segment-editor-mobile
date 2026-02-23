@@ -152,6 +152,14 @@ class SecurePreferences(context: Context) {
     fun getPreferDirectPlay(): Boolean {
         return sharedPreferences.getBoolean(KEY_PREFER_DIRECT_PLAY, true)
     }
+
+    fun setPreferLocalPreviews(prefer: Boolean) {
+        sharedPreferences.edit { putBoolean(KEY_PREFER_LOCAL_PREVIEWS, prefer) }
+    }
+
+    fun getPreferLocalPreviews(): Boolean {
+        return sharedPreferences.getBoolean(KEY_PREFER_LOCAL_PREVIEWS, false)
+    }
     
     // ========== Utility Methods ==========
     
@@ -196,5 +204,6 @@ class SecurePreferences(context: Context) {
         
         // Video player keys
         private const val KEY_PREFER_DIRECT_PLAY = "prefer_direct_play"
+        private const val KEY_PREFER_LOCAL_PREVIEWS = "prefer_local_previews"
     }
 }

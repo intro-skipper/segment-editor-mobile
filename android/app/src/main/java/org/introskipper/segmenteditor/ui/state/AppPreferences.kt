@@ -39,7 +39,6 @@ data class AppPreferences(
     val preferDirectPlay: Boolean = true,
     val preferredAudioLanguage: String = "",
     val preferredSubtitleLanguage: String = "",
-    val previewSource: PreviewSource = PreviewSource.TRICKPLAY,
     
     // Tracking preferences
     val trackSegmentEdits: Boolean = true,
@@ -88,13 +87,4 @@ enum class VideoQuality {
     MEDIUM,
     HIGH,
     ORIGINAL
-}
-
-/**
- * Video preview source options for scrubbing
- */
-enum class PreviewSource {
-    TRICKPLAY,          // Use Jellyfin's trickplay images
-    MEDIA_METADATA,     // Use MediaMetadataRetriever to generate previews
-    DISABLED            // Disable video previews
 }
