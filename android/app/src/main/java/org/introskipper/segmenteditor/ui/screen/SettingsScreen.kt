@@ -233,6 +233,13 @@ fun SettingsScreen(
                         checked = uiState.autoPlayNextEpisode,
                         onCheckedChange = viewModel::setAutoPlayNextEpisode
                     )
+
+                    SwitchSettingItem(
+                        title = translatedString(R.string.settings_prefer_local_previews),
+                        subtitle = translatedString(R.string.settings_prefer_local_previews_subtitle),
+                        checked = uiState.preferLocalPreviews,
+                        onCheckedChange = viewModel::setPreferLocalPreviews
+                    )
                 }
             }
             

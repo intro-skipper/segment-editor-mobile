@@ -53,10 +53,8 @@
     <string name="settings_prefer_direct_play_subtitle">Play media directly without transcoding</string>
     <string name="settings_autoplay_next">Auto-play Next Episode</string>
     <string name="settings_autoplay_next_subtitle">Automatically play the next episode</string>
-    <string name="settings_preview_source">Video Scrub Previews</string>
-    <string name="settings_preview_source_subtitle">Source for video thumbnail previews</string>
-    <string name="settings_preview_trickplay">🌐 Jellyfin Trickplay</string>
-    <string name="settings_preview_metadata">📱 Local Generation</string>
+    <string name="settings_prefer_local_previews">Prefer Local Generation</string>
+    <string name="settings_prefer_local_previews_subtitle">Use local frame extraction instead of Jellyfin Trickplay</string>
     <string name="settings_preview_disabled">🚫 Disabled</string>
     
     <string name="settings_section_export">Export</string>

@@ -103,10 +103,9 @@ fun PlayerScreen(
         viewModel.getStreamUrl(useHls = !useDirectPlay)
     }
     
-    // Preview loader
-    val previewLoader = remember {
-        viewModel.createPreviewLoader(itemId, streamUrl)
-
+    // Preview loader, recreated per item
+    val previewLoader = remember(itemId) {
+        viewModel.createPreviewLoader(itemId)
     }
     
     // Handle events from ViewModel
@@ -133,6 +132,11 @@ fun PlayerScreen(
             previewLoader?.release()
             onReleasePreviews()
         }
+    }
+
+    // Initialise PreviewFrames independently whenever the stream URL changes
+    LaunchedEffect(itemId, streamUrl) {
+        streamUrl?.let { viewModel.setupFallbackPreviews(it) }
     }
     
     // Track selection state - keyed by itemId to reset when navigating
