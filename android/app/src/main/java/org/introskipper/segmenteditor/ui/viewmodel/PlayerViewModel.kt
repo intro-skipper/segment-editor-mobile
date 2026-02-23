@@ -767,7 +767,7 @@ class PlayerViewModel @Inject constructor(
         _events.value = null
     }
 
-    fun createPreviewLoader(itemId: String): PreviewLoader? {
+    fun createPreviewLoader(itemId: String, streamUrl: String?): PreviewLoader? {
         // Local generation preferred: skip trickplay
         if (securePreferences.getPreferLocalPreviews()) {
             return object : PreviewLoader {
@@ -784,7 +784,7 @@ class PlayerViewModel @Inject constructor(
 
         if (serverUrl != null && apiKey != null && userId != null) {
             try {
-                return TrickplayPreviewLoader(serverUrl, apiKey, userId, itemId, httpClient, true)
+                return TrickplayPreviewLoader(serverUrl, apiKey, userId, itemId, httpClient, streamUrl != null)
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to create TrickplayPreviewLoader", e)
             }

@@ -103,9 +103,9 @@ fun PlayerScreen(
         viewModel.getStreamUrl(useHls = !useDirectPlay)
     }
     
-    // Preview loader, recreated per item
-    val previewLoader = remember(itemId) {
-        viewModel.createPreviewLoader(itemId)
+    // Preview loader, recreated per item and when stream URL availability changes
+    val previewLoader = remember(itemId, streamUrl != null) {
+        viewModel.createPreviewLoader(itemId, streamUrl)
     }
     
     // Handle events from ViewModel
