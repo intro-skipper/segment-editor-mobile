@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 AbandonedCart.  All rights reserved.
+ * Copyright (c) 2026 AbandonedCart.
  */
 
 package org.introskipper.segmenteditor.framecapture

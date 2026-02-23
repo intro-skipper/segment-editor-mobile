@@ -3,8 +3,11 @@ package org.introskipper.segmenteditor.ui.preview
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
+import android.util.LruCache
 import org.introskipper.segmenteditor.framecapture.PreviewFrames.loadPreviewFrame
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -23,13 +26,14 @@ class TrickplayPreviewLoader(
     private val userId: String,
     private val itemId: String,
     private val httpClient: OkHttpClient,
-    private val useFallback: Boolean
+    private val useFallback: Boolean,
+    scope: CoroutineScope
 ) : PreviewLoader {
     
     private var trickplayInfo: TrickplayInfo? = null
-    private var isInitialized = false
-    private val previewCache = LinkedHashMap<Long, Bitmap>(100, 0.75f, true) // LRU cache
-    private val tileSheetCache = LinkedHashMap<Int, Bitmap>(10, 0.75f, true) // Cache tile sheets
+    private val initJob: Job = scope.launch(Dispatchers.IO) { trickplayInfo = loadTrickplayInfo() }
+    private val previewCache = LruCache<Long, Bitmap>(MAX_PREVIEW_CACHE_SIZE)
+    private val tileSheetCache = LruCache<Int, Bitmap>(MAX_TILE_SHEET_CACHE_SIZE)
     
     companion object {
         private const val TAG = "TrickplayPreviewLoader"
@@ -50,11 +54,7 @@ class TrickplayPreviewLoader(
     )
     
     override suspend fun loadPreview(positionMs: Long): Bitmap? = withContext(Dispatchers.IO) {
-        // Initialize on first load, and only if not already initialized
-        if (!isInitialized) {
-            trickplayInfo = loadTrickplayInfo()
-            isInitialized = true
-        }
+        initJob.join()
 
         val info =
             trickplayInfo ?: // Fallback to local frame extraction if trickplay is not available
@@ -65,7 +65,7 @@ class TrickplayPreviewLoader(
             val roundedPositionMs = (positionMs / info.interval) * info.interval.toLong()
 
             // Check cache first with rounded position
-            previewCache[roundedPositionMs]?.let { return@withContext it }
+            previewCache.get(roundedPositionMs)?.let { return@withContext it }
 
             // Calculate which tile image and position within the tile
             // Note: info.interval is in milliseconds (per Jellyfin API spec)
@@ -96,18 +96,7 @@ class TrickplayPreviewLoader(
             )
 
             // Cache the result with rounded position
-            previewCache[roundedPositionMs] = thumbnail
-
-            // Limit cache size using LRU eviction
-            if (previewCache.size > MAX_PREVIEW_CACHE_SIZE) {
-                val iterator = previewCache.entries.iterator()
-                repeat(MAX_PREVIEW_CACHE_SIZE / 10) {
-                    if (iterator.hasNext()) {
-                        iterator.next()
-                        iterator.remove()
-                    }
-                }
-            }
+            previewCache.put(roundedPositionMs, thumbnail)
 
             thumbnail
         } catch (e: Exception) {
@@ -198,7 +187,7 @@ class TrickplayPreviewLoader(
     private suspend fun loadTileSheet(imageIndex: Int, width: Int, mediaSourceId: String): Bitmap? = withContext(Dispatchers.IO) {
         try {
             // Check tile sheet cache first
-            tileSheetCache[imageIndex]?.let { 
+            tileSheetCache.get(imageIndex)?.let { 
                 Log.d(TAG, "Using cached tile sheet $imageIndex")
                 return@withContext it 
             }
@@ -223,19 +212,7 @@ class TrickplayPreviewLoader(
             }
             
             // Cache the tile sheet
-            if (tileSheet != null) {
-                tileSheetCache[imageIndex] = tileSheet
-                
-                // Limit cache size using LRU eviction
-                if (tileSheetCache.size > MAX_TILE_SHEET_CACHE_SIZE) {
-                    val iterator = tileSheetCache.entries.iterator()
-                    if (iterator.hasNext()) {
-                        val oldest = iterator.next()
-                        Log.d(TAG, "Evicting tile sheet ${oldest.key} from cache")
-                        iterator.remove()
-                    }
-                }
-            }
+            tileSheet?.let { tileSheetCache.put(imageIndex, it) }
             
             tileSheet
         } catch (e: IOException) {
@@ -246,6 +223,7 @@ class TrickplayPreviewLoader(
     
     override suspend fun preloadPreviews(positionMs: Long, count: Int) {
         try {
+            initJob.join()
             val info = trickplayInfo ?: return
             val interval = info.interval.toLong()
             
@@ -256,7 +234,7 @@ class TrickplayPreviewLoader(
                     if (preloadPosition >= 0) {
                         // Only preload if not already in cache
                         val roundedPosition = (preloadPosition / interval) * interval
-                        if (!previewCache.containsKey(roundedPosition)) {
+                        if (previewCache.get(roundedPosition) == null) {
                             launch(Dispatchers.IO) {
                                 loadPreview(preloadPosition)
                             }
@@ -275,7 +253,8 @@ class TrickplayPreviewLoader(
     }
     
     override fun release() {
-        previewCache.clear()
-        tileSheetCache.clear()
+        initJob.cancel()
+        previewCache.evictAll()
+        tileSheetCache.evictAll()
     }
 }

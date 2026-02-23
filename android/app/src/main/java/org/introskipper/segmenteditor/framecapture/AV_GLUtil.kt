@@ -1,6 +1,6 @@
 /*
  * https://stackoverflow.com/a/60633395/461982
- * Copyright (c) 2024 AbandonedCart.  All rights reserved.
+ * Copyright (c) 2024 AbandonedCart.
  */
 
 package org.introskipper.segmenteditor.framecapture

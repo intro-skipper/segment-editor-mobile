@@ -784,7 +784,7 @@ class PlayerViewModel @Inject constructor(
 
         if (serverUrl != null && apiKey != null && userId != null) {
             try {
-                return TrickplayPreviewLoader(serverUrl, apiKey, userId, itemId, httpClient, true)
+                return TrickplayPreviewLoader(serverUrl, apiKey, userId, itemId, httpClient, true, viewModelScope)
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to create TrickplayPreviewLoader", e)
             }
