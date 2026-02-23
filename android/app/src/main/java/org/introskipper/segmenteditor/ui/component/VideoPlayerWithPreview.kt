@@ -418,9 +418,5 @@ fun VideoPlayerWithPreview(
             modifier = Modifier.fillMaxSize()
         )
 
-        LaunchedEffect(previewLoader) {
-            previewLoader?.loadPreview(0)
-            previewLoader?.preloadPreviews(0, count = 3)
-        }
     }
 }
