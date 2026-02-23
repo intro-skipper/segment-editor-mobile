@@ -4,7 +4,9 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
 import org.introskipper.segmenteditor.framecapture.PreviewFrames.loadPreviewFrame
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -23,11 +25,12 @@ class TrickplayPreviewLoader(
     private val userId: String,
     private val itemId: String,
     private val httpClient: OkHttpClient,
-    private val useFallback: Boolean
+    private val useFallback: Boolean,
+    scope: CoroutineScope
 ) : PreviewLoader {
     
     private var trickplayInfo: TrickplayInfo? = null
-    private var isInitialized = false
+    private val initJob: Job = scope.launch(Dispatchers.IO) { trickplayInfo = loadTrickplayInfo() }
     private val previewCache = LinkedHashMap<Long, Bitmap>(100, 0.75f, true) // LRU cache
     private val tileSheetCache = LinkedHashMap<Int, Bitmap>(10, 0.75f, true) // Cache tile sheets
     
@@ -50,11 +53,7 @@ class TrickplayPreviewLoader(
     )
     
     override suspend fun loadPreview(positionMs: Long): Bitmap? = withContext(Dispatchers.IO) {
-        // Initialize on first load, and only if not already initialized
-        if (!isInitialized) {
-            trickplayInfo = loadTrickplayInfo()
-            isInitialized = true
-        }
+        initJob.join()
 
         val info =
             trickplayInfo ?: // Fallback to local frame extraction if trickplay is not available
@@ -275,6 +274,7 @@ class TrickplayPreviewLoader(
     }
     
     override fun release() {
+        initJob.cancel()
         previewCache.clear()
         tileSheetCache.clear()
     }
