@@ -245,6 +245,7 @@ class TrickplayPreviewLoader(
     
     override suspend fun preloadPreviews(positionMs: Long, count: Int) {
         try {
+            initJob.join()
             val info = trickplayInfo ?: return
             val interval = info.interval.toLong()
             
