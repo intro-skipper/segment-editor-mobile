@@ -45,7 +45,7 @@ object PreviewFrames {
 
         initJob = viewModelScope.launch(Dispatchers.IO) {
             // Start probes in parallel
-            val fcJob = async {
+            val frameJob = async {
                 try {
                     AV_FrameCapture().apply {
                         setDataSource(streamUrl)
@@ -68,7 +68,7 @@ object PreviewFrames {
             }
 
             // Await them in priority order
-            val fc = fcJob.await()
+            val fc = frameJob.await()
             if (fc != null) {
                 Log.d(TAG, "Using AV_FrameCapture for previews")
                 frameCapture = fc
@@ -117,13 +117,14 @@ object PreviewFrames {
 
             try {
                 val keyFrame = cacheKey.toDuration(DurationUnit.SECONDS)
-                val bitmap = frameCapture?.getFrameAtTime(keyFrame.inWholeMicroseconds)
-                    ?: retriever?.getScaledFrameAtTime(keyFrame.inWholeMicroseconds,
-                        MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 176.toPx, 96.toPx)
-                    ?: mediaInfo?.getFrameAt(keyFrame.inWholeMilliseconds)?.let { originalBitmap ->
-                        originalBitmap.scale(176.toPx, 96.toPx, false).apply { originalBitmap.recycle() }
-                    }
-                    
+                val bitmap =
+                    frameCapture?.getFrameAtTime(keyFrame.inWholeMicroseconds)
+                        ?: retriever?.getScaledFrameAtTime(keyFrame.inWholeMicroseconds,
+                            MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 176.toPx, 96.toPx)
+                        ?: mediaInfo?.getFrameAt(keyFrame.inWholeMilliseconds)?.let { originalBitmap ->
+                            originalBitmap.scale(176.toPx, 96.toPx, false).apply { originalBitmap.recycle() }
+                        }
+
                 bitmap?.let {
                     previewCache.put(cacheKey, it)
                 }
