@@ -134,9 +134,12 @@ fun PlayerScreen(
         }
     }
 
-    // Initialise PreviewFrames independently whenever the stream URL changes
-    LaunchedEffect(itemId, streamUrl) {
-        streamUrl?.let { viewModel.setupFallbackPreviews(it) }
+    // Initialise PreviewFrames independently. Prefer static URL for preview extraction 
+    // as HLS is unreliable for frame capture and we want to avoid re-init on track changes.
+    LaunchedEffect(uiState.mediaItem?.id) {
+        // Prefer static URL for preview extraction as HLS is unreliable for frame capture
+        val staticUrl = viewModel.getStreamUrl(useHls = false)
+        staticUrl?.let { viewModel.setupFallbackPreviews(it) }
     }
     
     // Track selection state - keyed by itemId to reset when navigating

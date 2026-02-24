@@ -767,13 +767,14 @@ class PlayerViewModel @Inject constructor(
         _events.value = null
     }
 
-    fun createPreviewLoader(itemId: String): PreviewLoader? {
+    fun createPreviewLoader(itemId: String): PreviewLoader {
         // Local generation preferred: skip trickplay
         if (securePreferences.getPreferLocalPreviews()) {
             return object : PreviewLoader {
                 override suspend fun loadPreview(positionMs: Long): android.graphics.Bitmap? =
                     loadPreviewFrame(positionMs)
                 override fun getPreviewInterval(): Long = 1000L
+                override val requiresWarmup: Boolean get() = true
                 override fun release() = onReleasePreviews()
             }
         }
@@ -784,7 +785,7 @@ class PlayerViewModel @Inject constructor(
 
         if (serverUrl != null && apiKey != null && userId != null) {
             try {
-                return TrickplayPreviewLoader(serverUrl, apiKey, userId, itemId, httpClient, true, viewModelScope)
+                return TrickplayPreviewLoader(serverUrl, apiKey, userId, itemId, httpClient, viewModelScope)
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to create TrickplayPreviewLoader", e)
             }
@@ -795,6 +796,7 @@ class PlayerViewModel @Inject constructor(
             override suspend fun loadPreview(positionMs: Long): android.graphics.Bitmap? =
                 loadPreviewFrame(positionMs)
             override fun getPreviewInterval(): Long = 1000L
+            override val requiresWarmup: Boolean get() = true
             override fun release() = onReleasePreviews()
         }
     }

@@ -15,6 +15,8 @@ import io.github.anilbeesetti.nextlib.mediainfo.MediaInfoBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -45,54 +47,69 @@ object PreviewFrames {
 
         initJob = viewModelScope.launch(Dispatchers.IO) {
             // Start probes in parallel
-            val frameJob = async {
-                try {
-                    AV_FrameCapture().apply {
-                        setDataSource(streamUrl)
-                        setTargetSize(176.toPx, 96.toPx)
-                        if (!init()) { release(); return@async null }
+            coroutineScope {
+                val frameJob = async {
+                    try {
+                        val fc = AV_FrameCapture()
+                        fc.setDataSource(streamUrl)
+                        fc.setTargetSize(176.toPx, 96.toPx)
+                        if (fc.init()) {
+                            fc
+                        } else {
+                            fc.release()
+                            null
+                        }
+                    } catch (_: Exception) {
+                        null
                     }
-                } catch (_: Exception) { null }
-            }
+                }
 
-            val retrieverJob = async {
-                try {
-                    MediaMetadataRetriever().apply { setDataSource(streamUrl) }
-                } catch (_: Exception) { null }
-            }
+                val retrieverJob = async {
+                    var retr: MediaMetadataRetriever? = null
+                    try {
+                        retr =
+                            MediaMetadataRetriever().apply { setDataSource(streamUrl) }
+                        if (isActive) retr else {
+                            retr.close(); null
+                        }
+                    } catch (_: Exception) {
+                        retr?.close(); null
+                    }
+                }
 
-            val mediaInfoJob = async {
-                try {
-                    MediaInfoBuilder().from(streamUrl).build().takeIf { it?.supportsFrameLoading == true }
-                } catch (_: Exception) { null }
-            }
+                val mediaInfoJob = async {
+                    var info: MediaInfo? = null
+                    try {
+                        info = MediaInfoBuilder().from(streamUrl).build()
+                        if (isActive && info?.supportsFrameLoading == true) info else {
+                            info?.release(); null
+                        }
+                    } catch (_: Exception) {
+                        info?.release(); null
+                    }
+                }
 
-            // Await them in priority order
-            val fc = frameJob.await()
-            if (fc != null) {
-                Log.d(TAG, "Using AV_FrameCapture for previews")
-                frameCapture = fc
-                retrieverJob.cancel()
-                mediaInfoJob.cancel()
-                return@launch
-            }
+                val fc = frameJob.await()
+                if (fc != null) {
+                    frameCapture = fc
+                    retrieverJob.cancel()
+                    mediaInfoJob.cancel()
+                    return@coroutineScope
+                }
 
-            val retr = try { retrieverJob.await() } catch (_: Exception) { null }
-            if (retr != null) {
-                Log.d(TAG, "Using MediaMetadataRetriever for previews")
-                retriever = retr
-                mediaInfoJob.cancel()
-                return@launch
-            }
+                val retr = retrieverJob.await()
+                if (retr != null) {
+                    retriever = retr
+                    mediaInfoJob.cancel()
+                    return@coroutineScope
+                }
 
-            val info = try { mediaInfoJob.await() } catch (_: Exception) { null }
-            if (info != null) {
-                Log.d(TAG, "Using MediaInfo for previews")
-                mediaInfo = info
-                return@launch
+                val info = mediaInfoJob.await()
+                if (info != null) {
+                    mediaInfo = info
+                    return@coroutineScope
+                }
             }
-            
-            Log.w(TAG, "No suitable preview extractor found")
         }
     }
 

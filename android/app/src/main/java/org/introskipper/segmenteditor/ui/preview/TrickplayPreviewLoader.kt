@@ -26,7 +26,6 @@ class TrickplayPreviewLoader(
     private val userId: String,
     private val itemId: String,
     private val httpClient: OkHttpClient,
-    private val useFallback: Boolean,
     scope: CoroutineScope
 ) : PreviewLoader {
     
@@ -34,7 +33,7 @@ class TrickplayPreviewLoader(
     private val initJob: Job = scope.launch(Dispatchers.IO) { trickplayInfo = loadTrickplayInfo() }
     private val previewCache = LruCache<Long, Bitmap>(MAX_PREVIEW_CACHE_SIZE)
     private val tileSheetCache = LruCache<Int, Bitmap>(MAX_TILE_SHEET_CACHE_SIZE)
-    
+
     override val requiresWarmup: Boolean get() = true
 
     companion object {
@@ -60,7 +59,7 @@ class TrickplayPreviewLoader(
 
         val info =
             trickplayInfo ?: // Fallback to local frame extraction if trickplay is not available
-            return@withContext if (useFallback) loadPreviewFrame(positionMs) else null
+            return@withContext loadPreviewFrame(positionMs)
 
         try {
             // Round position to nearest interval boundary for better cache hits
@@ -80,7 +79,7 @@ class TrickplayPreviewLoader(
             val tileSheet = loadTileSheet(imageIndex, info.width, info.mediaSourceId)
             tileSheet ?: run {
                 Log.w(TAG, "Failed to load tile sheet $imageIndex")
-                return@withContext if (useFallback) loadPreviewFrame(positionMs) else null
+                return@withContext loadPreviewFrame(positionMs)
             }
 
             // Extract the specific thumbnail from the tile sheet
@@ -103,7 +102,7 @@ class TrickplayPreviewLoader(
             thumbnail
         } catch (e: Exception) {
             Log.e(TAG, "Error loading preview for position $positionMs", e)
-            if (useFallback) loadPreviewFrame(positionMs) else null
+            loadPreviewFrame(positionMs)
         }
     }
     
