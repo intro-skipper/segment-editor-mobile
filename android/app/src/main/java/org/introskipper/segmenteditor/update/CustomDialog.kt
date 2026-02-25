@@ -1,5 +1,10 @@
 // https://github.com/BoltUIX/compose-ice-cream-template/blob/main/app/src/main/java/com/blogspot/boltuix/CustomDialog.kt
 
+/*
+ * Copyright (c) 2026 Intro-Skipper contributors <intro-skipper.org>
+ * SPDX-License-Identifier: GPL-3.0-only
+ */
+
 package org.introskipper.segmenteditor.update
 
 import android.annotation.SuppressLint

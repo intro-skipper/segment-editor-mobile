@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2026 Intro-Skipper contributors <intro-skipper.org>
+ * SPDX-License-Identifier: GPL-3.0-only
+ */
+
 package org.introskipper.segmenteditor.ui.viewmodel
 
 import android.util.Log
@@ -5,9 +10,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.C
-import org.introskipper.segmenteditor.framecapture.PreviewFrames.loadPreviewFrame
-import org.introskipper.segmenteditor.framecapture.PreviewFrames.onPreviewsRequested
-import org.introskipper.segmenteditor.framecapture.PreviewFrames.onReleasePreviews
+import org.introskipper.segmenteditor.framecapture.FramePreview.loadPreviewFrame
+import org.introskipper.segmenteditor.framecapture.FramePreview.onPreviewsRequested
+import org.introskipper.segmenteditor.framecapture.FramePreview.onReleasePreviews
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -774,7 +779,7 @@ class PlayerViewModel @Inject constructor(
                 override suspend fun loadPreview(positionMs: Long): android.graphics.Bitmap? =
                     loadPreviewFrame(positionMs)
                 override fun getPreviewInterval(): Long = 1000L
-                override val requiresWarmup: Boolean get() = true
+                override val requiresWarmup: Boolean get() = false
                 override fun release() = onReleasePreviews()
             }
         }
@@ -796,7 +801,7 @@ class PlayerViewModel @Inject constructor(
             override suspend fun loadPreview(positionMs: Long): android.graphics.Bitmap? =
                 loadPreviewFrame(positionMs)
             override fun getPreviewInterval(): Long = 1000L
-            override val requiresWarmup: Boolean get() = true
+            override val requiresWarmup: Boolean get() = false
             override fun release() = onReleasePreviews()
         }
     }

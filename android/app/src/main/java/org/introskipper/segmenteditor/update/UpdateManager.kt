@@ -1,3 +1,13 @@
+/*
+ * Copyright (c) 2026 Intro-Skipper contributors <intro-skipper.org>
+ * SPDX-License-Identifier: GPL-3.0-only
+ */
+
+/*
+ * Copyright (c) 2026 Intro-Skipper contributors <intro-skipper.org>
+ * SPDX-License-Identifier: GPL-3.0-only
+ */
+
 package org.introskipper.segmenteditor.update
 
 import android.annotation.SuppressLint

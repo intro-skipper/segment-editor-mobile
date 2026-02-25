@@ -1,6 +1,7 @@
 /*
  * https://stackoverflow.com/a/60633395/461982
- * Copyright (c) 2024 AbandonedCart.
+ * Copyright (c) 2026 Intro-Skipper contributors <intro-skipper.org>
+ * SPDX-License-Identifier: GPL-3.0-only
  */
 
 package org.introskipper.segmenteditor.framecapture

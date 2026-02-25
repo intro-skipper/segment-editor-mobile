@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2026 Intro-Skipper contributors <intro-skipper.org>
+ * SPDX-License-Identifier: GPL-3.0-only
+ */
+
 package org.introskipper.segmenteditor.ui.preview
 
 import android.graphics.Bitmap
@@ -31,7 +36,7 @@ interface PreviewLoader {
      * Whether this loader benefits from a warmup call at position 0 before the user scrubs.
      * Should return true only for remote sources (e.g. Trickplay) that benefit from pre-fetching.
      */
-    val requiresWarmup: Boolean get() = false
+    val requiresWarmup: Boolean get() = true
 
     /**
      * Cleans up any resources used by the loader

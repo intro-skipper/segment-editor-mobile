@@ -4,7 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
 import android.util.LruCache
-import org.introskipper.segmenteditor.framecapture.PreviewFrames.loadPreviewFrame
+import org.introskipper.segmenteditor.framecapture.FramePreview.loadPreviewFrame
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

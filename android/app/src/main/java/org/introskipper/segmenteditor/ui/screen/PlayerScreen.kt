@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2026 Intro-Skipper contributors <intro-skipper.org>
+ * SPDX-License-Identifier: GPL-3.0-only
+ */
+
 package org.introskipper.segmenteditor.ui.screen
 
 import android.app.Activity
@@ -61,7 +66,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
-import org.introskipper.segmenteditor.framecapture.PreviewFrames.onReleasePreviews
+import org.introskipper.segmenteditor.framecapture.FramePreview.onReleasePreviews
 import kotlinx.coroutines.delay
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.Segment

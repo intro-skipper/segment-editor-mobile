@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2026 AbandonedCart.
+ * Copyright (c) 2026 Intro-Skipper contributors <intro-skipper.org>
+ * SPDX-License-Identifier: GPL-3.0-only
  */
 
 package org.introskipper.segmenteditor.framecapture
@@ -26,7 +27,7 @@ import org.introskipper.segmenteditor.ui.viewmodel.PlayerViewModel
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
-object PreviewFrames {
+object FramePreview {
     private const val TAG = "PreviewFrames"
     var frameCapture: AV_FrameCapture? = null
     var mediaInfo: MediaInfo? = null
@@ -67,8 +68,7 @@ object PreviewFrames {
                 val retrieverJob = async {
                     var retr: MediaMetadataRetriever? = null
                     try {
-                        retr =
-                            MediaMetadataRetriever().apply { setDataSource(streamUrl) }
+                        retr = MediaMetadataRetriever().apply { setDataSource(streamUrl) }
                         if (isActive) retr else {
                             retr.close(); null
                         }

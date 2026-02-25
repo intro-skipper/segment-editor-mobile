@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2026 Intro-Skipper contributors <intro-skipper.org>
+ * SPDX-License-Identifier: GPL-3.0-only
+ */
+
 package org.introskipper.segmenteditor.api
 
 import androidx.core.net.toUri
@@ -139,7 +144,7 @@ class JellyfinApiService(private val securePreferences: SecurePreferences) {
         return try {
             val response = getSystemInfo()
             response.isSuccessful
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
     }
