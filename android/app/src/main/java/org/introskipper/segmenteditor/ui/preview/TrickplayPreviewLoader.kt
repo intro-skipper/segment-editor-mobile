@@ -38,8 +38,8 @@ class TrickplayPreviewLoader(
 
     companion object {
         private const val TAG = "TrickplayPreviewLoader"
-        private const val DEFAULT_INTERVAL_MS = 10000L // 10 seconds
-        private const val MAX_PREVIEW_CACHE_SIZE = 100 // Cache more thumbnails
+        const val DEFAULT_INTERVAL_MS = 10000L // 10 seconds
+        const val MAX_PREVIEW_CACHE_SIZE = 100 // Cache more thumbnails
         private const val MAX_TILE_SHEET_CACHE_SIZE = 10 // Cache tile sheets
     }
 

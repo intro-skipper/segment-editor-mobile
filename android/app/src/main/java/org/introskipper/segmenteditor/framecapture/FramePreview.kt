@@ -23,6 +23,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.introskipper.segmenteditor.toPx
+import org.introskipper.segmenteditor.ui.preview.TrickplayPreviewLoader
 import org.introskipper.segmenteditor.ui.viewmodel.PlayerViewModel
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
@@ -37,7 +38,7 @@ object FramePreview {
     private val extractionMutex = Mutex()
 
     // Preview frame caching
-    private val previewCache = LruCache<Long, Bitmap>(300)
+    private val previewCache = LruCache<Long, Bitmap>(TrickplayPreviewLoader.MAX_PREVIEW_CACHE_SIZE)
     @Volatile private var latestPreviewKey: Long = -1
 
     fun PlayerViewModel.onPreviewsRequested(streamUrl: String) {
@@ -117,7 +118,7 @@ object FramePreview {
         // Wait for initialization to complete if it's still running
         initJob?.join()
         
-        val cacheKey = positionMs / 1000
+        val cacheKey = positionMs / TrickplayPreviewLoader.DEFAULT_INTERVAL_MS
         
         // Always check cache first to avoid redundant extraction work
         previewCache.get(cacheKey)?.let { return@withContext it }
