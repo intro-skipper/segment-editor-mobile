@@ -144,7 +144,6 @@ dependencies {
     implementation "androidx.media3:media3-ui-compose:$media3_version"
     ext.nextlib_version = "$media3_version-0.11.0"
     implementation("io.github.anilbeesetti:nextlib-media3ext:$nextlib_version")
-    implementation("io.github.anilbeesetti:nextlib-mediainfo:$nextlib_version")
 
     // Security for encrypted preferences
     implementation 'androidx.security:security-crypto:1.1.0'

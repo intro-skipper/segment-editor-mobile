@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +38,9 @@ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.SubtitleView
 import androidx.media3.ui.compose.ContentFrame
 import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.SegmentEditorApplication
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
@@ -423,12 +427,14 @@ fun VideoPlayerWithPreview(
             modifier = Modifier.fillMaxSize()
         )
 
-        LaunchedEffect(previewLoader) {
+        SideEffect {
             if (previewLoader?.requiresWarmup == true) {
-                previewLoader.loadPreview(0)
-                previewLoader.preloadPreviews(0, count = 3)
+                CoroutineScope(Dispatchers.IO).launch {
+                    // Load initial preview and preload adjacent ones
+                    previewLoader.loadPreview(0)
+                    previewLoader.preloadPreviews(0, count = 3)
+                }
             }
         }
-
     }
 }

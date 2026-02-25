@@ -9,10 +9,7 @@ import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.util.Log
 import android.util.LruCache
-import androidx.core.graphics.scale
 import androidx.lifecycle.viewModelScope
-import io.github.anilbeesetti.nextlib.mediainfo.MediaInfo
-import io.github.anilbeesetti.nextlib.mediainfo.MediaInfoBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -30,8 +27,7 @@ import kotlin.time.toDuration
 
 object FramePreview {
     private const val TAG = "PreviewFrames"
-    var frameCapture: AV_FrameCapture? = null
-    var mediaInfo: MediaInfo? = null
+//    var frameCapture: AV_FrameCapture? = null
     var retriever: MediaMetadataRetriever? = null
     
     private var initJob: Job? = null
@@ -50,21 +46,21 @@ object FramePreview {
         initJob = viewModelScope.launch(Dispatchers.IO) {
             // Start probes in parallel
             coroutineScope {
-                val frameJob = async {
-                    try {
-                        val fc = AV_FrameCapture()
-                        fc.setDataSource(streamUrl)
-                        fc.setTargetSize(176.toPx, 96.toPx)
-                        if (fc.init()) {
-                            fc
-                        } else {
-                            fc.release()
-                            null
-                        }
-                    } catch (_: Exception) {
-                        null
-                    }
-                }
+//                val frameJob = async {
+//                    try {
+//                        val fc = AV_FrameCapture()
+//                        fc.setDataSource(streamUrl)
+//                        fc.setTargetSize(176.toPx, 96.toPx)
+//                        if (fc.init()) {
+//                            fc
+//                        } else {
+//                            fc.release()
+//                            null
+//                        }
+//                    } catch (_: Exception) {
+//                        null
+//                    }
+//                }
 
                 val retrieverJob = async {
                     var retr: MediaMetadataRetriever? = null
@@ -78,36 +74,17 @@ object FramePreview {
                     }
                 }
 
-                val mediaInfoJob = async {
-                    var info: MediaInfo? = null
-                    try {
-                        info = MediaInfoBuilder().from(streamUrl).build()
-                        if (isActive && info?.supportsFrameLoading == true) info else {
-                            info?.release(); null
-                        }
-                    } catch (_: Exception) {
-                        info?.release(); null
-                    }
-                }
-
-                val fc = frameJob.await()
-                if (fc != null) {
-                    frameCapture = fc
-                    retrieverJob.cancel()
-                    mediaInfoJob.cancel()
-                    return@coroutineScope
-                }
+//                val fc = frameJob.await()
+//                if (fc != null) {
+//                    frameCapture = fc
+//                    retrieverJob.cancel()
+//                    mediaInfoJob.cancel()
+//                    return@coroutineScope
+//                }
 
                 val retr = retrieverJob.await()
                 if (retr != null) {
                     retriever = retr
-                    mediaInfoJob.cancel()
-                    return@coroutineScope
-                }
-
-                val info = mediaInfoJob.await()
-                if (info != null) {
-                    mediaInfo = info
                     return@coroutineScope
                 }
             }
@@ -136,12 +113,9 @@ object FramePreview {
             try {
                 val keyFrame = cacheKey.toDuration(DurationUnit.SECONDS)
                 val bitmap =
-                    frameCapture?.getFrameAtTime(keyFrame.inWholeMicroseconds)
-                        ?: retriever?.getScaledFrameAtTime(keyFrame.inWholeMicroseconds,
+//                    frameCapture?.getFrameAtTime(keyFrame.inWholeMicroseconds) ?:
+                        retriever?.getScaledFrameAtTime(keyFrame.inWholeMicroseconds,
                             MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 176.toPx, 96.toPx)
-                        ?: mediaInfo?.getFrameAt(keyFrame.inWholeMilliseconds)?.let { originalBitmap ->
-                            originalBitmap.scale(176.toPx, 96.toPx, false).apply { originalBitmap.recycle() }
-                        }
 
                 bitmap?.let {
                     previewCache.put(cacheKey, it)
@@ -157,15 +131,12 @@ object FramePreview {
     fun onReleasePreviews() {
         initJob?.cancel()
         initJob = null
-        
-        mediaInfo?.release()
-        mediaInfo = null
-        
+
         retriever?.close()
         retriever = null
         
-        frameCapture?.release()
-        frameCapture = null
+//        frameCapture?.release()
+//        frameCapture = null
 
         // Clear cache and reset state
         previewCache.evictAll()
