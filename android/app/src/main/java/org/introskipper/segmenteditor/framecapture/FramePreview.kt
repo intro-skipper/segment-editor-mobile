@@ -27,9 +27,9 @@ import kotlin.time.toDuration
 
 object FramePreview {
     private const val TAG = "PreviewFrames"
-//    var frameCapture: AV_FrameCapture? = null
     var retriever: MediaMetadataRetriever? = null
-    
+    var frameCapture: AV_FrameCapture? = null
+
     private var initJob: Job? = null
     private val extractionMutex = Mutex()
 
@@ -40,27 +40,12 @@ object FramePreview {
     fun PlayerViewModel.onPreviewsRequested(streamUrl: String) {
         // Clear previous state
         onReleasePreviews()
-        
+
         Log.d(TAG, "Initializing preview extraction for $streamUrl")
 
         initJob = viewModelScope.launch(Dispatchers.IO) {
             // Start probes in parallel
             coroutineScope {
-//                val frameJob = async {
-//                    try {
-//                        val fc = AV_FrameCapture()
-//                        fc.setDataSource(streamUrl)
-//                        fc.setTargetSize(176.toPx, 96.toPx)
-//                        if (fc.init()) {
-//                            fc
-//                        } else {
-//                            fc.release()
-//                            null
-//                        }
-//                    } catch (_: Exception) {
-//                        null
-//                    }
-//                }
 
                 val retrieverJob = async {
                     var retr: MediaMetadataRetriever? = null
@@ -74,18 +59,30 @@ object FramePreview {
                     }
                 }
 
-//                val fc = frameJob.await()
-//                if (fc != null) {
-//                    frameCapture = fc
-//                    retrieverJob.cancel()
-//                    mediaInfoJob.cancel()
-//                    return@coroutineScope
-//                }
+                val frameJob = async {
+                    try {
+                        val fc = AV_FrameCapture()
+                        fc.setDataSource(streamUrl)
+                        fc.setTargetSize(176.toPx, 96.toPx)
+                        if (fc.init()) {
+                            fc
+                        } else {
+                            fc.release()
+                            null
+                        }
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
 
                 val retr = retrieverJob.await()
                 if (retr != null) {
                     retriever = retr
-                    return@coroutineScope
+                }
+
+                val fc = frameJob.await()
+                if (fc != null) {
+                    frameCapture = fc
                 }
             }
         }
@@ -94,9 +91,9 @@ object FramePreview {
     suspend fun loadPreviewFrame(positionMs: Long): Bitmap? = withContext(Dispatchers.IO) {
         // Wait for initialization to complete if it's still running
         initJob?.join()
-        
+
         val cacheKey = positionMs / TrickplayPreviewLoader.DEFAULT_INTERVAL_MS
-        
+
         // Always check cache first to avoid redundant extraction work
         previewCache.get(cacheKey)?.let { return@withContext it }
 
@@ -113,9 +110,9 @@ object FramePreview {
             try {
                 val keyFrame = cacheKey.toDuration(DurationUnit.SECONDS)
                 val bitmap =
-//                    frameCapture?.getFrameAtTime(keyFrame.inWholeMicroseconds) ?:
-                        retriever?.getScaledFrameAtTime(keyFrame.inWholeMicroseconds,
-                            MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 176.toPx, 96.toPx)
+                    retriever?.getScaledFrameAtTime(keyFrame.inWholeMicroseconds,
+                        MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 176.toPx, 96.toPx)
+                        ?: frameCapture?.getFrameAtTime(keyFrame.inWholeMicroseconds)
 
                 bitmap?.let {
                     previewCache.put(cacheKey, it)
@@ -132,11 +129,11 @@ object FramePreview {
         initJob?.cancel()
         initJob = null
 
+        frameCapture?.release()
+        frameCapture = null
+
         retriever?.close()
         retriever = null
-        
-//        frameCapture?.release()
-//        frameCapture = null
 
         // Clear cache and reset state
         previewCache.evictAll()
