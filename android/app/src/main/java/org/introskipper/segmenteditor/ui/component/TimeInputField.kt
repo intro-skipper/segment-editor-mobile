@@ -5,20 +5,28 @@
 
 package org.introskipper.segmenteditor.ui.component
 
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.validation.SegmentValidator
 
@@ -28,41 +36,54 @@ fun TimeInputField(
     label: String,
     timeInSeconds: Double,
     onTimeChanged: (Double) -> Unit,
-    keyboardActions: KeyboardActions = KeyboardActions.Default,
     isError: Boolean = false
 ) {
-    var textValue by remember(timeInSeconds) {
-        mutableStateOf(SegmentValidator.formatTimeString(timeInSeconds))
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    if (showTimePicker) {
+        TimePickerDialog(
+            initialTimeSeconds = timeInSeconds,
+            onTimeSelected = { newTime ->
+                onTimeChanged(newTime)
+                showTimePicker = false
+            },
+            onDismiss = { showTimePicker = false }
+        )
     }
-    var localError by remember { mutableStateOf(false) }
-    
-    OutlinedTextField(
-        value = textValue,
-        onValueChange = { newValue ->
-            textValue = newValue
-            // Try to parse and update
-            val parsed = SegmentValidator.parseTimeString(newValue)
-            if (parsed != null) {
-                localError = false
-                onTimeChanged(parsed)
-            } else if (newValue.isNotEmpty()) {
-                localError = true
+
+    Surface(
+        onClick = { showTimePicker = true },
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        color = if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+        contentColor = if (isError) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+        border = BorderStroke(
+            1.dp,
+            if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = SegmentValidator.formatTimeString(timeInSeconds),
+                    style = MaterialTheme.typography.bodyLarge
+                )
             }
-        },
-        label = { Text(label) },
-        placeholder = { Text(stringResource(R.string.time_format_hint)) },
-        isError = isError || localError,
-        supportingText = {
-            if (localError) {
-                Text(stringResource(R.string.time_format_error))
-            }
-        },
-        keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Number,
-            imeAction = ImeAction.Done
-        ),
-        keyboardActions = keyboardActions,
-        singleLine = true,
-        modifier = modifier.fillMaxWidth()
-    )
+            Icon(
+                imageVector = Icons.Default.Schedule,
+                contentDescription = stringResource(R.string.time_picker_title),
+                modifier = Modifier.size(20.dp),
+                tint = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
 }

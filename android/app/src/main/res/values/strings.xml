@@ -221,6 +221,10 @@
     <!-- Time Input Field -->
     <string name="time_format_hint">MM:SS or HH:MM:SS</string>
     <string name="time_format_error">Invalid format. Use MM:SS or HH:MM:SS</string>
+    <string name="time_picker_title">Select Time</string>
+    <string name="time_picker_hours">Hours</string>
+    <string name="time_picker_minutes">Minutes</string>
+    <string name="time_picker_seconds">Seconds</string>
 
     <!-- Segment Editor Dialog -->
     <string name="segment_delete_title">Delete Segment?</string>

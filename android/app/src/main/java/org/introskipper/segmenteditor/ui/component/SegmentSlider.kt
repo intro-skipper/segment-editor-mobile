@@ -505,7 +505,6 @@ private fun TimeInputRow(
             label = label,
             timeInSeconds = timeSeconds,
             onTimeChanged = onTimeChanged,
-            keyboardActions = keyboardActions,
             modifier = Modifier.weight(1f)
         )
     }
