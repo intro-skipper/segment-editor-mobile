@@ -134,17 +134,18 @@ fun PlayerScreen(
     // Clean up preview loader on dispose
     DisposableEffect(previewLoader) {
         onDispose {
-            previewLoader?.release()
+            previewLoader.release()
             onReleasePreviews()
         }
     }
 
-    // Initialise PreviewFrames independently. Prefer static URL for preview extraction 
+    // Initialise PreviewFrames independently. Prefer base URL for preview extraction
     // as HLS is unreliable for frame capture and we want to avoid re-init on track changes.
-    LaunchedEffect(uiState.mediaItem?.id) {
+    LaunchedEffect(uiState.mediaItem) {
         // Prefer static URL for preview extraction as HLS is unreliable for frame capture
-        val staticUrl = viewModel.getStreamUrl(useHls = false)
-        staticUrl?.let { viewModel.setupFallbackPreviews(it) }
+        viewModel.getStreamUrl(useHls = !useDirectPlay, skipTracks = true)?.let {
+            viewModel.setupFallbackPreviews(it)
+        }
     }
     
     // Track selection state - keyed by itemId to reset when navigating

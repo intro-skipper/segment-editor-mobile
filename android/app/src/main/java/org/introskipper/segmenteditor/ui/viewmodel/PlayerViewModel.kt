@@ -458,7 +458,7 @@ class PlayerViewModel @Inject constructor(
      * For HLS: includes AudioStreamIndex and SubtitleStreamIndex parameters if set
      * For Direct Play: no track parameters needed
      */
-    fun getStreamUrl(useHls: Boolean = true): String? {
+    fun getStreamUrl(useHls: Boolean = true, skipTracks: Boolean = false): String? {
         val mediaItem = _uiState.value.mediaItem ?: return null
         val serverUrl = securePreferences.getServerUrl() ?: return null
         val apiKey = securePreferences.getApiKey() ?: return null
@@ -479,26 +479,28 @@ class PlayerViewModel @Inject constructor(
                 append("&MinSegments=1")
                 append("&BreakOnNonKeyFrames=true")
 
-                // Add track parameters directly to URL (not via ResolvingDataSource)
-                // selectedAudioTrack/selectedSubtitleTrack are relativeIndex values,
-                // but HLS needs the Jellyfin MediaStream index, so look up the track
-                val audioRelativeIndex = _uiState.value.selectedAudioTrack
-                if (audioRelativeIndex != null) {
-                    val audioTrack = _uiState.value.audioTracks.firstOrNull { it.relativeIndex == audioRelativeIndex }
-                    if (audioTrack != null) {
-                        append("&AudioStreamIndex=${audioTrack.index}")
-                    } else {
-                        Log.w(TAG, "Failed to find audio track with relativeIndex $audioRelativeIndex")
+                if (!skipTracks) {
+                    // Add track parameters directly to URL (not via ResolvingDataSource)
+                    // selectedAudioTrack/selectedSubtitleTrack are relativeIndex values,
+                    // but HLS needs the Jellyfin MediaStream index, so look up the track
+                    val audioRelativeIndex = _uiState.value.selectedAudioTrack
+                    if (audioRelativeIndex != null) {
+                        val audioTrack = _uiState.value.audioTracks.firstOrNull { it.relativeIndex == audioRelativeIndex }
+                        if (audioTrack != null) {
+                            append("&AudioStreamIndex=${audioTrack.index}")
+                        } else {
+                            Log.w(TAG, "Failed to find audio track with relativeIndex $audioRelativeIndex")
+                        }
                     }
-                }
 
-                val subtitleRelativeIndex = _uiState.value.selectedSubtitleTrack
-                if (subtitleRelativeIndex != null) {
-                    val subtitleTrack = _uiState.value.subtitleTracks.firstOrNull { it.relativeIndex == subtitleRelativeIndex }
-                    if (subtitleTrack != null) {
-                        append("&SubtitleStreamIndex=${subtitleTrack.index}")
-                    } else {
-                        Log.w(TAG, "Failed to find subtitle track with relativeIndex $subtitleRelativeIndex")
+                    val subtitleRelativeIndex = _uiState.value.selectedSubtitleTrack
+                    if (subtitleRelativeIndex != null) {
+                        val subtitleTrack = _uiState.value.subtitleTracks.firstOrNull { it.relativeIndex == subtitleRelativeIndex }
+                        if (subtitleTrack != null) {
+                            append("&SubtitleStreamIndex=${subtitleTrack.index}")
+                        } else {
+                            Log.w(TAG, "Failed to find subtitle track with relativeIndex $subtitleRelativeIndex")
+                        }
                     }
                 }
             }
