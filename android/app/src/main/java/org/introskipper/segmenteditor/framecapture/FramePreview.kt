@@ -75,14 +75,12 @@ object FramePreview {
                     }
                 }
 
-                val retr = retrieverJob.await()
-                if (retr != null) {
-                    retriever = retr
+                retrieverJob.await()?.let {
+                    retriever = it
                 }
 
-                val fc = frameJob.await()
-                if (fc != null) {
-                    frameCapture = fc
+                frameJob.await()?.let {
+                    frameCapture = it
                 }
             }
         }
