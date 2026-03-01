@@ -113,7 +113,7 @@ class TrickplayPreviewLoader(
             val url = "$serverUrl/Users/$userId/Items/$itemId"
             val request = Request.Builder()
                 .url(url)
-                .header("X-Emby-Token", apiKey)
+                .header("Authorization", "MediaBrowser Token=\"$apiKey\"")
                 .build()
             
             httpClient.newCall(request).execute().use { response ->
@@ -197,7 +197,7 @@ class TrickplayPreviewLoader(
             val url = "$serverUrl/Videos/$itemId/Trickplay/$width/$imageIndex.jpg?mediaSourceId=$mediaSourceId"
             val request = Request.Builder()
                 .url(url)
-                .header("X-Emby-Token", apiKey)
+                .header("Authorization", "MediaBrowser Token=\"$apiKey\"")
                 .build()
             
             Log.d(TAG, "Loading tile sheet $imageIndex from network")
