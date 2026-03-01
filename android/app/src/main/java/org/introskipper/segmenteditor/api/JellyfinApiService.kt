@@ -77,7 +77,8 @@ class JellyfinApiService(private val securePreferences: SecurePreferences) {
     }
     
     private fun getApiKey(): String {
-        return securePreferences.getApiKey() ?: ""
+        val token = securePreferences.getApiKey() ?: ""
+        return "MediaBrowser Token=\"$token\""
     }
     
     private fun ensureInitialized() {
@@ -177,7 +178,7 @@ class JellyfinApiService(private val securePreferences: SecurePreferences) {
             searchTerm = searchTerm,
             fields = fields?.joinToString(","),
             filters = filters?.joinToString(","),
-            apiKey = getApiKey()
+            authHeader = getApiKey()
         )
     }
     

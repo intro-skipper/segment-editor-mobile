@@ -31,7 +31,7 @@ interface JellyfinApi {
     @GET("MediaSegments/{itemId}")
     suspend fun getSegments(
         @Path("itemId") itemId: String,
-        @Header("X-Emby-Token") apiKey: String
+        @Header("Authorization") authHeader: String
     ): Response<SegmentResponse>
     
     @POST("MediaSegmentsApi/{itemId}")
@@ -39,7 +39,7 @@ interface JellyfinApi {
         @Path("itemId") itemId: String,
         @Query("providerId") providerId: String,
         @Body segment: SegmentCreateRequest,
-        @Header("X-Emby-Token") apiKey: String
+        @Header("Authorization") authHeader: String
     ): Response<Segment>
     
     @DELETE("MediaSegmentsApi/{segmentId}")
@@ -47,7 +47,7 @@ interface JellyfinApi {
         @Path("segmentId") segmentId: String,
         @Query("itemId") itemId: String,
         @Query("type") segmentType: String,
-        @Header("X-Emby-Token") apiKey: String
+        @Header("Authorization") authHeader: String
     ): Response<Unit>
     
     // ========== Authentication Endpoints ==========
@@ -55,12 +55,12 @@ interface JellyfinApi {
     @POST("Users/AuthenticateByName")
     suspend fun authenticate(
         @Body request: AuthenticationRequest,
-        @Header("X-Emby-Authorization") authHeader: String
+        @Header("Authorization") authHeader: String
     ): Response<AuthenticationResult>
     
     @GET("System/Info")
     suspend fun getSystemInfo(
-        @Header("X-Emby-Token") apiKey: String
+        @Header("Authorization") authHeader: String
     ): Response<ServerInfo>
     
     @GET("System/Info/Public")
@@ -68,13 +68,13 @@ interface JellyfinApi {
     
     @GET("Users")
     suspend fun getUsers(
-        @Header("X-Emby-Token") apiKey: String
+        @Header("Authorization") authHeader: String
     ): Response<List<User>>
     
     @GET("Users/{userId}")
     suspend fun getUserById(
         @Path("userId") userId: String,
-        @Header("X-Emby-Token") apiKey: String
+        @Header("Authorization") authHeader: String
     ): Response<User>
     
     // ========== Media Discovery Endpoints ==========
@@ -92,7 +92,7 @@ interface JellyfinApi {
         @Query("searchTerm") searchTerm: String? = null,
         @Query("fields") fields: String? = null,
         @Query("filters") filters: String? = null,
-        @Header("X-Emby-Token") apiKey: String
+        @Header("Authorization") authHeader: String
     ): Response<ItemsResponse>
     
     @GET("Users/{userId}/Items/{itemId}")
@@ -100,7 +100,7 @@ interface JellyfinApi {
         @Path("userId") userId: String,
         @Path("itemId") itemId: String,
         @Query("fields") fields: String? = null,
-        @Header("X-Emby-Token") apiKey: String
+        @Header("Authorization") authHeader: String
     ): Response<MediaItem>
     
     @GET("Shows/{seriesId}/Episodes")
@@ -111,7 +111,7 @@ interface JellyfinApi {
         @Query("fields") fields: String? = null,
         @Query("startIndex") startIndex: Int? = null,
         @Query("limit") limit: Int? = null,
-        @Header("X-Emby-Token") apiKey: String
+        @Header("Authorization") authHeader: String
     ): Response<ItemsResponse>
     
     @GET("Shows/{seriesId}/Seasons")
@@ -119,12 +119,12 @@ interface JellyfinApi {
         @Path("seriesId") seriesId: String,
         @Query("userId") userId: String,
         @Query("fields") fields: String? = null,
-        @Header("X-Emby-Token") apiKey: String
+        @Header("Authorization") authHeader: String
     ): Response<ItemsResponse>
     
     @GET("Users/{userId}/Views")
     suspend fun getLibraries(
         @Path("userId") userId: String,
-        @Header("X-Emby-Token") apiKey: String
+        @Header("Authorization") authHeader: String
     ): Response<ItemsResponse>
 }
