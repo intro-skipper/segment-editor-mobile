@@ -24,7 +24,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,11 +31,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -51,10 +55,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
-import com.google.accompanist.swiperefresh.SwipeRefresh
-import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.component.translatedString
+import org.introskipper.segmenteditor.ui.component.WavyCircularProgressIndicator
 import org.introskipper.segmenteditor.ui.state.ThemeState
 import org.introskipper.segmenteditor.ui.util.getDominantColor
 import org.introskipper.segmenteditor.ui.viewmodel.Library
@@ -100,18 +103,33 @@ fun LibraryScreen(
             )
         }
     ) { paddingValues ->
-        SwipeRefresh(
-            state = rememberSwipeRefreshState(isRefreshing = uiState is LibraryUiState.Loading),
-            onRefresh = { viewModel.refresh() },
+        var isRefreshing by remember { mutableStateOf(false) }
+        val pullToRefreshState = rememberPullToRefreshState()
+
+        LaunchedEffect(uiState) {
+            if (uiState !is LibraryUiState.Loading) {
+                isRefreshing = false
+            }
+        }
+
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                isRefreshing = true
+                viewModel.refresh()
+            },
+            state = pullToRefreshState,
             modifier = Modifier.padding(paddingValues)
         ) {
             when (val state = uiState) {
                 is LibraryUiState.Loading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
+                    if (!isRefreshing) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            WavyCircularProgressIndicator()
+                        }
                     }
                 }
                 is LibraryUiState.Empty -> {
