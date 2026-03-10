@@ -221,7 +221,7 @@ fun AuthenticationScreen(
                     onClick = { viewModel.authenticate() },
                     enabled = when (state.authMethod) {
                         AuthMethod.API_KEY -> state.apiKey.isNotBlank()
-                        AuthMethod.USERNAME_PASSWORD -> state.username.isNotBlank() && state.password.isNotBlank()
+                        AuthMethod.USERNAME_PASSWORD -> state.username.isNotBlank()
                     }
                 )
             }
