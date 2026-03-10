@@ -19,7 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,6 +30,8 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -44,12 +45,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.google.accompanist.swiperefresh.SwipeRefresh
-import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.component.EpisodeCard
 import org.introskipper.segmenteditor.ui.component.MediaHeader
+import org.introskipper.segmenteditor.ui.component.WavyCircularProgressIndicator
 import org.introskipper.segmenteditor.ui.component.translatedString
 import org.introskipper.segmenteditor.ui.navigation.Screen
 import org.introskipper.segmenteditor.ui.state.SeriesUiState
@@ -121,18 +121,33 @@ fun SeriesScreen(
             },
             containerColor = MaterialTheme.colorScheme.surface
         ) { paddingValues ->
-            SwipeRefresh(
-                state = rememberSwipeRefreshState(isRefreshing = uiState is SeriesUiState.Loading),
-                onRefresh = { viewModel.refresh(seriesId) },
+            var isRefreshing by remember { mutableStateOf(false) }
+            val pullToRefreshState = rememberPullToRefreshState()
+
+            LaunchedEffect(uiState) {
+                if (uiState !is SeriesUiState.Loading) {
+                    isRefreshing = false
+                }
+            }
+
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = {
+                    isRefreshing = true
+                    viewModel.refresh(seriesId)
+                },
+                state = pullToRefreshState,
                 modifier = Modifier.padding(paddingValues)
             ) {
                 when (val state = uiState) {
                     is SeriesUiState.Loading -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
+                        if (!isRefreshing) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                WavyCircularProgressIndicator()
+                            }
                         }
                     }
                     is SeriesUiState.Error -> {
