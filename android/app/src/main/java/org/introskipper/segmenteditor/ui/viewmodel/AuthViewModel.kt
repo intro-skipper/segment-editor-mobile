@@ -9,6 +9,7 @@ import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,7 +43,15 @@ class AuthViewModel(
     
     private val _state = MutableStateFlow(AuthState())
     val state: StateFlow<AuthState> = _state.asStateFlow()
-    
+
+    private var activeJob: Job? = null
+
+    fun reset() {
+        activeJob?.cancel()
+        activeJob = null
+        _state.value = AuthState()
+    }
+
     fun setAuthMethod(method: AuthMethod) {
         _state.value = _state.value.copy(authMethod = method, error = null)
     }
@@ -60,6 +69,7 @@ class AuthViewModel(
     }
     
     fun authenticate() {
+        activeJob?.cancel()
         when (_state.value.authMethod) {
             AuthMethod.API_KEY -> authenticateWithApiKey()
             AuthMethod.USERNAME_PASSWORD -> authenticateWithCredentials()
@@ -75,7 +85,7 @@ class AuthViewModel(
         
         _state.value = _state.value.copy(isLoading = true, error = null)
         
-        viewModelScope.launch {
+        activeJob = viewModelScope.launch {
             try {
                 // Save API key first so it's available for the request
                 securePreferences.saveApiKey(apiKey)
@@ -167,14 +177,14 @@ class AuthViewModel(
             return
         }
         
-        if (password.isBlank()) {
-            _state.value = _state.value.copy(error = "Please enter a password")
+        if (password.isNotEmpty() && password.isBlank()) {
+            _state.value = _state.value.copy(error = "Password cannot be only whitespace")
             return
         }
         
         _state.value = _state.value.copy(isLoading = true, error = null)
         
-        viewModelScope.launch {
+        activeJob = viewModelScope.launch {
             try {
                 val deviceId = getDeviceId()
                 val deviceName = getDeviceName()

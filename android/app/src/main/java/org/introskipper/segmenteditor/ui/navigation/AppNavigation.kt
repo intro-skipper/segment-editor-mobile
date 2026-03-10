@@ -60,7 +60,8 @@ fun AppNavigation(
         composable(Screen.ConnectionWizard.route) {
             ConnectionWizardScreen(
                 navController = navController,
-                connectionViewModel = connectionViewModel
+                connectionViewModel = connectionViewModel,
+                authViewModel = authViewModel
             )
         }
         

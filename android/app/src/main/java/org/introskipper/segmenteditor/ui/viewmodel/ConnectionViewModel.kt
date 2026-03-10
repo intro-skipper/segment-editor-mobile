@@ -8,6 +8,7 @@ package org.introskipper.segmenteditor.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,12 +46,21 @@ class ConnectionViewModel(
     
     private val _state = MutableStateFlow(ConnectionState())
     val state: StateFlow<ConnectionState> = _state.asStateFlow()
-    
+
+    private var activeJob: Job? = null
+
+    fun reset() {
+        activeJob?.cancel()
+        activeJob = null
+        _state.value = ConnectionState()
+    }
+
     fun onServerUrlChange(url: String) {
         _state.value = _state.value.copy(
             serverUrl = url,
             isValidUrl = isValidServerUrl(url),
-            error = null
+            error = null,
+            serverValidated = false
         )
     }
     
@@ -61,9 +71,10 @@ class ConnectionViewModel(
             return
         }
         
+        activeJob?.cancel()
         _state.value = _state.value.copy(isLoading = true, error = null)
         
-        viewModelScope.launch {
+        activeJob = viewModelScope.launch {
             try {
                 val normalizedUrl = normalizeServerUrl(url)
                 apiService.updateBaseUrl(normalizedUrl)
@@ -98,13 +109,15 @@ class ConnectionViewModel(
     }
     
     fun discoverServers() {
+        activeJob?.cancel()
         _state.value = _state.value.copy(
             isDiscovering = true,
             discoveredServers = emptyList(),
-            error = null
+            error = null,
+            serverValidated = false
         )
         
-        viewModelScope.launch {
+        activeJob = viewModelScope.launch {
             try {
                 val servers = performServerDiscovery()
                 _state.value = _state.value.copy(
