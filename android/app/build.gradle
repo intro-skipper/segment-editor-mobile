@@ -18,7 +18,7 @@ android {
         compileSdk 36
         minSdk 30
         targetSdkVersion 35
-        versionName "1.0.7"
+        versionName "1.0.8"
         versionCode = versionName.replace(".","").toInteger()
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -106,10 +106,10 @@ dependencies {
     // You will need this to load local JS and CSS files in the WebView
     implementation "androidx.webkit:webkit:1.15.0"
 
-    implementation 'androidx.core:core-ktx:1.17.0'
+    implementation 'androidx.core:core-ktx:1.18.0'
     implementation 'androidx.core:core-pip:1.0.0-alpha02'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.10.0'
-    implementation 'androidx.activity:activity-compose:1.12.4'
+    implementation 'androidx.activity:activity-compose:1.13.0'
     implementation platform('androidx.compose:compose-bom:2026.02.01')
     implementation 'androidx.compose.animation:animation-core'
     implementation 'androidx.compose.material3:material3'

@@ -55,9 +55,9 @@ fun SkipOverlay(
         }
     }
 
-    // Animate vertical position: 0.0 is center, 0.85 is near bottom
+    // Animate vertical position: 0.0 is center, 0.9 is near bottom
     val verticalBias by animateFloatAsState(
-        targetValue = if (uiState.showControls) 0f else 0.85f,
+        targetValue = if (uiState.showControls) 0f else 0.9f,
         label = "SkipOverlayVerticalBias"
     )
 
