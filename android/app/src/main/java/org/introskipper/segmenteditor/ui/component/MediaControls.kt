@@ -84,7 +84,7 @@ fun MediaControls(
     onScrubMove: (Long) -> Unit = {},
     onScrubEnd: (Long) -> Unit = {}
 ) {
-    var showControls by remember { mutableStateOf(true) }
+    val showControls = uiState.showControls
     var isPlaying by remember { mutableStateOf(false) }
     var currentPosition by remember { mutableLongStateOf(0L) }
     var duration by remember { mutableLongStateOf(0L) }
@@ -113,7 +113,7 @@ fun MediaControls(
     LaunchedEffect(showControls, isPlaying) {
         if (showControls && isPlaying) {
             delay(5000)
-            showControls = false
+            viewModel.setControlsVisible(false)
         }
     }
     
@@ -124,7 +124,7 @@ fun MediaControls(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() }
             ) {
-                showControls = !showControls
+                viewModel.toggleControls()
             }
     ) {
         // Loading indicator

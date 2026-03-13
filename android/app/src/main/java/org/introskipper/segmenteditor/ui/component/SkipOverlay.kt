@@ -6,6 +6,7 @@
 package org.introskipper.segmenteditor.ui.component
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -24,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -54,13 +56,19 @@ fun SkipOverlay(
         }
     }
 
+    // Animate vertical position: 0.0 is center, 0.85 is near bottom
+    val verticalBias by animateFloatAsState(
+        targetValue = if (uiState.showControls) 0f else 0.85f,
+        label = "SkipOverlayVerticalBias"
+    )
+
     Box(modifier = modifier.fillMaxSize()) {
         AnimatedVisibility(
             visible = activeSegment != null,
             enter = fadeIn() + slideInHorizontally(initialOffsetX = { it }),
             exit = fadeOut() + slideOutHorizontally(targetOffsetX = { it }),
             modifier = Modifier
-                .align(Alignment.CenterEnd)
+                .align(BiasAlignment(1f, verticalBias))
                 .padding(end = 16.dp)
         ) {
             activeSegment?.let { segment ->

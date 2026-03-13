@@ -75,7 +75,8 @@ class PlayerViewModel @Inject constructor(
                     subtitleTracks = emptyList(),
                     selectedAudioTrack = null,
                     selectedSubtitleTrack = null,
-                    nextItemId = null
+                    nextItemId = null,
+                    showControls = true
                 )
             }
 
@@ -386,8 +387,8 @@ class PlayerViewModel @Inject constructor(
                                 }
 
                             // Preserve current selections (same relativeIndex should work for both sources)
-                            // Audio: current selection (if valid) → default track → first track → null
-                            // Subtitle: current selection (if valid) → null (subtitles are optional)
+                            // Audio: current selection (if valid) \u2192 default track \u2192 first track \u2192 null
+                            // Subtitle: current selection (if valid) \u2192 null (subtitles are optional)
                             val preservedAudioSelection = state.selectedAudioTrack?.let { current ->
                                 // Keep current if within bounds, otherwise try fallbacks
                                 if (current < jellyfinAudioTracks.size) {
@@ -592,6 +593,14 @@ class PlayerViewModel @Inject constructor(
         _uiState.update {
             it.copy(capturedStartTime = null, capturedEndTime = null)
         }
+    }
+
+    fun setControlsVisible(visible: Boolean) {
+        _uiState.update { it.copy(showControls = visible) }
+    }
+
+    fun toggleControls() {
+        _uiState.update { it.copy(showControls = !it.showControls) }
     }
 
     /**

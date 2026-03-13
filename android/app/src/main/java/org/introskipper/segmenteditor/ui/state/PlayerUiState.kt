@@ -31,6 +31,7 @@ data class PlayerUiState(
     val playbackSpeed: Float = 1.0f,
     
     // UI state
+    val showControls: Boolean = true,
     val showTrackSelection: Boolean = false,
     val showSpeedSelection: Boolean = false,
     val isFullscreen: Boolean = false,
