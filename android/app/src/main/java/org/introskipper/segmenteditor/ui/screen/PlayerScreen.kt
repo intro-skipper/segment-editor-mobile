@@ -36,7 +36,10 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -64,12 +67,15 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.media3.common.PlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
 import org.introskipper.segmenteditor.framecapture.FramePreview.onReleasePreviews
 import kotlinx.coroutines.delay
 import org.introskipper.segmenteditor.R
+import org.introskipper.segmenteditor.data.model.MediaItem
 import org.introskipper.segmenteditor.data.model.Segment
+import org.introskipper.segmenteditor.data.model.SegmentType
 import org.introskipper.segmenteditor.ui.component.PlaybackSpeedDialog
 import org.introskipper.segmenteditor.ui.component.SegmentSlider
 import org.introskipper.segmenteditor.ui.component.SegmentTimeline
@@ -79,6 +85,7 @@ import org.introskipper.segmenteditor.ui.component.translatedString
 import org.introskipper.segmenteditor.ui.navigation.Screen
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.state.PlayerEvent
+import org.introskipper.segmenteditor.ui.state.PlayerUiState
 import org.introskipper.segmenteditor.ui.viewmodel.PlayerViewModel
 import java.util.Locale
 import kotlin.time.DurationUnit
@@ -312,7 +319,7 @@ fun PlayerScreen(
         floatingActionButton = {
             if (!uiState.isFullscreen && !uiState.isUserLandscape) {
                 Box {
-                    androidx.compose.material3.FloatingActionButton(
+                    FloatingActionButton(
                         onClick = { showFabMenu = true },
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -320,12 +327,12 @@ fun PlayerScreen(
                         Icon(Icons.Default.Add, contentDescription = translatedString(R.string.player_create_segment))
                     }
                     
-                    androidx.compose.material3.DropdownMenu(
+                    DropdownMenu(
                         expanded = showFabMenu,
                         onDismissRequest = { showFabMenu = false }
                     ) {
-                        org.introskipper.segmenteditor.data.model.SegmentType.entries.forEach { type ->
-                            androidx.compose.material3.DropdownMenuItem(
+                        SegmentType.entries.forEach { type ->
+                            DropdownMenuItem(
                                 text = { Text(type.value) },
                                 onClick = {
                                     showFabMenu = false
@@ -680,7 +687,7 @@ fun PlayerScreen(
     }
 }
 
-private fun navigateBack(navController: NavController, mediaItem: org.introskipper.segmenteditor.data.model.MediaItem?) {
+private fun navigateBack(navController: NavController, mediaItem: MediaItem?) {
     if (mediaItem?.seriesId != null) {
         // If it's an episode, go back to the series screen
         // We use popBackStack with the route template to find any existing SeriesScreen in the backstack
@@ -700,7 +707,7 @@ private fun navigateBack(navController: NavController, mediaItem: org.introskipp
 
 @Composable
 private fun PlayerContent(
-    uiState: org.introskipper.segmenteditor.ui.state.PlayerUiState,
+    uiState: PlayerUiState,
     viewModel: PlayerViewModel,
     player: ExoPlayer?,
     streamUrl: String?,
@@ -721,7 +728,7 @@ private fun PlayerContent(
     onSetActiveSegment: (Int) -> Unit,
     onSetStartFromPlayer: (Int) -> Unit,
     onSetEndFromPlayer: (Int) -> Unit,
-    onPlaybackError: (androidx.media3.common.PlaybackException) -> Unit,
+    onPlaybackError: (PlaybackException) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Use rememberUpdatedState to capture the current useDirectPlay value

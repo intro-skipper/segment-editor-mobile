@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.FastForward
@@ -63,6 +64,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.preview.ScrubPreviewOverlay
+import org.introskipper.segmenteditor.ui.state.PlayerUiState
 import org.introskipper.segmenteditor.ui.viewmodel.PlayerViewModel
 import java.util.Locale
 import kotlin.time.Duration
@@ -75,7 +77,7 @@ import kotlin.time.Duration.Companion.seconds
  */
 @Composable
 fun MediaControls(
-    uiState: org.introskipper.segmenteditor.ui.state.PlayerUiState,
+    uiState: PlayerUiState,
     viewModel: PlayerViewModel,
     player: Player?,
     modifier: Modifier = Modifier,
@@ -200,7 +202,7 @@ fun MediaControls(
                     modifier = Modifier.size(sideButtonSize)
                         .background(
                             Color.Black.copy(alpha = 0.5f),
-                            shape = androidx.compose.foundation.shape.CircleShape
+                            shape = CircleShape
                         )
                         .onTouchHeldAnimated(
                             onTouchHeld = {
@@ -231,7 +233,7 @@ fun MediaControls(
                         .size(playButtonSize)
                         .background(
                             Color.Black.copy(alpha = 0.5f),
-                            shape = androidx.compose.foundation.shape.CircleShape
+                            shape = CircleShape
                         )
                 ) {
                     Icon(
@@ -248,7 +250,7 @@ fun MediaControls(
                     modifier = Modifier.size(sideButtonSize)
                         .background(
                             Color.Black.copy(alpha = 0.5f),
-                            shape = androidx.compose.foundation.shape.CircleShape
+                            shape = CircleShape
                         )
                         .onTouchHeldAnimated(
                             onTouchHeld = {
