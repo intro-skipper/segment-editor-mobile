@@ -32,6 +32,7 @@ import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.component.PrimaryButton
 import org.introskipper.segmenteditor.ui.component.translatedString
 import org.introskipper.segmenteditor.ui.navigation.Screen
+import org.introskipper.segmenteditor.ui.viewmodel.AuthMethod
 import org.introskipper.segmenteditor.ui.viewmodel.AuthViewModel
 
 @Composable
@@ -75,7 +76,13 @@ fun ConnectionSuccessScreen(
             
             if (state.user != null) {
                 Text(
-                    text = translatedString(R.string.auth_signed_in_as, state.user!!.name),
+                    text = translatedString(R.string.auth_signed_in_as,
+                        if (state.authMethod == AuthMethod.API_KEY) {
+                            "\n${state.apiKey}"
+                        } else {
+                            state.user!!.name
+                        }
+                    ),
                     style = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
