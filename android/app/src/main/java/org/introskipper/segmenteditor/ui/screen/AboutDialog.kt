@@ -103,7 +103,7 @@ fun AboutDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 Image(
-                    painter = painterResource(id = R.drawable.generated_by_ai),
+                    painter = painterResource(id = R.drawable.generated_by_ai_no_bg),
                     contentDescription = translatedString(R.string.about_generated_by_ai),
                     modifier = Modifier.fillMaxWidth(),
                     contentScale = ContentScale.FillWidth
