@@ -5,6 +5,7 @@
 
 package org.introskipper.segmenteditor.ui.screen
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,7 +27,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.introskipper.segmenteditor.BuildConfig
@@ -99,11 +102,11 @@ fun AboutDialog(
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                Text(
-                    text = translatedString(R.string.about_coding),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
+                Image(
+                    painter = painterResource(id = R.drawable.generated_by_ai),
+                    contentDescription = translatedString(R.string.about_generated_by_ai),
+                    modifier = Modifier.fillMaxWidth(),
+                    contentScale = ContentScale.FillWidth
                 )
                 
                 Spacer(modifier = Modifier.height(24.dp))
