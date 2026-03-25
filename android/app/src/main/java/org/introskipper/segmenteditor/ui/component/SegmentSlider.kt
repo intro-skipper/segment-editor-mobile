@@ -197,6 +197,21 @@ fun SegmentSlider(
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
+                    // Share button
+                    if (onShare != null) {
+                        IconButton(
+                            onClick = onShare,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = translatedString(R.string.segment_share_description),
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
                     // Copy button
                     IconButton(
                         onClick = {
@@ -216,21 +231,6 @@ fun SegmentSlider(
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
-                    }
-
-                    // Share button
-                    if (onShare != null) {
-                        IconButton(
-                            onClick = onShare,
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = translatedString(R.string.segment_share_description),
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
                     }
 
                     // Save button (if callback provided)
