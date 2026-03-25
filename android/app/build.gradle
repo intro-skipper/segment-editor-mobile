@@ -27,7 +27,7 @@ android {
         }
 
         buildConfigField "String", "COMMIT", "\""+commit+"\""
-        buildConfigField "String", "SKIPME_BASE_URL", "\"https://skipme.deadlymediocre.workers.dev/\""
+        buildConfigField "String", "SKIPME_BASE_URL", "\"https://db.skipme.workers.dev/\""
     }
     androidResources {
         generateLocaleConfig = false

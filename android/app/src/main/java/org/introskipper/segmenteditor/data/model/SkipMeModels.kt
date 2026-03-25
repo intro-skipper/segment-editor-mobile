@@ -34,7 +34,7 @@ data class SkipMeSubmitRequest(
     val startMs: Long,
 
     @SerializedName("end_ms")
-    val endMs: Long? = null
+    val endMs: Long
 )
 
 /**
