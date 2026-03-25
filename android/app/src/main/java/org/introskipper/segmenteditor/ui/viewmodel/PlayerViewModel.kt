@@ -94,7 +94,7 @@ class PlayerViewModel @Inject constructor(
                 val mediaResult = mediaRepository.getItemResult(
                     userId = userId,
                     itemId = itemId,
-                    fields = listOf("MediaSources", "MediaStreams", "Path", "Container", "SeriesId", "SeasonId", "IndexNumber", "ProviderIds")
+                    fields = listOf("MediaSources", "MediaStreams", "Path", "Container", "SeriesId", "SeasonId", "IndexNumber", "ParentIndexNumber", "ProviderIds")
                 )
 
                 mediaResult.fold(
