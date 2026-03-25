@@ -70,4 +70,5 @@ sealed class PlayerEvent {
     data class SegmentLoaded(val segments: List<Segment>) : PlayerEvent()
     object PlaybackEnded : PlayerEvent()
     data class NavigateToPlayer(val itemId: String) : PlayerEvent()
+    data class ShowToast(val message: String) : PlayerEvent()
 }

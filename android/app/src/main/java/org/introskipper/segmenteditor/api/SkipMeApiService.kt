@@ -12,10 +12,10 @@ import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-class SkipMeApiService(httpClient: OkHttpClient) {
+class SkipMeApiService(baseUrl: String, httpClient: OkHttpClient) {
 
     private val api: SkipMeApi = Retrofit.Builder()
-        .baseUrl(BASE_URL)
+        .baseUrl(baseUrl)
         .client(httpClient)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
@@ -23,9 +23,5 @@ class SkipMeApiService(httpClient: OkHttpClient) {
 
     suspend fun submitSegment(request: SkipMeSubmitRequest): Response<SkipMeSubmitResponse> {
         return api.submitSegment(request)
-    }
-
-    companion object {
-        const val BASE_URL = "https://skipme.deadlymediocre.workers.dev/"
     }
 }

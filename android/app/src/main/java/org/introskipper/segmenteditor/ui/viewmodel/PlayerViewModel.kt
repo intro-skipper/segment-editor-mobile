@@ -835,6 +835,7 @@ class PlayerViewModel @Inject constructor(
         val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType()
         if (skipMeType == null) {
             Log.d(TAG, "Skipping SkipMe.db share: segment type '${segment.type}' is not supported")
+            _events.value = PlayerEvent.ShowToast("This segment type cannot be shared with SkipMe.db")
             return
         }
 
@@ -844,6 +845,7 @@ class PlayerViewModel @Inject constructor(
 
         if (tmdbId == null && tvdbId == null) {
             Log.w(TAG, "Skipping SkipMe.db share: no TMDB or TVDB episode ID available")
+            _events.value = PlayerEvent.ShowToast("Cannot share: no TMDB or TVDB episode ID available")
             return
         }
 
@@ -853,6 +855,7 @@ class PlayerViewModel @Inject constructor(
                 TAG,
                 "Skipping SkipMe.db share: episode duration is ${durationMs ?: "unknown or non-positive"}"
             )
+            _events.value = PlayerEvent.ShowToast("Cannot share: episode duration is unknown")
             return
         }
 
@@ -864,6 +867,7 @@ class PlayerViewModel @Inject constructor(
                 TAG,
                 "Skipping SkipMe.db share: invalid segment timing (startMs=$startMs, endMs=$endMs)"
             )
+            _events.value = PlayerEvent.ShowToast("Cannot share: segment timing is invalid")
             return
         }
 
@@ -872,6 +876,7 @@ class PlayerViewModel @Inject constructor(
                 TAG,
                 "Skipping SkipMe.db share: segment end ($endMs ms) exceeds episode duration ($durationMs ms)"
             )
+            _events.value = PlayerEvent.ShowToast("Cannot share: segment exceeds episode duration")
             return
         }
 
@@ -892,11 +897,14 @@ class PlayerViewModel @Inject constructor(
                 if (response.isSuccessful) {
                     val body = response.body()
                     Log.d(TAG, "SkipMe.db share accepted: id=${body?.submission?.id}, status=${body?.submission?.status}")
+                    _events.value = PlayerEvent.ShowToast("Segment shared with SkipMe.db")
                 } else {
                     Log.w(TAG, "SkipMe.db share failed: HTTP ${response.code()}")
+                    _events.value = PlayerEvent.ShowToast("Failed to share with SkipMe.db (HTTP ${response.code()})")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "SkipMe.db share error", e)
+                _events.value = PlayerEvent.ShowToast("Failed to share with SkipMe.db")
             }
         }
     }

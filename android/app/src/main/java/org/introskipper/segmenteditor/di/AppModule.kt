@@ -101,6 +101,6 @@ object AppModule {
     fun provideSkipMeApiService(
         httpClient: OkHttpClient
     ): SkipMeApiService {
-        return SkipMeApiService(httpClient)
+        return SkipMeApiService(BuildConfig.SKIPME_BASE_URL, httpClient)
     }
 }
