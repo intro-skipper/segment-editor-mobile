@@ -90,7 +90,7 @@ class PlayerViewModel @Inject constructor(
                 val mediaResult = mediaRepository.getItemResult(
                     userId = userId,
                     itemId = itemId,
-                    fields = listOf("MediaSources", "MediaStreams", "Path", "Container", "SeriesId", "SeasonId", "IndexNumber")
+                    fields = listOf("MediaSources", "MediaStreams", "Path", "Container", "SeriesId", "SeasonId", "IndexNumber", "ProviderIds")
                 )
 
                 mediaResult.fold(
@@ -820,6 +820,15 @@ class PlayerViewModel @Inject constructor(
     // Exposes onPreviewsRequested (a PreviewFrames extension on PlayerViewModel) to the UI layer
     fun setupFallbackPreviews(streamUrl: String) {
         onPreviewsRequested(streamUrl)
+    }
+
+    /**
+     * Shares a segment with SkipMe.db using the episode's IMDb and TVDB provider IDs.
+     * This is a stub for a future API integration.
+     */
+    fun shareSegment(segment: Segment, imdbId: String?, tvdbId: String?) {
+        Log.d(TAG, "Share with SkipMe.db: type=${segment.type}, start=${segment.getStartSeconds()}s, end=${segment.getEndSeconds()}s, imdbId=$imdbId, tvdbId=$tvdbId")
+        // TODO: Submit to SkipMe.db API once endpoint is available
     }
 
     companion object {

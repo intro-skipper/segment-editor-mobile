@@ -247,6 +247,7 @@
 
     <!-- Segment Editor -->
     <string name="segment_copy_description">Copy Segment</string>
+    <string name="segment_share_description">Share with SkipMe.db</string>
     <string name="segment_save_description">Save Segment</string>
     <string name="segment_delete_description">Delete Segment</string>
     <string name="start_label">Start</string>
