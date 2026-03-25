@@ -827,7 +827,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     /**
-     * Submits a segment to SkipMe.db using the episode's own IMDb and TVDB provider IDs
+     * Submits a segment to SkipMe.db using the episode's own TMDB and TVDB provider IDs
      * (episode-level IDs, not series-level IDs).
      * Unsupported segment types (Commercial, Unknown) are silently ignored.
      */
@@ -839,11 +839,11 @@ class PlayerViewModel @Inject constructor(
         }
 
         // Episode-level provider IDs (Jellyfin stores these on the episode item itself)
-        val imdbId = mediaItem?.providerIds?.get("Imdb")
+        val tmdbId = mediaItem?.providerIds?.get("Tmdb")?.toIntOrNull()
         val tvdbId = mediaItem?.providerIds?.get("Tvdb")?.toIntOrNull()
 
-        if (imdbId == null && tvdbId == null) {
-            Log.w(TAG, "Skipping SkipMe.db share: no IMDb or TVDB episode ID available")
+        if (tmdbId == null && tvdbId == null) {
+            Log.w(TAG, "Skipping SkipMe.db share: no TMDB or TVDB episode ID available")
             return
         }
 
@@ -853,7 +853,7 @@ class PlayerViewModel @Inject constructor(
             return
         }
         val request = SkipMeSubmitRequest(
-            imdbId = imdbId,
+            tmdbId = tmdbId,
             tvdbId = tvdbId,
             segment = skipMeType,
             season = mediaItem?.parentIndexNumber,
