@@ -94,7 +94,10 @@ data class MediaItem(
     val supportsMediaControl: Boolean = false,
     
     @SerializedName("ChildCount")
-    val childCount: Int? = null
+    val childCount: Int? = null,
+
+    @SerializedName("ProviderIds")
+    val providerIds: Map<String, String>? = null
 ) {
     /**
      * Gets the runtime in seconds

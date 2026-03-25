@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -84,6 +85,7 @@ fun SegmentSlider(
     onSetStartFromPlayer: (() -> Unit)? = null,
     onSetEndFromPlayer: (() -> Unit)? = null,
     onSave: (() -> Unit)? = null,
+    onShare: (() -> Unit)? = null,
     hasUnsavedChanges: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -195,6 +197,21 @@ fun SegmentSlider(
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
+                    // Share button
+                    if (onShare != null) {
+                        IconButton(
+                            onClick = onShare,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = translatedString(R.string.segment_share_description),
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
                     // Copy button
                     IconButton(
                         onClick = {
@@ -215,7 +232,7 @@ fun SegmentSlider(
                             modifier = Modifier.size(18.dp)
                         )
                     }
-                    
+
                     // Save button (if callback provided)
                     if (onSave != null) {
                         val canSave = hasUnsavedChanges && !isSaving

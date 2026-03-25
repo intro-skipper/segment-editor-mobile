@@ -246,7 +246,7 @@ class JellyfinApiService(private val securePreferences: SecurePreferences) {
         )
         val EPISODE_FIELDS = listOf(
             "Overview", "PrimaryImageAspectRatio", "ImageTags", "MediaSources",
-            "SeriesName", "SeasonName", "IndexNumber", "ParentIndexNumber"
+            "SeriesName", "SeasonName", "IndexNumber", "ParentIndexNumber", "ProviderIds"
         )
     }
 }

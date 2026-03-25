@@ -15,6 +15,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.introskipper.segmenteditor.BuildConfig
 import org.introskipper.segmenteditor.api.JellyfinApiService
+import org.introskipper.segmenteditor.api.SkipMeApiService
 import org.introskipper.segmenteditor.data.repository.AuthRepository
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
@@ -93,5 +94,13 @@ object AppModule {
         apiService: JellyfinApiService
     ): AuthRepository {
         return AuthRepository(apiService)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSkipMeApiService(
+        httpClient: OkHttpClient
+    ): SkipMeApiService {
+        return SkipMeApiService(BuildConfig.SKIPME_BASE_URL, httpClient)
     }
 }

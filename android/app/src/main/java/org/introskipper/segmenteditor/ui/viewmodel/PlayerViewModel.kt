@@ -25,9 +25,12 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import org.introskipper.segmenteditor.api.SkipMeApiService
 import org.introskipper.segmenteditor.data.model.MediaItem
 import org.introskipper.segmenteditor.data.model.MediaStream
 import org.introskipper.segmenteditor.data.model.Segment
+import org.introskipper.segmenteditor.data.model.SegmentType
+import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
@@ -43,7 +46,8 @@ class PlayerViewModel @Inject constructor(
     private val mediaRepository: MediaRepository,
     private val segmentRepository: SegmentRepository,
     private val securePreferences: SecurePreferences,
-    private val httpClient: OkHttpClient
+    private val httpClient: OkHttpClient,
+    private val skipMeApiService: SkipMeApiService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PlayerUiState())
@@ -90,7 +94,7 @@ class PlayerViewModel @Inject constructor(
                 val mediaResult = mediaRepository.getItemResult(
                     userId = userId,
                     itemId = itemId,
-                    fields = listOf("MediaSources", "MediaStreams", "Path", "Container", "SeriesId", "SeasonId", "IndexNumber")
+                    fields = listOf("MediaSources", "MediaStreams", "Path", "Container", "SeriesId", "SeasonId", "IndexNumber", "ParentIndexNumber", "ProviderIds")
                 )
 
                 mediaResult.fold(
@@ -820,6 +824,89 @@ class PlayerViewModel @Inject constructor(
     // Exposes onPreviewsRequested (a PreviewFrames extension on PlayerViewModel) to the UI layer
     fun setupFallbackPreviews(streamUrl: String) {
         onPreviewsRequested(streamUrl)
+    }
+
+    /**
+     * Submits a segment to SkipMe.db using the episode's own TMDB and TVDB provider IDs
+     * (episode-level IDs, not series-level IDs).
+     * Unsupported segment types (Commercial, Unknown) are silently ignored.
+     */
+    fun shareSegment(segment: Segment, mediaItem: MediaItem?) {
+        val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType()
+        if (skipMeType == null) {
+            Log.d(TAG, "Skipping SkipMe.db share: segment type '${segment.type}' is not supported")
+            _events.value = PlayerEvent.ShowToast("This segment type cannot be shared with SkipMe.db")
+            return
+        }
+
+        // Episode-level provider IDs (Jellyfin stores these on the episode item itself)
+        val tmdbId = mediaItem?.providerIds?.get("Tmdb")?.toIntOrNull()
+        val tvdbId = mediaItem?.providerIds?.get("Tvdb")?.toIntOrNull()
+
+        if (tmdbId == null && tvdbId == null) {
+            Log.w(TAG, "Skipping SkipMe.db share: no TMDB or TVDB episode ID available")
+            _events.value = PlayerEvent.ShowToast("Cannot share: no TMDB or TVDB episode ID available")
+            return
+        }
+
+        val durationMs = mediaItem?.runTimeTicks?.div(10_000)
+        if (durationMs == null || durationMs <= 0) {
+            Log.w(
+                TAG,
+                "Skipping SkipMe.db share: episode duration is ${durationMs ?: "unknown or non-positive"}"
+            )
+            _events.value = PlayerEvent.ShowToast("Cannot share: episode duration is unknown")
+            return
+        }
+
+        val startMs = segment.startTicks / 10_000
+        val endMs = segment.endTicks / 10_000
+
+        if (startMs >= endMs) {
+            Log.w(
+                TAG,
+                "Skipping SkipMe.db share: invalid segment timing (startMs=$startMs, endMs=$endMs)"
+            )
+            _events.value = PlayerEvent.ShowToast("Cannot share: segment timing is invalid")
+            return
+        }
+
+        if (endMs > durationMs) {
+            Log.w(
+                TAG,
+                "Skipping SkipMe.db share: segment end ($endMs ms) exceeds episode duration ($durationMs ms)"
+            )
+            _events.value = PlayerEvent.ShowToast("Cannot share: segment exceeds episode duration")
+            return
+        }
+
+        val request = SkipMeSubmitRequest(
+            tmdbId = tmdbId,
+            tvdbId = tvdbId,
+            segment = skipMeType,
+            season = mediaItem?.parentIndexNumber,
+            episode = mediaItem?.indexNumber,
+            durationMs = durationMs,
+            startMs = startMs,
+            endMs = endMs
+        )
+
+        viewModelScope.launch {
+            try {
+                val response = skipMeApiService.submitSegment(request)
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    Log.d(TAG, "SkipMe.db share accepted: id=${body?.submission?.id}, status=${body?.submission?.status}")
+                    _events.value = PlayerEvent.ShowToast("Segment shared with SkipMe.db")
+                } else {
+                    Log.w(TAG, "SkipMe.db share failed: HTTP ${response.code()}")
+                    _events.value = PlayerEvent.ShowToast("Failed to share with SkipMe.db (HTTP ${response.code()})")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "SkipMe.db share error", e)
+                _events.value = PlayerEvent.ShowToast("Failed to share with SkipMe.db")
+            }
+        }
     }
 
     companion object {

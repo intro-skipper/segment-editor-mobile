@@ -9,6 +9,7 @@ import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -133,6 +134,10 @@ fun PlayerScreen(
             is PlayerEvent.PlaybackEnded -> {
                 viewModel.clearEvent()
                 navigateBack(navController, uiState.mediaItem)
+            }
+            is PlayerEvent.ShowToast -> {
+                viewModel.clearEvent()
+                Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
             }
             else -> {}
         }
@@ -859,6 +864,9 @@ private fun PlayerContent(
                             },
                             onSave = {
                                 onSaveSegment(segment)
+                            },
+                            onShare = {
+                                viewModel.shareSegment(segment, uiState.mediaItem)
                             },
                             hasUnsavedChanges = hasChanges,
                             modifier = Modifier.padding(vertical = 4.dp)
