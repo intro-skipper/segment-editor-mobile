@@ -861,9 +861,7 @@ private fun PlayerContent(
                                 onSaveSegment(segment)
                             },
                             onShare = {
-                                val imdbId = uiState.mediaItem?.providerIds?.get("Imdb")
-                                val tvdbId = uiState.mediaItem?.providerIds?.get("Tvdb")
-                                viewModel.shareSegment(segment, imdbId, tvdbId)
+                                viewModel.shareSegment(segment, uiState.mediaItem)
                             },
                             hasUnsavedChanges = hasChanges,
                             modifier = Modifier.padding(vertical = 4.dp)

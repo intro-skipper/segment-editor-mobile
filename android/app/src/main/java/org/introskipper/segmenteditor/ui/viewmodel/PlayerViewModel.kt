@@ -25,9 +25,12 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import org.introskipper.segmenteditor.api.SkipMeApiService
 import org.introskipper.segmenteditor.data.model.MediaItem
 import org.introskipper.segmenteditor.data.model.MediaStream
 import org.introskipper.segmenteditor.data.model.Segment
+import org.introskipper.segmenteditor.data.model.SegmentType
+import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
@@ -43,7 +46,8 @@ class PlayerViewModel @Inject constructor(
     private val mediaRepository: MediaRepository,
     private val segmentRepository: SegmentRepository,
     private val securePreferences: SecurePreferences,
-    private val httpClient: OkHttpClient
+    private val httpClient: OkHttpClient,
+    private val skipMeApiService: SkipMeApiService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PlayerUiState())
@@ -823,12 +827,55 @@ class PlayerViewModel @Inject constructor(
     }
 
     /**
-     * Shares a segment with SkipMe.db using the episode's IMDb and TVDB provider IDs.
-     * This is a stub for a future API integration.
+     * Submits a segment to SkipMe.db using the episode's own IMDb and TVDB provider IDs
+     * (episode-level IDs, not series-level IDs).
+     * Unsupported segment types (Commercial, Unknown) are silently ignored.
      */
-    fun shareSegment(segment: Segment, imdbId: String?, tvdbId: String?) {
-        Log.d(TAG, "Share with SkipMe.db: type=${segment.type}, start=${segment.getStartSeconds()}s, end=${segment.getEndSeconds()}s, imdbId=$imdbId, tvdbId=$tvdbId")
-        // TODO: Submit to SkipMe.db API once endpoint is available
+    fun shareSegment(segment: Segment, mediaItem: MediaItem?) {
+        val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType()
+        if (skipMeType == null) {
+            Log.d(TAG, "Skipping SkipMe.db share: segment type '${segment.type}' is not supported")
+            return
+        }
+
+        // Episode-level provider IDs (Jellyfin stores these on the episode item itself)
+        val imdbId = mediaItem?.providerIds?.get("Imdb")
+        val tvdbId = mediaItem?.providerIds?.get("Tvdb")?.toIntOrNull()
+
+        if (imdbId == null && tvdbId == null) {
+            Log.w(TAG, "Skipping SkipMe.db share: no IMDb or TVDB episode ID available")
+            return
+        }
+
+        val durationMs = mediaItem?.runTimeTicks?.div(10_000)
+        if (durationMs == null) {
+            Log.w(TAG, "Skipping SkipMe.db share: episode duration is unknown")
+            return
+        }
+        val request = SkipMeSubmitRequest(
+            imdbId = imdbId,
+            tvdbId = tvdbId,
+            segment = skipMeType,
+            season = mediaItem?.parentIndexNumber,
+            episode = mediaItem?.indexNumber,
+            durationMs = durationMs,
+            startMs = segment.startTicks / 10_000,
+            endMs = segment.endTicks / 10_000
+        )
+
+        viewModelScope.launch {
+            try {
+                val response = skipMeApiService.submitSegment(request)
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    Log.d(TAG, "SkipMe.db share accepted: id=${body?.submission?.id}, status=${body?.submission?.status}")
+                } else {
+                    Log.w(TAG, "SkipMe.db share failed: HTTP ${response.code()}")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "SkipMe.db share error", e)
+            }
+        }
     }
 
     companion object {
