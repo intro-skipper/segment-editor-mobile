@@ -839,8 +839,8 @@ class PlayerViewModel @Inject constructor(
         }
 
         // Episode-level provider IDs (Jellyfin stores these on the episode item itself)
-        val tmdbId = mediaItem?.providerIds?.get("TMDB")?.toIntOrNull()
-        val tvdbId = mediaItem?.providerIds?.get("TVDB")?.toIntOrNull()
+        val tmdbId = mediaItem?.providerIds?.get("Tmdb")?.toIntOrNull()
+        val tvdbId = mediaItem?.providerIds?.get("Tvdb")?.toIntOrNull()
 
         if (tmdbId == null && tvdbId == null) {
             Log.w(TAG, "Skipping SkipMe.db share: no TMDB or TVDB episode ID available")
