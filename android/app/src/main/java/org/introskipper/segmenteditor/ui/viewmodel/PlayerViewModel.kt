@@ -848,10 +848,33 @@ class PlayerViewModel @Inject constructor(
         }
 
         val durationMs = mediaItem?.runTimeTicks?.div(10_000)
-        if (durationMs == null) {
-            Log.w(TAG, "Skipping SkipMe.db share: episode duration is unknown")
+        if (durationMs == null || durationMs <= 0) {
+            Log.w(
+                TAG,
+                "Skipping SkipMe.db share: episode duration is ${durationMs ?: "unknown or non-positive"}"
+            )
             return
         }
+
+        val startMs = segment.startTicks / 10_000
+        val endMs = segment.endTicks / 10_000
+
+        if (startMs >= endMs) {
+            Log.w(
+                TAG,
+                "Skipping SkipMe.db share: invalid segment timing (startMs=$startMs, endMs=$endMs)"
+            )
+            return
+        }
+
+        if (endMs > durationMs) {
+            Log.w(
+                TAG,
+                "Skipping SkipMe.db share: segment end ($endMs ms) exceeds episode duration ($durationMs ms)"
+            )
+            return
+        }
+
         val request = SkipMeSubmitRequest(
             tmdbId = tmdbId,
             tvdbId = tvdbId,
@@ -859,8 +882,8 @@ class PlayerViewModel @Inject constructor(
             season = mediaItem?.parentIndexNumber,
             episode = mediaItem?.indexNumber,
             durationMs = durationMs,
-            startMs = segment.startTicks / 10_000,
-            endMs = segment.endTicks / 10_000
+            startMs = startMs,
+            endMs = endMs
         )
 
         viewModelScope.launch {
