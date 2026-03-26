@@ -30,6 +30,7 @@ import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.api.SkipMeApiService
+import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.data.model.MediaItem
 import org.introskipper.segmenteditor.data.model.MediaStream
 import org.introskipper.segmenteditor.data.model.Segment
@@ -124,6 +125,11 @@ class PlayerViewModel @Inject constructor(
 
                         // Find next episode for auto-play
                         findNextEpisode(mediaItem)
+                        
+                        // If it's an episode, load its series and season info for sharing
+                        if (mediaItem.type == "Episode") {
+                            loadExtraMetadataForSharing(mediaItem)
+                        }
                     },
                     onFailure = { error ->
                         Log.e(TAG, "Failed to load media item", error)
@@ -145,6 +151,37 @@ class PlayerViewModel @Inject constructor(
                         error = errorMsg
                     )
                 }
+            }
+        }
+    }
+
+    /**
+     * Loads series and season metadata to get TMDB series ID and TVDB season ID
+     */
+    private fun loadExtraMetadataForSharing(episode: MediaItem) {
+        val seriesId = episode.seriesId ?: return
+        val seasonId = episode.seasonId ?: return
+        val userId = securePreferences.getUserId() ?: return
+
+        viewModelScope.launch {
+            try {
+                // Load series to get its TMDB/TVDB IDs
+                val seriesResult = mediaRepository.getItemResult(userId, seriesId, listOf("ProviderIds"))
+                val series = seriesResult.getOrNull()
+                
+                // Load season to get its TVDB ID
+                val seasonResult = mediaRepository.getItemResult(userId, seasonId, listOf("ProviderIds"))
+                val season = seasonResult.getOrNull()
+
+                _uiState.update { state ->
+                    state.copy(
+                        seriesTmdbId = series?.providerIds?.get("Tmdb")?.toIntOrNull(),
+                        seriesTvdbId = series?.providerIds?.get("Tvdb")?.toIntOrNull(),
+                        seasonTvdbId = season?.providerIds?.get("Tvdb")?.toIntOrNull()
+                    )
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to load extra metadata for sharing", e)
             }
         }
     }
@@ -840,8 +877,8 @@ class PlayerViewModel @Inject constructor(
     }
 
     /**
-     * Submits a segment to SkipMe.db using the episode's own TMDB and TVDB provider IDs
-     * (episode-level IDs, not series-level IDs).
+     * Submits a segment to SkipMe.db using the series-level TMDB ID and
+     * episode-level TVDB season/episode IDs.
      * Unsupported segment types (Commercial, Unknown) are silently ignored.
      */
     fun shareSegment(segment: Segment, mediaItem: MediaItem?) {
@@ -853,12 +890,14 @@ class PlayerViewModel @Inject constructor(
                 return@launch
             }
 
-            // Episode-level provider IDs (Jellyfin stores these on the episode item itself)
-            val tmdbId = mediaItem?.providerIds?.get("Tmdb")?.toIntOrNull()
-            val tvdbId = mediaItem?.providerIds?.get("Tvdb")?.toIntOrNull()
+            val state = _uiState.value
+            val tmdbId = state.seriesTmdbId
+            val tvdbId = state.seriesTvdbId
+            val tvdbSeasonId = state.seasonTvdbId
+            val tvdbEpisodeId = mediaItem?.providerIds?.get("Tvdb")?.toIntOrNull()
 
             if (tmdbId == null && tvdbId == null) {
-                Log.w(TAG, "Skipping SkipMe.db share: no TMDB or TVDB episode ID available")
+                Log.w(TAG, "Skipping SkipMe.db share: no series-level TMDB or TVDB ID available")
                 _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_no_ids))
                 return@launch
             }
@@ -897,9 +936,11 @@ class PlayerViewModel @Inject constructor(
             val request = SkipMeSubmitRequest(
                 tmdbId = tmdbId,
                 tvdbId = tvdbId,
+                tvdbSeasonId = tvdbSeasonId,
+                tvdbEpisodeId = tvdbEpisodeId,
                 segment = skipMeType,
-                season = mediaItem.parentIndexNumber,
-                episode = mediaItem.indexNumber,
+                season = mediaItem?.parentIndexNumber,
+                episode = mediaItem?.indexNumber,
                 durationMs = durationMs,
                 startMs = startMs,
                 endMs = endMs

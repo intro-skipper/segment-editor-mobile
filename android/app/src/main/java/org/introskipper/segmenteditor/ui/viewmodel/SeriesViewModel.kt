@@ -96,6 +96,14 @@ class SeriesViewModel @Inject constructor(
 
                 val episodes = episodesResult.getOrThrow().items
 
+                // Load seasons to get their provider IDs (TVDB IDs)
+                val seasonsResult = mediaRepository.getSeasons(seriesId, userId)
+                val seasonTvdbIds = if (seasonsResult.isSuccessful) {
+                    seasonsResult.body()?.items?.associate { it.id to it.providerIds?.get("Tvdb")?.toIntOrNull() } ?: emptyMap()
+                } else {
+                    emptyMap()
+                }
+
                 // Group episodes by season
                 val episodesBySeason = episodes
                     .groupBy { it.parentIndexNumber ?: 0 }
@@ -115,6 +123,7 @@ class SeriesViewModel @Inject constructor(
                     series = series,
                     episodesBySeason = episodesBySeason,
                     seasonNames = seasonNames,
+                    seasonTvdbIds = seasonTvdbIds,
                     isLoadingSegments = true
                 )
 
@@ -191,27 +200,32 @@ class SeriesViewModel @Inject constructor(
 
     private fun shareEpisodes(episodes: List<EpisodeWithSegments>) {
         viewModelScope.launch {
-            _uiState.update { (it as SeriesUiState.Success).copy(isSharing = true) }
+            val currentState = _uiState.value as? SeriesUiState.Success ?: return@launch
+            _uiState.update { currentState.copy(isSharing = true) }
             
             try {
                 val requests = mutableListOf<SkipMeSubmitRequest>()
+                val seriesTvdbId = currentState.series.providerIds?.get("Tvdb")?.toIntOrNull()
+                val seriesTmdbId = currentState.series.providerIds?.get("Tmdb")?.toIntOrNull()
                 
                 episodes.forEach { episodeWithSegments ->
                     val episode = episodeWithSegments.episode
                     val segments = episodeWithSegments.segments ?: return@forEach
                     
-                    val tmdbId = episode.providerIds?.get("Tmdb")?.toIntOrNull()
-                    val tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+                    val tvdbEpisodeId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+                    val seasonTvdbId = currentState.seasonTvdbIds[episode.seasonId ?: ""]
                     val durationMs = episode.runTimeTicks?.div(10_000)
 
-                    if ((tmdbId != null || tvdbId != null) && durationMs != null && durationMs > 0) {
+                    if ((seriesTmdbId != null || seriesTvdbId != null) && durationMs != null && durationMs > 0) {
                         segments.forEach { segment ->
                             val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType()
                             if (skipMeType != null) {
                                 requests.add(
                                     SkipMeSubmitRequest(
-                                        tmdbId = tmdbId,
-                                        tvdbId = tvdbId,
+                                        tmdbId = seriesTmdbId,
+                                        tvdbId = seriesTvdbId,
+                                        tvdbSeasonId = seasonTvdbId,
+                                        tvdbEpisodeId = tvdbEpisodeId,
                                         segment = skipMeType,
                                         season = episode.parentIndexNumber,
                                         episode = episode.indexNumber,

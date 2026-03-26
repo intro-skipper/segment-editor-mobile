@@ -15,6 +15,7 @@ sealed class SeriesUiState {
         val series: MediaItem,
         val episodesBySeason: Map<Int, List<EpisodeWithSegments>>,
         val seasonNames: Map<Int, String?> = emptyMap(),
+        val seasonTvdbIds: Map<String, Int?> = emptyMap(),
         val isSharing: Boolean = false,
         val isShared: Boolean = false,
         val isLoadingSegments: Boolean = false

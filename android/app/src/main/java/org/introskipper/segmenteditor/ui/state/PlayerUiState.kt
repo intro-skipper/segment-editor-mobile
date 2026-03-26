@@ -15,6 +15,11 @@ data class PlayerUiState(
     val segments: List<Segment> = emptyList(),
     val error: String? = null,
     
+    // Metadata for sharing
+    val seriesTmdbId: Int? = null,
+    val seriesTvdbId: Int? = null,
+    val seasonTvdbId: Int? = null,
+    
     // Playback state
     val isPlaying: Boolean = false,
     val currentPosition: Long = 0L,
