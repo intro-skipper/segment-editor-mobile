@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.api.SkipMeApiService
 import org.introskipper.segmenteditor.data.model.SegmentType
@@ -29,6 +30,7 @@ import org.introskipper.segmenteditor.ui.state.EpisodeWithSegments
 import org.introskipper.segmenteditor.ui.state.SeriesEvent
 import org.introskipper.segmenteditor.ui.state.SeriesUiState
 import org.introskipper.segmenteditor.ui.util.SeasonSortUtil
+import org.introskipper.segmenteditor.ui.util.UiText
 import javax.inject.Inject
 
 @HiltViewModel
@@ -49,7 +51,10 @@ class SeriesViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = SeriesUiState.Loading
             try {
-                val userId = securePreferences.getUserId() ?: throw Exception("User not authenticated")
+                val userId = securePreferences.getUserId() ?: run {
+                    _uiState.value = SeriesUiState.Error(UiText.StringResource(R.string.auth_error_not_authenticated))
+                    return@launch
+                }
 
                 // Load series info
                 val seriesResult = mediaRepository.getItemResult(
@@ -59,8 +64,10 @@ class SeriesViewModel @Inject constructor(
                 )
 
                 if (seriesResult.isFailure) {
+                    val message = seriesResult.exceptionOrNull()?.message
                     _uiState.value = SeriesUiState.Error(
-                        seriesResult.exceptionOrNull()?.message ?: "Failed to load series"
+                        if (message != null) UiText.DynamicString(message)
+                        else UiText.StringResource(R.string.series_error_load)
                     )
                     return@launch
                 }
@@ -79,8 +86,10 @@ class SeriesViewModel @Inject constructor(
                 )
 
                 if (episodesResult.isFailure) {
+                    val message = episodesResult.exceptionOrNull()?.message
                     _uiState.value = SeriesUiState.Error(
-                        episodesResult.exceptionOrNull()?.message ?: "Failed to load episodes"
+                        if (message != null) UiText.DynamicString(message)
+                        else UiText.StringResource(R.string.series_episodes_error_load)
                     )
                     return@launch
                 }
@@ -112,7 +121,11 @@ class SeriesViewModel @Inject constructor(
                 loadSegmentsForEpisodes(episodesBySeason)
 
             } catch (e: Exception) {
-                _uiState.value = SeriesUiState.Error(e.message ?: "Unknown error")
+                val message = e.message
+                _uiState.value = SeriesUiState.Error(
+                    if (message != null) UiText.DynamicString(message)
+                    else UiText.StringResource(R.string.error_unknown)
+                )
             }
         }
     }
@@ -191,20 +204,21 @@ class SeriesViewModel @Inject constructor(
                 }
 
                 if (requests.isEmpty()) {
-                    _events.emit(SeriesEvent.ShowToast("No valid segments found to share"))
+                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
                     return@launch
                 }
 
                 val response = skipMeApiService.submitCollection(requests)
                 if (response.isSuccessful) {
-                    val count = response.body()?.submissions?.size ?: 0
-                    _events.emit(SeriesEvent.ShowToast("Successfully shared $count segments"))
+                    val count = response.body()?.submitted ?: 0
+                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_success_collection, count)))
                 } else {
-                    _events.emit(SeriesEvent.ShowToast("Failed to share collection (HTTP ${response.code()})"))
+                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_failed_http, response.code())))
                 }
             } catch (e: Exception) {
                 Log.e("SeriesViewModel", "Error sharing season segments", e)
-                _events.emit(SeriesEvent.ShowToast("Error sharing collection: ${e.message}"))
+                val message = e.message ?: "Unknown error"
+                _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_failed_collection_generic, message)))
             } finally {
                 _uiState.update { (it as SeriesUiState.Success).copy(isSharing = false) }
             }

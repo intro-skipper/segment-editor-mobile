@@ -36,6 +36,7 @@
     <string name="disabled">Disabled</string>
     <string name="none">None</string>
     <string name="ellipsis">…</string>
+    <string name="error_unknown">Unknown error</string>
 
     <!-- Settings Screen -->
     <string name="settings">Settings</string>
@@ -111,6 +112,7 @@
     <string name="auth_signed_in_as">Signed in as %1$s</string>
     <string name="auth_connected_to">Connected to %1$s</string>
     <string name="auth_authenticating">Authenticating…</string>
+    <string name="auth_error_not_authenticated">User not authenticated</string>
 
     <!-- Server Entry Screen -->
     <string name="server_url">Server URL</string>
@@ -179,6 +181,9 @@
     <string name="series_unknown">Unknown Series</string>
     <string name="series_no_episodes">No episodes found</string>
     <string name="series_season_format">Season %1$d</string>
+    <string name="series_error_load">Failed to load series</string>
+    <string name="series_episodes_error_load">Failed to load episodes</string>
+    <string name="series_total_episodes">%1$d episodes</string>
 
     <!-- Episode Card -->
     <string name="episode_duration_minutes">%1$d min</string>
@@ -286,4 +291,7 @@
     <string name="share_failed_http">SkipMe.db share failed (HTTP %1$d)</string>
     <string name="share_failed_generic">Failed to share with SkipMe.db</string>
     <string name="share_season_segments">Share Season Segments</string>
+    <string name="share_no_segments_found">No valid segments found to share</string>
+    <string name="share_success_collection">Successfully shared %1$d segments</string>
+    <string name="share_failed_collection_generic">Error sharing collection: %1$s</string>
 </resources>

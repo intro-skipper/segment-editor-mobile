@@ -7,6 +7,7 @@ package org.introskipper.segmenteditor.ui.state
 
 import org.introskipper.segmenteditor.data.model.MediaItem
 import org.introskipper.segmenteditor.data.model.Segment
+import org.introskipper.segmenteditor.ui.util.UiText
 
 sealed class SeriesUiState {
     object Loading : SeriesUiState()
@@ -16,7 +17,7 @@ sealed class SeriesUiState {
         val seasonNames: Map<Int, String?> = emptyMap(),
         val isSharing: Boolean = false
     ) : SeriesUiState()
-    data class Error(val message: String) : SeriesUiState()
+    data class Error(val message: UiText) : SeriesUiState()
 }
 
 data class EpisodeWithSegments(
@@ -27,5 +28,5 @@ data class EpisodeWithSegments(
 )
 
 sealed class SeriesEvent {
-    data class ShowToast(val message: String) : SeriesEvent()
+    data class ShowToast(val message: UiText) : SeriesEvent()
 }

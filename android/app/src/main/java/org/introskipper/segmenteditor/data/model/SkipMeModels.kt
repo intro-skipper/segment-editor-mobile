@@ -62,6 +62,6 @@ data class SkipMeSubmission(
 data class SkipMeCollectionSubmitResponse(
     @SerializedName("ok")
     val ok: Boolean,
-    @SerializedName("submissions")
-    val submissions: List<SkipMeSubmission>?
+    @SerializedName("submitted")
+    val submitted: Int = 0
 )

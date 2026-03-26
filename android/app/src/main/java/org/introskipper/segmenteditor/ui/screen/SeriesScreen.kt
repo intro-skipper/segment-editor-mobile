@@ -86,7 +86,7 @@ fun SeriesScreen(
         viewModel.events.collect { event ->
             when (event) {
                 is SeriesEvent.ShowToast -> {
-                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, event.message.asString(context), Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -162,7 +162,7 @@ fun SeriesScreen(
                             } else {
                                 Icon(
                                     imageVector = Icons.Default.Share,
-                                    contentDescription = "Share Season Segments"
+                                    contentDescription = translatedString(R.string.share_season_segments)
                                 )
                             }
                         }
@@ -210,7 +210,7 @@ fun SeriesScreen(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(
-                                    text = translatedString(R.string.error_prefix, state.message),
+                                    text = translatedString(R.string.error_prefix, state.message.asString()),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.error
                                 )
@@ -250,14 +250,18 @@ fun SeriesScreen(
                                 "$serverUrl/Items/${series.id}/Images/Backdrop/0?maxWidth=800"
                             }
 
+                            val totalEpisodesCount = state.episodesBySeason.values.sumOf { it.size }
+                            val totalEpisodesText = if (totalEpisodesCount > 0) {
+                                translatedString(R.string.series_total_episodes, totalEpisodesCount)
+                            } else null
+
                             MediaHeader(
                                 title = series.name ?: translatedString(R.string.series_unknown),
                                 subtitle = buildString {
                                     series.productionYear?.let { append(it.toString()) }
-                                    val totalEpisodes = state.episodesBySeason.values.sumOf { it.size }
-                                    if (totalEpisodes > 0) {
+                                    if (totalEpisodesText != null) {
                                         if (isNotEmpty()) append(" • ")
-                                        append("$totalEpisodes episodes")
+                                        append(totalEpisodesText)
                                     }
                                 },
                                 imageUrl = imageUrl,
@@ -293,7 +297,7 @@ fun SeriesScreen(
                                             onClick = { selectedSeasonIndex = index },
                                             text = { 
                                                 Text(
-                                                    text = state.seasonNames[seasonNumber] ?: "Season $seasonNumber",
+                                                    text = state.seasonNames[seasonNumber] ?: translatedString(R.string.series_season_format, seasonNumber),
                                                     style = MaterialTheme.typography.titleMedium,
                                                     color = if (selectedSeasonIndex == index) 
                                                         MaterialTheme.colorScheme.primary 
@@ -340,7 +344,7 @@ fun SeriesScreen(
                                             color = MaterialTheme.colorScheme.secondaryContainer
                                         ) {
                                             Text(
-                                                text = state.seasonNames[selectedSeasonNumber] ?: "Season ${selectedSeasonNumber ?: 1}",
+                                                text = state.seasonNames[selectedSeasonNumber] ?: translatedString(R.string.series_season_format, selectedSeasonNumber ?: 1),
                                                 style = MaterialTheme.typography.titleMedium,
                                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                                                 modifier = Modifier.padding(12.dp)
