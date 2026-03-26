@@ -892,9 +892,8 @@ class PlayerViewModel @Inject constructor(
 
             val state = _uiState.value
             val tmdbId = state.seriesTmdbId
-            val tvdbId = state.seriesTvdbId
             val tvdbSeasonId = state.seasonTvdbId
-            val tvdbEpisodeId = mediaItem?.providerIds?.get("Tvdb")?.toIntOrNull()
+            val tvdbId = mediaItem?.providerIds?.get("Tvdb")?.toIntOrNull()
 
             if (tmdbId == null && tvdbId == null) {
                 Log.w(TAG, "Skipping SkipMe.db share: no series-level TMDB or TVDB ID available")
@@ -935,9 +934,8 @@ class PlayerViewModel @Inject constructor(
 
             val request = SkipMeSubmitRequest(
                 tmdbId = tmdbId,
-                tvdbId = tvdbId,
                 tvdbSeasonId = tvdbSeasonId,
-                tvdbEpisodeId = tvdbEpisodeId,
+                tvdbId = tvdbId,
                 segment = skipMeType,
                 season = mediaItem?.parentIndexNumber,
                 episode = mediaItem?.indexNumber,

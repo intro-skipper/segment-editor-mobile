@@ -213,7 +213,7 @@ class SeriesViewModel @Inject constructor(
                     val segments = episodeWithSegments.segments ?: return@forEach
                     
                     val tvdbEpisodeId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
-                    val seasonTvdbId = currentState.seasonTvdbIds[episode.seasonId ?: ""]
+                    val tvdbSeasonId = currentState.seasonTvdbIds[episode.seasonId ?: ""]
                     val durationMs = episode.runTimeTicks?.div(10_000)
 
                     if ((seriesTmdbId != null || seriesTvdbId != null) && durationMs != null && durationMs > 0) {
@@ -223,9 +223,8 @@ class SeriesViewModel @Inject constructor(
                                 requests.add(
                                     SkipMeSubmitRequest(
                                         tmdbId = seriesTmdbId,
-                                        tvdbId = seriesTvdbId,
-                                        tvdbSeasonId = seasonTvdbId,
-                                        tvdbEpisodeId = tvdbEpisodeId,
+                                        tvdbSeasonId = tvdbSeasonId,
+                                        tvdbId = tvdbEpisodeId,
                                         segment = skipMeType,
                                         season = episode.parentIndexNumber,
                                         episode = episode.indexNumber,
