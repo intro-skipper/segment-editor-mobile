@@ -180,7 +180,8 @@ class SeriesViewModel @Inject constructor(
         if (currentState !is SeriesUiState.Success) return
 
         val episodes = currentState.episodesBySeason[seasonNumber] ?: return
-        shareEpisodes(episodes)
+        val regularSeasonCount = currentState.episodesBySeason.keys.count { it != 0 }
+        shareEpisodes(episodes, hideAfterSuccess = regularSeasonCount <= 1)
     }
 
     /**
@@ -195,10 +196,10 @@ class SeriesViewModel @Inject constructor(
             .values
             .flatten()
         
-        shareEpisodes(allEpisodes)
+        shareEpisodes(allEpisodes, hideAfterSuccess = true)
     }
 
-    private fun shareEpisodes(episodes: List<EpisodeWithSegments>) {
+    private fun shareEpisodes(episodes: List<EpisodeWithSegments>, hideAfterSuccess: Boolean) {
         viewModelScope.launch {
             val currentState = _uiState.value as? SeriesUiState.Success ?: return@launch
             _uiState.update { currentState.copy(isSharing = true) }
@@ -219,21 +220,28 @@ class SeriesViewModel @Inject constructor(
                     if ((seriesTmdbId != null || seriesTvdbId != null) && durationMs != null && durationMs > 0) {
                         segments.forEach { segment ->
                             val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType()
-                            if (skipMeType != null) {
-                                requests.add(
-                                    SkipMeSubmitRequest(
-                                        tmdbId = seriesTmdbId,
-                                        tvdbSeasonId = tvdbSeasonId,
-                                        tvdbId = tvdbEpisodeId,
-                                        segment = skipMeType,
-                                        season = episode.parentIndexNumber,
-                                        episode = episode.indexNumber,
-                                        durationMs = durationMs,
-                                        startMs = segment.startTicks / 10_000,
-                                        endMs = segment.endTicks / 10_000
-                                    )
-                                )
+                            if (skipMeType == null) return@forEach
+
+                            val startMs = segment.startTicks / 10_000
+                            val endMs = segment.endTicks / 10_000
+                            if (startMs < 0 || endMs <= startMs || endMs > durationMs) {
+                                Log.w("SeriesViewModel", "Skipping invalid segment for episode ${episode.id}: startMs=$startMs endMs=$endMs durationMs=$durationMs")
+                                return@forEach
                             }
+
+                            requests.add(
+                                SkipMeSubmitRequest(
+                                    tmdbId = seriesTmdbId,
+                                    tvdbSeasonId = tvdbSeasonId,
+                                    tvdbId = tvdbEpisodeId,
+                                    segment = skipMeType,
+                                    season = episode.parentIndexNumber,
+                                    episode = episode.indexNumber,
+                                    durationMs = durationMs,
+                                    startMs = startMs,
+                                    endMs = endMs
+                                )
+                            )
                         }
                     }
                 }
@@ -248,7 +256,9 @@ class SeriesViewModel @Inject constructor(
                 if (response.isSuccessful) {
                     val count = response.body()?.submitted ?: 0
                     _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_success_collection, count)))
-                    _uiState.update { (it as SeriesUiState.Success).copy(isShared = true) }
+                    if (hideAfterSuccess) {
+                        _uiState.update { (it as SeriesUiState.Success).copy(isShared = true) }
+                    }
                 } else {
                     _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_failed_http, response.code())))
                 }
