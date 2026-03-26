@@ -24,6 +24,8 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -111,6 +113,8 @@ fun SeriesScreen(
             mutableStateOf(0)
         }
         
+        var showShareMenu by remember { mutableStateOf(false) }
+
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -144,12 +148,9 @@ fun SeriesScreen(
             floatingActionButton = {
                 val state = uiState
                 if (state is SeriesUiState.Success && !state.isLoadingSegments) {
-                    val sortedSeasons = state.episodesBySeason.keys.toList()
-                    val selectedSeasonNumber = sortedSeasons.getOrNull(selectedSeasonIndex)
-                    
-                    if (selectedSeasonNumber != null) {
+                    Box {
                         FloatingActionButton(
-                            onClick = { viewModel.shareSeasonSegments(selectedSeasonNumber) },
+                            onClick = { showShareMenu = true },
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ) {
@@ -163,6 +164,35 @@ fun SeriesScreen(
                                 Icon(
                                     imageVector = Icons.Default.Share,
                                     contentDescription = translatedString(R.string.share_season_segments)
+                                )
+                            }
+                        }
+
+                        val seasonsToShare = state.episodesBySeason.keys.filter { it != 0 }
+                        DropdownMenu(
+                            expanded = showShareMenu,
+                            onDismissRequest = { showShareMenu = false }
+                        ) {
+                            seasonsToShare.forEach { seasonNumber ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(state.seasonNames[seasonNumber] ?: translatedString(R.string.series_season_format, seasonNumber))
+                                    },
+                                    onClick = {
+                                        showShareMenu = false
+                                        viewModel.shareSeasonSegments(seasonNumber)
+                                    }
+                                )
+                            }
+                            if (seasonsToShare.size > 1) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(translatedString(R.string.series_entire_series))
+                                    },
+                                    onClick = {
+                                        showShareMenu = false
+                                        viewModel.shareEntireSeries()
+                                    }
                                 )
                             }
                         }

@@ -171,7 +171,25 @@ class SeriesViewModel @Inject constructor(
         if (currentState !is SeriesUiState.Success) return
 
         val episodes = currentState.episodesBySeason[seasonNumber] ?: return
+        shareEpisodes(episodes)
+    }
+
+    /**
+     * Shares all segments for all seasons (excluding specials) to SkipMe.db
+     */
+    fun shareEntireSeries() {
+        val currentState = _uiState.value
+        if (currentState !is SeriesUiState.Success) return
+
+        val allEpisodes = currentState.episodesBySeason
+            .filter { it.key != 0 } // Exclude specials
+            .values
+            .flatten()
         
+        shareEpisodes(allEpisodes)
+    }
+
+    private fun shareEpisodes(episodes: List<EpisodeWithSegments>) {
         viewModelScope.launch {
             _uiState.update { (it as SeriesUiState.Success).copy(isSharing = true) }
             
@@ -220,7 +238,7 @@ class SeriesViewModel @Inject constructor(
                     _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_failed_http, response.code())))
                 }
             } catch (e: Exception) {
-                Log.e("SeriesViewModel", "Error sharing season segments", e)
+                Log.e("SeriesViewModel", "Error sharing segments", e)
                 val message = e.message ?: "Unknown error"
                 _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_failed_collection_generic, message)))
             } finally {
