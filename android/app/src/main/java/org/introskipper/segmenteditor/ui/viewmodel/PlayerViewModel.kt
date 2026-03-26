@@ -5,7 +5,9 @@
 
 package org.introskipper.segmenteditor.ui.viewmodel
 
+import android.content.Context
 import android.util.Log
+import androidx.annotation.StringRes
 import androidx.compose.ui.layout.ContentScale
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,6 +16,7 @@ import org.introskipper.segmenteditor.framecapture.FramePreview.loadPreviewFrame
 import org.introskipper.segmenteditor.framecapture.FramePreview.onPreviewsRequested
 import org.introskipper.segmenteditor.framecapture.FramePreview.onReleasePreviews
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,6 +28,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.api.SkipMeApiService
 import org.introskipper.segmenteditor.data.model.MediaItem
 import org.introskipper.segmenteditor.data.model.MediaStream
@@ -39,6 +43,8 @@ import org.introskipper.segmenteditor.ui.preview.TrickplayPreviewLoader
 import org.introskipper.segmenteditor.ui.state.PlayerEvent
 import org.introskipper.segmenteditor.ui.state.PlayerUiState
 import org.introskipper.segmenteditor.ui.state.TrackInfo
+import org.introskipper.segmenteditor.utils.TranslationService
+import org.introskipper.segmenteditor.utils.getTranslatedString
 import javax.inject.Inject
 
 @HiltViewModel
@@ -47,7 +53,9 @@ class PlayerViewModel @Inject constructor(
     private val segmentRepository: SegmentRepository,
     private val securePreferences: SecurePreferences,
     private val httpClient: OkHttpClient,
-    private val skipMeApiService: SkipMeApiService
+    private val skipMeApiService: SkipMeApiService,
+    private val translationService: TranslationService,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PlayerUiState())
@@ -85,7 +93,8 @@ class PlayerViewModel @Inject constructor(
             }
 
             val userId = securePreferences.getUserId() ?: run {
-                _uiState.update { it.copy(isLoading = false, error = "User ID not found") }
+                val errorMsg = translationService.getString(R.string.error_user_id_not_found)
+                _uiState.update { it.copy(isLoading = false, error = errorMsg) }
                 return@launch
             }
 
@@ -118,20 +127,22 @@ class PlayerViewModel @Inject constructor(
                     },
                     onFailure = { error ->
                         Log.e(TAG, "Failed to load media item", error)
+                        val errorMsg = translationService.getString(R.string.error_load_media_item, error.message ?: "")
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
-                                error = "Failed to load media: ${error.message}"
+                                error = errorMsg
                             )
                         }
                     }
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "Exception loading media item", e)
+                val errorMsg = translationService.getString(R.string.error_load_media_item_generic, e.message ?: "")
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = "Error: ${e.message}"
+                        error = errorMsg
                     )
                 }
             }
@@ -199,7 +210,8 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    private fun buildTrackTitle(type: String, language: String?, codec: String?): String {
+    private fun buildTrackTitle(@StringRes typeResId: Int, language: String?, codec: String?): String {
+        val type = context.getTranslatedString(typeResId)
         return buildString {
             append(type)
             if (language != null) append(" - $language")
@@ -220,7 +232,7 @@ class PlayerViewModel @Inject constructor(
                     index = stream.index,  // Use Jellyfin stream index
                     relativeIndex = relativeIndex,  // Sequential 0-based index within audio tracks
                     language = stream.language,
-                    displayTitle = stream.displayTitle ?: buildTrackTitle("Audio", stream.language, stream.codec),
+                    displayTitle = stream.displayTitle ?: buildTrackTitle(R.string.player_audio, stream.language, stream.codec),
                     codec = stream.codec,
                     isDefault = stream.isDefault,
                     source = org.introskipper.segmenteditor.ui.state.TrackSource.JELLYFIN
@@ -234,7 +246,7 @@ class PlayerViewModel @Inject constructor(
                     index = stream.index,  // Use Jellyfin stream index
                     relativeIndex = relativeIndex,  // Sequential 0-based index within subtitle tracks
                     language = stream.language,
-                    displayTitle = stream.displayTitle ?: buildTrackTitle("Subtitle", stream.language, stream.codec),
+                    displayTitle = stream.displayTitle ?: buildTrackTitle(R.string.player_subtitles, stream.language, stream.codec),
                     codec = stream.codec,
                     isDefault = stream.isDefault,
                     source = org.introskipper.segmenteditor.ui.state.TrackSource.JELLYFIN
@@ -282,7 +294,7 @@ class PlayerViewModel @Inject constructor(
                     val format = group.getTrackFormat(trackIndex)
                     val language = format.language
                     // Use label from format (set by media container metadata)
-                    val label = format.label ?: "Audio ${audioRelativeIndex + 1}"
+                    val label = format.label ?: context.getTranslatedString(R.string.player_audio_track_label, audioRelativeIndex + 1)
                     exoAudioTracks.add(TrackInfo(
                         index = audioRelativeIndex,  // Use relativeIndex as index for direct play
                         relativeIndex = audioRelativeIndex,
@@ -306,7 +318,7 @@ class PlayerViewModel @Inject constructor(
                 for (trackIndex in 0 until group.length) {
                     val format = group.getTrackFormat(trackIndex)
                     val language = format.language
-                    val label = format.label ?: "Subtitle ${subtitleRelativeIndex + 1}"
+                    val label = format.label ?: context.getTranslatedString(R.string.player_subtitle_track_label, subtitleRelativeIndex + 1)
                     exoSubtitleTracks.add(TrackInfo(
                         index = subtitleRelativeIndex,  // Use relativeIndex as index for direct play
                         relativeIndex = subtitleRelativeIndex,
@@ -369,7 +381,7 @@ class PlayerViewModel @Inject constructor(
                                         index = stream.index,
                                         relativeIndex = relativeIndex,
                                         language = stream.language,
-                                        displayTitle = stream.displayTitle ?: buildTrackTitle("Audio", stream.language, stream.codec),
+                                        displayTitle = stream.displayTitle ?: buildTrackTitle(R.string.player_audio, stream.language, stream.codec),
                                         codec = stream.codec,
                                         isDefault = stream.isDefault,
                                         source = org.introskipper.segmenteditor.ui.state.TrackSource.JELLYFIN
@@ -383,7 +395,7 @@ class PlayerViewModel @Inject constructor(
                                         index = stream.index,
                                         relativeIndex = relativeIndex,
                                         language = stream.language,
-                                        displayTitle = stream.displayTitle ?: buildTrackTitle("Subtitle", stream.language, stream.codec),
+                                        displayTitle = stream.displayTitle ?: buildTrackTitle(R.string.player_subtitles, stream.language, stream.codec),
                                         codec = stream.codec,
                                         isDefault = stream.isDefault,
                                         source = org.introskipper.segmenteditor.ui.state.TrackSource.JELLYFIN
@@ -690,7 +702,8 @@ class PlayerViewModel @Inject constructor(
             if (savedSegment != null) {
                 onComplete(Result.success(savedSegment))
             } else {
-                onComplete(Result.failure(Exception("Failed to save segment")))
+                val errorMsg = translationService.getString(R.string.error_save_segment_failed)
+                onComplete(Result.failure(Exception(errorMsg)))
             }
         }
     }
@@ -832,79 +845,79 @@ class PlayerViewModel @Inject constructor(
      * Unsupported segment types (Commercial, Unknown) are silently ignored.
      */
     fun shareSegment(segment: Segment, mediaItem: MediaItem?) {
-        val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType()
-        if (skipMeType == null) {
-            Log.d(TAG, "Skipping SkipMe.db share: segment type '${segment.type}' is not supported")
-            _events.value = PlayerEvent.ShowToast("This segment type cannot be shared with SkipMe.db")
-            return
-        }
-
-        // Episode-level provider IDs (Jellyfin stores these on the episode item itself)
-        val tmdbId = mediaItem?.providerIds?.get("Tmdb")?.toIntOrNull()
-        val tvdbId = mediaItem?.providerIds?.get("Tvdb")?.toIntOrNull()
-
-        if (tmdbId == null && tvdbId == null) {
-            Log.w(TAG, "Skipping SkipMe.db share: no TMDB or TVDB episode ID available")
-            _events.value = PlayerEvent.ShowToast("Cannot share: no TMDB or TVDB episode ID available")
-            return
-        }
-
-        val durationMs = mediaItem?.runTimeTicks?.div(10_000)
-        if (durationMs == null || durationMs <= 0) {
-            Log.w(
-                TAG,
-                "Skipping SkipMe.db share: episode duration is ${durationMs ?: "unknown or non-positive"}"
-            )
-            _events.value = PlayerEvent.ShowToast("Cannot share: episode duration is unknown")
-            return
-        }
-
-        val startMs = segment.startTicks / 10_000
-        val endMs = segment.endTicks / 10_000
-
-        if (startMs >= endMs) {
-            Log.w(
-                TAG,
-                "Skipping SkipMe.db share: invalid segment timing (startMs=$startMs, endMs=$endMs)"
-            )
-            _events.value = PlayerEvent.ShowToast("Cannot share: segment timing is invalid")
-            return
-        }
-
-        if (endMs > durationMs) {
-            Log.w(
-                TAG,
-                "Skipping SkipMe.db share: segment end ($endMs ms) exceeds episode duration ($durationMs ms)"
-            )
-            _events.value = PlayerEvent.ShowToast("Cannot share: segment exceeds episode duration")
-            return
-        }
-
-        val request = SkipMeSubmitRequest(
-            tmdbId = tmdbId,
-            tvdbId = tvdbId,
-            segment = skipMeType,
-            season = mediaItem?.parentIndexNumber,
-            episode = mediaItem?.indexNumber,
-            durationMs = durationMs,
-            startMs = startMs,
-            endMs = endMs
-        )
-
         viewModelScope.launch {
+            val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType()
+            if (skipMeType == null) {
+                Log.d(TAG, "Skipping SkipMe.db share: segment type '${segment.type}' is not supported")
+                _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_unsupported_type))
+                return@launch
+            }
+
+            // Episode-level provider IDs (Jellyfin stores these on the episode item itself)
+            val tmdbId = mediaItem?.providerIds?.get("Tmdb")?.toIntOrNull()
+            val tvdbId = mediaItem?.providerIds?.get("Tvdb")?.toIntOrNull()
+
+            if (tmdbId == null && tvdbId == null) {
+                Log.w(TAG, "Skipping SkipMe.db share: no TMDB or TVDB episode ID available")
+                _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_no_ids))
+                return@launch
+            }
+
+            val durationMs = mediaItem?.runTimeTicks?.div(10_000)
+            if (durationMs == null || durationMs <= 0) {
+                Log.w(
+                    TAG,
+                    "Skipping SkipMe.db share: episode duration is ${durationMs ?: "unknown or non-positive"}"
+                )
+                _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_no_duration))
+                return@launch
+            }
+
+            val startMs = segment.startTicks / 10_000
+            val endMs = segment.endTicks / 10_000
+
+            if (startMs >= endMs) {
+                Log.w(
+                    TAG,
+                    "Skipping SkipMe.db share: invalid segment timing (startMs=$startMs, endMs=$endMs)"
+                )
+                _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_invalid_timing))
+                return@launch
+            }
+
+            if (endMs > durationMs) {
+                Log.w(
+                    TAG,
+                    "Skipping SkipMe.db share: segment end ($endMs ms) exceeds episode duration ($durationMs ms)"
+                )
+                _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_exceeds_duration))
+                return@launch
+            }
+
+            val request = SkipMeSubmitRequest(
+                tmdbId = tmdbId,
+                tvdbId = tvdbId,
+                segment = skipMeType,
+                season = mediaItem.parentIndexNumber,
+                episode = mediaItem.indexNumber,
+                durationMs = durationMs,
+                startMs = startMs,
+                endMs = endMs
+            )
+
             try {
                 val response = skipMeApiService.submitSegment(request)
                 if (response.isSuccessful) {
                     val body = response.body()
                     Log.d(TAG, "SkipMe.db share accepted: id=${body?.submission?.id}, status=${body?.submission?.status}")
-                    _events.value = PlayerEvent.ShowToast("Segment shared with SkipMe.db")
+                    _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_success))
                 } else {
                     Log.w(TAG, "SkipMe.db share failed: HTTP ${response.code()}")
-                    _events.value = PlayerEvent.ShowToast("Failed to share with SkipMe.db (HTTP ${response.code()})")
+                    _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_failed_http, response.code()))
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "SkipMe.db share error", e)
-                _events.value = PlayerEvent.ShowToast("Failed to share with SkipMe.db")
+                _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_failed_generic))
             }
         }
     }

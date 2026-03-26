@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Copyright (c) 2026 Intro-Skipper Devs <intro-skipper.org>
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
 <resources>
     <string name="app_name">Segment Editor</string>
 
@@ -70,7 +74,7 @@
     <string name="settings_items_per_page">Items Per Page</string>
     <string name="settings_items_per_page_subtitle">Number of items to show per page</string>
     <string name="settings_show_all">Show All</string>
-    <string name="settings_hidden_libraries">Hidden Libraries</string>
+    <string name="settings_hidden_libraries">Server Libraries</string>
     <string name="settings_hidden_libraries_subtitle">Disabled libraries will be hidden from the home screen</string>
     
     <string name="settings_section_connection">Connection</string>
@@ -265,4 +269,20 @@
 
     <!-- Preview -->
     <string name="preview_description">Video preview at %1$s</string>
+
+    <!-- Player Errors -->
+    <string name="error_user_id_not_found">User ID not found</string>
+    <string name="error_load_media_item">Failed to load media: %1$s</string>
+    <string name="error_load_media_item_generic">Error: %1$s</string>
+    <string name="error_save_segment_failed">Failed to save segment</string>
+
+    <!-- SkipMe Share -->
+    <string name="share_unsupported_type">This segment type cannot be shared with SkipMe.db</string>
+    <string name="share_no_ids">Cannot share: no TMDB or TVDB episode ID available</string>
+    <string name="share_no_duration">Cannot share: episode duration is unknown</string>
+    <string name="share_invalid_timing">Cannot share: segment timing is invalid</string>
+    <string name="share_exceeds_duration">Cannot share: segment exceeds episode duration</string>
+    <string name="share_success">Segment shared with SkipMe.db</string>
+    <string name="share_failed_http">SkipMe.db share failed (HTTP %1$d)</string>
+    <string name="share_failed_generic">Failed to share with SkipMe.db</string>
 </resources>
