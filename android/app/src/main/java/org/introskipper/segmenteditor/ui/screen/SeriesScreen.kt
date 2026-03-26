@@ -147,7 +147,7 @@ fun SeriesScreen(
             },
             floatingActionButton = {
                 val state = uiState
-                if (state is SeriesUiState.Success && !state.isLoadingSegments) {
+                if (state is SeriesUiState.Success && !state.isLoadingSegments && !state.isShared) {
                     Box {
                         FloatingActionButton(
                             onClick = { showShareMenu = true },

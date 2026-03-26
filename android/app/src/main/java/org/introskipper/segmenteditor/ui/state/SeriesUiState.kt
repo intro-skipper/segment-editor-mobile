@@ -16,6 +16,7 @@ sealed class SeriesUiState {
         val episodesBySeason: Map<Int, List<EpisodeWithSegments>>,
         val seasonNames: Map<Int, String?> = emptyMap(),
         val isSharing: Boolean = false,
+        val isShared: Boolean = false,
         val isLoadingSegments: Boolean = false
     ) : SeriesUiState()
     data class Error(val message: UiText) : SeriesUiState()

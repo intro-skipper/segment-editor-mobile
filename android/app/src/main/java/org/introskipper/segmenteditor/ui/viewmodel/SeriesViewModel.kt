@@ -227,6 +227,7 @@ class SeriesViewModel @Inject constructor(
 
                 if (requests.isEmpty()) {
                     _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
+                    _uiState.update { (it as SeriesUiState.Success).copy(isSharing = false) }
                     return@launch
                 }
 
@@ -234,6 +235,7 @@ class SeriesViewModel @Inject constructor(
                 if (response.isSuccessful) {
                     val count = response.body()?.submitted ?: 0
                     _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_success_collection, count)))
+                    _uiState.update { (it as SeriesUiState.Success).copy(isShared = true) }
                 } else {
                     _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_failed_http, response.code())))
                 }
