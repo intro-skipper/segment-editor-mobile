@@ -199,14 +199,16 @@ fun SegmentSlider(
                 ) {
                     // Share button
                     if (onShare != null) {
+                        val canShare = !hasUnsavedChanges
                         IconButton(
                             onClick = onShare,
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(36.dp),
+                            enabled = canShare
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Share,
                                 contentDescription = translatedString(R.string.segment_share_description),
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = if (canShare) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                 modifier = Modifier.size(18.dp)
                             )
                         }
