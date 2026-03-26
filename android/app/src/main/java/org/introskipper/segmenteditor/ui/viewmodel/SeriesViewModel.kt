@@ -114,7 +114,8 @@ class SeriesViewModel @Inject constructor(
                 _uiState.value = SeriesUiState.Success(
                     series = series,
                     episodesBySeason = episodesBySeason,
-                    seasonNames = seasonNames
+                    seasonNames = seasonNames,
+                    isLoadingSegments = true
                 )
 
                 // Load segments asynchronously
@@ -153,7 +154,10 @@ class SeriesViewModel @Inject constructor(
 
             _uiState.update { state ->
                 if (state is SeriesUiState.Success) {
-                    state.copy(episodesBySeason = updatedEpisodesBySeason)
+                    state.copy(
+                        episodesBySeason = updatedEpisodesBySeason,
+                        isLoadingSegments = false
+                    )
                 } else state
             }
         }

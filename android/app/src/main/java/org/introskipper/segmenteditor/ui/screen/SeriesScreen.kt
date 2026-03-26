@@ -143,7 +143,7 @@ fun SeriesScreen(
             },
             floatingActionButton = {
                 val state = uiState
-                if (state is SeriesUiState.Success) {
+                if (state is SeriesUiState.Success && !state.isLoadingSegments) {
                     val sortedSeasons = state.episodesBySeason.keys.toList()
                     val selectedSeasonNumber = sortedSeasons.getOrNull(selectedSeasonIndex)
                     
