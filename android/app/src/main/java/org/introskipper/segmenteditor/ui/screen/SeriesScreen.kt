@@ -147,9 +147,17 @@ fun SeriesScreen(
             floatingActionButton = {
                 val state = uiState
                 if (state is SeriesUiState.Success && !state.isLoadingSegments && !state.isShared) {
+                    val seasonsToShare = state.episodesBySeason.keys.filter { it != 0 }
+                    
                     Box {
                         FloatingActionButton(
-                            onClick = { showShareMenu = true },
+                            onClick = { 
+                                if (seasonsToShare.size > 1) {
+                                    showShareMenu = true 
+                                } else if (seasonsToShare.isNotEmpty()) {
+                                    viewModel.shareSeasonSegments(seasonsToShare.first())
+                                }
+                            },
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ) {
@@ -167,23 +175,22 @@ fun SeriesScreen(
                             }
                         }
 
-                        val seasonsToShare = state.episodesBySeason.keys.filter { it != 0 }
-                        DropdownMenu(
-                            expanded = showShareMenu,
-                            onDismissRequest = { showShareMenu = false }
-                        ) {
-                            seasonsToShare.forEach { seasonNumber ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(state.seasonNames[seasonNumber] ?: translatedString(R.string.series_season_format, seasonNumber))
-                                    },
-                                    onClick = {
-                                        showShareMenu = false
-                                        viewModel.shareSeasonSegments(seasonNumber)
-                                    }
-                                )
-                            }
-                            if (seasonsToShare.size > 1) {
+                        if (seasonsToShare.size > 1) {
+                            DropdownMenu(
+                                expanded = showShareMenu,
+                                onDismissRequest = { showShareMenu = false }
+                            ) {
+                                seasonsToShare.forEach { seasonNumber ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(state.seasonNames[seasonNumber] ?: translatedString(R.string.series_season_format, seasonNumber))
+                                        },
+                                        onClick = {
+                                            showShareMenu = false
+                                            viewModel.shareSeasonSegments(seasonNumber)
+                                        }
+                                    )
+                                }
                                 DropdownMenuItem(
                                     text = {
                                         Text(state.series.name ?: translatedString(R.string.series_entire_show))
