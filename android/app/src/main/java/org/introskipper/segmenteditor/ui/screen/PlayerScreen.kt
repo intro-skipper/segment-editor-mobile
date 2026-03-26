@@ -336,7 +336,7 @@ fun PlayerScreen(
                         expanded = showFabMenu,
                         onDismissRequest = { showFabMenu = false }
                     ) {
-                        SegmentType.entries.forEach { type ->
+                        SegmentType.entries.filter { it != SegmentType.UNKNOWN }.forEach { type ->
                             DropdownMenuItem(
                                 text = { Text(type.value) },
                                 onClick = {
