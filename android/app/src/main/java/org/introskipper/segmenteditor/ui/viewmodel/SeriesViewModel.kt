@@ -5,19 +5,28 @@
 
 package org.introskipper.segmenteditor.ui.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.api.JellyfinApiService
+import org.introskipper.segmenteditor.api.SkipMeApiService
+import org.introskipper.segmenteditor.data.model.SegmentType
+import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.state.EpisodeWithSegments
+import org.introskipper.segmenteditor.ui.state.SeriesEvent
 import org.introskipper.segmenteditor.ui.state.SeriesUiState
 import org.introskipper.segmenteditor.ui.util.SeasonSortUtil
 import javax.inject.Inject
@@ -26,11 +35,15 @@ import javax.inject.Inject
 class SeriesViewModel @Inject constructor(
     private val mediaRepository: MediaRepository,
     private val segmentRepository: SegmentRepository,
-    private val securePreferences: SecurePreferences
+    private val securePreferences: SecurePreferences,
+    private val skipMeApiService: SkipMeApiService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<SeriesUiState>(SeriesUiState.Loading)
     val uiState: StateFlow<SeriesUiState> = _uiState
+
+    private val _events = MutableSharedFlow<SeriesEvent>()
+    val events: SharedFlow<SeriesEvent> = _events.asSharedFlow()
 
     fun loadSeries(seriesId: String) {
         viewModelScope.launch {
@@ -85,7 +98,6 @@ class SeriesViewModel @Inject constructor(
                     .toSortedMap(SeasonSortUtil.seasonComparator)
 
                 // Create season name mapping from the first episode of each season
-                // Use null if season name is not available to allow UI layer to handle fallback
                 val seasonNames = episodesBySeason.mapValues { (_, episodeList) ->
                     episodeList.firstOrNull()?.episode?.seasonName
                 }
@@ -96,8 +108,8 @@ class SeriesViewModel @Inject constructor(
                     seasonNames = seasonNames
                 )
 
-                // Load segment counts asynchronously
-                loadSegmentCounts(episodesBySeason)
+                // Load segments asynchronously
+                loadSegmentsForEpisodes(episodesBySeason)
 
             } catch (e: Exception) {
                 _uiState.value = SeriesUiState.Error(e.message ?: "Unknown error")
@@ -105,25 +117,97 @@ class SeriesViewModel @Inject constructor(
         }
     }
 
-    private fun loadSegmentCounts(episodesBySeason: Map<Int, List<EpisodeWithSegments>>) {
+    private fun loadSegmentsForEpisodes(episodesBySeason: Map<Int, List<EpisodeWithSegments>>) {
         viewModelScope.launch {
             val currentState = _uiState.value
             if (currentState !is SeriesUiState.Success) return@launch
 
-            // Load segment counts for all episodes in parallel
+            // Load segments for all episodes in parallel
             val updatedEpisodesBySeason = episodesBySeason.mapValues { (_, episodes) ->
                 episodes.map { episodeWithSegments ->
                     async {
                         val segmentResult = segmentRepository.getSegmentsResult(episodeWithSegments.episode.id)
-                        val segmentCount = segmentResult.getOrNull()?.size ?: 0
-                        episodeWithSegments.copy(segmentCount = segmentCount)
+                        val segments = segmentResult.getOrNull() ?: emptyList()
+                        episodeWithSegments.copy(
+                            segments = segments,
+                            segmentCount = segments.size
+                        )
                     }
                 }
             }.mapValues { (_, deferredList) ->
                 deferredList.awaitAll()
             }
 
-            _uiState.value = currentState.copy(episodesBySeason = updatedEpisodesBySeason)
+            _uiState.update { state ->
+                if (state is SeriesUiState.Success) {
+                    state.copy(episodesBySeason = updatedEpisodesBySeason)
+                } else state
+            }
+        }
+    }
+
+    /**
+     * Shares all segments for the specified season to SkipMe.db
+     */
+    fun shareSeasonSegments(seasonNumber: Int) {
+        val currentState = _uiState.value
+        if (currentState !is SeriesUiState.Success) return
+
+        val episodes = currentState.episodesBySeason[seasonNumber] ?: return
+        
+        viewModelScope.launch {
+            _uiState.update { (it as SeriesUiState.Success).copy(isSharing = true) }
+            
+            try {
+                val requests = mutableListOf<SkipMeSubmitRequest>()
+                
+                episodes.forEach { episodeWithSegments ->
+                    val episode = episodeWithSegments.episode
+                    val segments = episodeWithSegments.segments ?: return@forEach
+                    
+                    val tmdbId = episode.providerIds?.get("Tmdb")?.toIntOrNull()
+                    val tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+                    val durationMs = episode.runTimeTicks?.div(10_000)
+
+                    if ((tmdbId != null || tvdbId != null) && durationMs != null && durationMs > 0) {
+                        segments.forEach { segment ->
+                            val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType()
+                            if (skipMeType != null) {
+                                requests.add(
+                                    SkipMeSubmitRequest(
+                                        tmdbId = tmdbId,
+                                        tvdbId = tvdbId,
+                                        segment = skipMeType,
+                                        season = episode.parentIndexNumber,
+                                        episode = episode.indexNumber,
+                                        durationMs = durationMs,
+                                        startMs = segment.startTicks / 10_000,
+                                        endMs = segment.endTicks / 10_000
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (requests.isEmpty()) {
+                    _events.emit(SeriesEvent.ShowToast("No valid segments found to share"))
+                    return@launch
+                }
+
+                val response = skipMeApiService.submitCollection(requests)
+                if (response.isSuccessful) {
+                    val count = response.body()?.submissions?.size ?: 0
+                    _events.emit(SeriesEvent.ShowToast("Successfully shared $count segments"))
+                } else {
+                    _events.emit(SeriesEvent.ShowToast("Failed to share collection (HTTP ${response.code()})"))
+                }
+            } catch (e: Exception) {
+                Log.e("SeriesViewModel", "Error sharing season segments", e)
+                _events.emit(SeriesEvent.ShowToast("Error sharing collection: ${e.message}"))
+            } finally {
+                _uiState.update { (it as SeriesUiState.Success).copy(isSharing = false) }
+            }
         }
     }
 

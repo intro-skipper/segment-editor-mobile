@@ -5,6 +5,7 @@
 
 package org.introskipper.segmenteditor.api
 
+import org.introskipper.segmenteditor.data.model.SkipMeCollectionSubmitResponse
 import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
 import org.introskipper.segmenteditor.data.model.SkipMeSubmitResponse
 import retrofit2.Response
@@ -17,4 +18,9 @@ interface SkipMeApi {
     suspend fun submitSegment(
         @Body request: SkipMeSubmitRequest
     ): Response<SkipMeSubmitResponse>
+
+    @POST("v1/submit/collection")
+    suspend fun submitCollection(
+        @Body requests: List<SkipMeSubmitRequest>
+    ): Response<SkipMeCollectionSubmitResponse>
 }

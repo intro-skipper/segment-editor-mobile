@@ -5,21 +5,27 @@
 
 package org.introskipper.segmenteditor.ui.screen
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +58,7 @@ import org.introskipper.segmenteditor.ui.component.MediaHeader
 import org.introskipper.segmenteditor.ui.component.WavyCircularProgressIndicator
 import org.introskipper.segmenteditor.ui.component.translatedString
 import org.introskipper.segmenteditor.ui.navigation.Screen
+import org.introskipper.segmenteditor.ui.state.SeriesEvent
 import org.introskipper.segmenteditor.ui.state.SeriesUiState
 import org.introskipper.segmenteditor.ui.theme.DynamicColorsOptions
 import org.introskipper.segmenteditor.ui.theme.SegmentEditorTheme
@@ -75,6 +82,16 @@ fun SeriesScreen(
         viewModel.loadSeries(seriesId)
     }
 
+    LaunchedEffect(viewModel.events) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is SeriesEvent.ShowToast -> {
+                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
     // Extract dominant color from series image
     LaunchedEffect(uiState) {
         if (uiState is SeriesUiState.Success) {
@@ -89,6 +106,11 @@ fun SeriesScreen(
     SegmentEditorTheme(
         dynamicColorsOptions = DynamicColorsOptions(seedColor = dominantColor)
     ) {
+        // Track selected season with state
+        var selectedSeasonIndex by remember { 
+            mutableStateOf(0)
+        }
+        
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -118,6 +140,34 @@ fun SeriesScreen(
                         titleContentColor = MaterialTheme.colorScheme.onSurface
                     )
                 )
+            },
+            floatingActionButton = {
+                val state = uiState
+                if (state is SeriesUiState.Success) {
+                    val sortedSeasons = state.episodesBySeason.keys.toList()
+                    val selectedSeasonNumber = sortedSeasons.getOrNull(selectedSeasonIndex)
+                    
+                    if (selectedSeasonNumber != null) {
+                        FloatingActionButton(
+                            onClick = { viewModel.shareSeasonSegments(selectedSeasonNumber) },
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ) {
+                            if (state.isSharing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Share,
+                                    contentDescription = "Share Season Segments"
+                                )
+                            }
+                        }
+                    }
+                }
             },
             containerColor = MaterialTheme.colorScheme.surface
         ) { paddingValues ->
@@ -171,13 +221,7 @@ fun SeriesScreen(
                         }
                     }
                     is SeriesUiState.Success -> {
-                        // Track selected season with state
-                        var selectedSeasonIndex by remember { 
-                            mutableStateOf(0)
-                        }
-                        
                         // Get sorted season numbers
-                        // The episodesBySeason map is already sorted with season 0 at the end
                         val sortedSeasons = remember(state.episodesBySeason) {
                             state.episodesBySeason.keys.toList()
                         }

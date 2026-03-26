@@ -55,3 +55,13 @@ data class SkipMeSubmission(
     @SerializedName("status")
     val status: String
 )
+
+/**
+ * Response body for POST /v1/submit/collection.
+ */
+data class SkipMeCollectionSubmitResponse(
+    @SerializedName("ok")
+    val ok: Boolean,
+    @SerializedName("submissions")
+    val submissions: List<SkipMeSubmission>?
+)

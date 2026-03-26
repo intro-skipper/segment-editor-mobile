@@ -285,4 +285,5 @@
     <string name="share_success">Segment shared with SkipMe.db</string>
     <string name="share_failed_http">SkipMe.db share failed (HTTP %1$d)</string>
     <string name="share_failed_generic">Failed to share with SkipMe.db</string>
+    <string name="share_season_segments">Share Season Segments</string>
 </resources>
