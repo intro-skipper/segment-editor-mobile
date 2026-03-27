@@ -10,17 +10,23 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.introskipper.segmenteditor.R
+import org.introskipper.segmenteditor.api.SkipMeApiService
 import org.introskipper.segmenteditor.data.repository.AuthRepository
 import org.introskipper.segmenteditor.data.repository.JellyfinRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.state.AppTheme
 import org.introskipper.segmenteditor.ui.state.ExportFormat
+import org.introskipper.segmenteditor.ui.util.UiText
 import org.introskipper.segmenteditor.utils.TranslationService
 import javax.inject.Inject
 
@@ -42,24 +48,33 @@ data class SettingsUiState(
     val serverVersion: String = "",
     val serverName: String = "",
     val supportedVideoCodecs: List<String> = emptyList(),
-    val supportedAudioCodecs: List<String> = emptyList()
+    val supportedAudioCodecs: List<String> = emptyList(),
+    val isMergingRecords: Boolean = false
 )
 
 data class LibraryInfo(
     val id: String,
-    val name: String
+    val name: UiText
 )
+
+sealed class SettingsEvent {
+    data class ShowToast(val message: UiText) : SettingsEvent()
+}
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val securePreferences: SecurePreferences,
     private val jellyfinRepository: JellyfinRepository,
     private val authRepository: AuthRepository,
-    private val translationService: TranslationService
+    private val translationService: TranslationService,
+    private val skipMeApiService: SkipMeApiService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+
+    private val _events = MutableSharedFlow<SettingsEvent>()
+    val events: SharedFlow<SettingsEvent> = _events.asSharedFlow()
 
     init {
         loadPreferences()
@@ -160,7 +175,8 @@ class SettingsViewModel @Inject constructor(
                 val libraryInfos = libraries.map { mediaItem ->
                     LibraryInfo(
                         id = mediaItem.id,
-                        name = mediaItem.name ?: "Unknown Library"
+                        name = mediaItem.name?.let { UiText.DynamicString(it) } 
+                            ?: UiText.StringResource(R.string.library_unknown)
                     )
                 }
                 _uiState.value = _uiState.value.copy(
@@ -226,5 +242,36 @@ class SettingsViewModel @Inject constructor(
 
     fun clearAuthenticationAndRestart() {
         securePreferences.clearAuthentication()
+    }
+
+    fun mergeRecords() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isMergingRecords = true)
+            try {
+                val response = skipMeApiService.mergeRecords()
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body?.ok == true) {
+                        _events.emit(SettingsEvent.ShowToast(
+                            UiText.StringResource(R.string.settings_compress_shared_success, body.merged)
+                        ))
+                    } else {
+                        _events.emit(SettingsEvent.ShowToast(
+                            UiText.StringResource(R.string.settings_compress_shared_server_error)
+                        ))
+                    }
+                } else {
+                    _events.emit(SettingsEvent.ShowToast(
+                        UiText.StringResource(R.string.settings_compress_shared_failed, response.code().toString())
+                    ))
+                }
+            } catch (e: Exception) {
+                _events.emit(SettingsEvent.ShowToast(
+                    UiText.StringResource(R.string.settings_compress_shared_error, e.message ?: "")
+                ))
+            } finally {
+                _uiState.value = _uiState.value.copy(isMergingRecords = false)
+            }
+        }
     }
 }

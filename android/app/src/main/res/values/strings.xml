@@ -85,6 +85,13 @@
     <string name="settings_change_server_subtitle">Connect to a different Jellyfin server</string>
     <string name="settings_change_server_dialog_message">This will disconnect from the current server and return to the connection wizard. Are you sure?</string>
     
+    <string name="settings_section_admin">Admin Actions</string>
+    <string name="settings_compress_shared">Compress Shared Content</string>
+    <string name="settings_compress_shared_success">Merge successful: %1$d records compressed</string>
+    <string name="settings_compress_shared_failed">Merge failed: %1$s</string>
+    <string name="settings_compress_shared_error">Merge error: %1$s</string>
+    <string name="settings_compress_shared_server_error">Merge failed: Server reported not OK</string>
+
     <string name="settings_section_codecs">Compatible Codecs</string>
     <string name="settings_video_codecs">Video Codecs</string>
     <string name="settings_audio_codecs">Audio Codecs</string>
@@ -175,6 +182,7 @@
     <string name="library_select">Select Library</string>
     <string name="library_no_libraries">No libraries found</string>
     <string name="library_type_format">(%1$s)</string>
+    <string name="library_unknown">Unknown Library</string>
 
     <!-- Series Screen -->
     <string name="series_title">Series</string>

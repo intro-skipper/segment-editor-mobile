@@ -9,8 +9,10 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,10 +20,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -34,11 +38,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -57,6 +63,7 @@ import org.introskipper.segmenteditor.ui.state.AppTheme
 import org.introskipper.segmenteditor.ui.state.ExportFormat
 import org.introskipper.segmenteditor.ui.viewmodel.SettingsViewModel
 import org.introskipper.segmenteditor.ui.component.translatedString
+import org.introskipper.segmenteditor.ui.viewmodel.SettingsEvent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,6 +78,17 @@ fun SettingsScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     var showAboutDialog by remember { mutableStateOf(false) }
     var showChangeServerDialog by remember { mutableStateOf(false) }
+    
+    // Handle events from ViewModel
+    LaunchedEffect(viewModel.events) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is SettingsEvent.ShowToast -> {
+                    Toast.makeText(context, event.message.asString(context), Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
     
     // Refresh preferences when returning to the screen (e.g. from system language settings)
     DisposableEffect(lifecycleOwner) {
@@ -271,6 +289,25 @@ fun SettingsScreen(
                             onCheckedChange = viewModel::setPrettyPrintJson
                         )
                     }
+                }
+            }
+            
+            // Admin Actions
+            item {
+                SettingsSection(title = translatedString(R.string.settings_section_admin)) {
+                    ClickableSettingItem(
+                        title = translatedString(R.string.settings_compress_shared),
+                        subtitle = null,
+                        onClick = viewModel::mergeRecords,
+                        trailingContent = {
+                            if (uiState.isMergingRecords) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            }
+                        }
+                    )
                 }
             }
             

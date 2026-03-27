@@ -23,4 +23,7 @@ interface SkipMeApi {
     suspend fun submitCollection(
         @Body requests: List<SkipMeSubmitRequest>
     ): Response<SkipMeCollectionSubmitResponse>
+
+    @POST("v1/admin/merge-records")
+    suspend fun mergeRecords(): Response<Unit>
 }
