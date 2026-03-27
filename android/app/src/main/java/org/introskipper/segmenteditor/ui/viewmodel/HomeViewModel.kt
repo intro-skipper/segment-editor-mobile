@@ -152,10 +152,12 @@ class HomeViewModel @Inject constructor(
                     (currentPage - 1) * currentPageSize
                 }
 
-                val includeItemTypes = when (currentCollectionType) {
+                val includeItemTypes: List<String>? = when (currentCollectionType) {
                     "movies" -> listOf("Movie")
                     "tvshows" -> listOf("Series")
-                    else -> listOf("Series", "Movie")
+                    "music" -> listOf("MusicAlbum", "MusicArtist")
+                    "boxsets" -> listOf("BoxSet")
+                    else -> null // Mixed/unknown/container: let the API return all item types
                 }
 
                 val result = jellyfinRepository.getMediaItems(

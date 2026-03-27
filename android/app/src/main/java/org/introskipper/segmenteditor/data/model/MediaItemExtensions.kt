@@ -29,6 +29,22 @@ val MediaItem.officialRating: String?
     get() = null // This would come from additional fields in the API
 
 /**
+ * Container types that should browse into their children
+ * rather than opening the player/editor.
+ */
+val CONTAINER_TYPES = setOf(
+    "BoxSet",
+    "Folder",
+    "CollectionFolder",
+    "Playlist",
+    "AggregateFolder",
+    "UserView",
+    "PhotoAlbum",
+    "ManualPlaylistsFolder",
+    "PlaylistsFolder"
+)
+
+/**
  * Adapter type for Jellyfin media items with URL context
  */
 data class JellyfinMediaItem(
@@ -38,8 +54,16 @@ data class JellyfinMediaItem(
     val productionYear: Int?,
     val runTimeTicks: Long?,
     val officialRating: String?,
-    val type: String?
+    val type: String?,
+    val isFolder: Boolean = false
 )
+
+/**
+ * Returns true if this item is a container that should browse into its children
+ * rather than opening the player.
+ */
+fun JellyfinMediaItem.isContainerType(): Boolean =
+    isFolder || type in CONTAINER_TYPES
 
 /**
  * Converts MediaItem to JellyfinMediaItem with server URL context
@@ -52,6 +76,7 @@ fun MediaItem.toJellyfinMediaItem(serverUrl: String): JellyfinMediaItem {
         productionYear = productionYear,
         runTimeTicks = runTimeTicks,
         officialRating = null, // Would need to be fetched from additional fields
-        type = type
+        type = type,
+        isFolder = isFolder
     )
 }
