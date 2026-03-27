@@ -12,7 +12,6 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -44,7 +43,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -210,7 +208,7 @@ fun SettingsScreen(
                         )
                         uiState.availableLibraries.forEach { library ->
                             SwitchSettingItem(
-                                title = library.name,
+                                title = library.name.asString(),
                                 subtitle = null,
                                 checked = !uiState.hiddenLibraryIds.contains(library.id),
                                 onCheckedChange = { viewModel.toggleLibraryVisibility(library.id) }

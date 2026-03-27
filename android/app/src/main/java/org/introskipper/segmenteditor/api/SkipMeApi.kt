@@ -6,6 +6,7 @@
 package org.introskipper.segmenteditor.api
 
 import org.introskipper.segmenteditor.data.model.SkipMeCollectionSubmitResponse
+import org.introskipper.segmenteditor.data.model.SkipMeMergeResponse
 import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
 import org.introskipper.segmenteditor.data.model.SkipMeSubmitResponse
 import retrofit2.Response
@@ -25,5 +26,5 @@ interface SkipMeApi {
     ): Response<SkipMeCollectionSubmitResponse>
 
     @POST("v1/admin/merge-records")
-    suspend fun mergeRecords(): Response<Unit>
+    suspend fun mergeRecords(): Response<SkipMeMergeResponse>
 }

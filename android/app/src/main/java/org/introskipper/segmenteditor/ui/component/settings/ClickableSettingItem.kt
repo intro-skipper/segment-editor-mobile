@@ -18,14 +18,17 @@ fun ClickableSettingItem(
     title: String,
     subtitle: String? = null,
     onClick: () -> Unit,
-    showArrow: Boolean = true
+    showArrow: Boolean = true,
+    trailingContent: @Composable (() -> Unit)? = null
 ) {
     SettingItem(
         title = title,
         subtitle = subtitle,
         modifier = modifier.clickable(onClick = onClick),
         trailingContent = {
-            if (showArrow) {
+            if (trailingContent != null) {
+                trailingContent()
+            } else if (showArrow) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null
