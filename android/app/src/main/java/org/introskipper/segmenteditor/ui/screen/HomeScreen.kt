@@ -41,6 +41,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.JellyfinMediaItem
+import org.introskipper.segmenteditor.data.model.isContainerType
 import org.introskipper.segmenteditor.ui.component.MediaGrid
 import org.introskipper.segmenteditor.ui.component.PaginationControls
 import org.introskipper.segmenteditor.ui.component.SearchBar
@@ -85,11 +86,15 @@ fun HomeScreen(
 
     // Smart navigation based on media type
     val navigateToMedia: (JellyfinMediaItem) -> Unit = { item ->
-        when(item.type) {
-            "Series" -> onMediaItemClick("series/${item.id}")
-            "MusicAlbum" -> onMediaItemClick("album/${item.id}")
-            "MusicArtist" -> onMediaItemClick("artist/${item.id}")
-            else -> onMediaItemClick("player/${item.id}") // Movies, Episodes, Audio, etc.
+        if (item.isContainerType()) {
+            onMediaItemClick("home/${item.id}")
+        } else {
+            when (item.type) {
+                "Series" -> onMediaItemClick("series/${item.id}")
+                "MusicAlbum" -> onMediaItemClick("album/${item.id}")
+                "MusicArtist" -> onMediaItemClick("artist/${item.id}")
+                else -> onMediaItemClick("player/${item.id}") // Movies, Episodes, Audio, etc.
+            }
         }
     }
 

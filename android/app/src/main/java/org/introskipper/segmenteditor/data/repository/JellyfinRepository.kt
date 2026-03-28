@@ -35,7 +35,7 @@ class JellyfinRepository @Inject constructor(
         parentIds: List<String>? = null,
         startIndex: Int = 0,
         limit: Int = 20,
-        includeItemTypes: List<String> = listOf("Movie", "Series", "Episode")
+        includeItemTypes: List<String>? = null
     ): ItemsResponse {
         val userId = getUserId()
         
