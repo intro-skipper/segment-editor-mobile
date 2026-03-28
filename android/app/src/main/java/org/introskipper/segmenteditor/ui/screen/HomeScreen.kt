@@ -84,16 +84,18 @@ fun HomeScreen(
         viewModel.setLibraryId(libraryId, collectionType)
     }
 
-    // Smart navigation based on media type
+    // Smart navigation based on media type.
+    // Type-specific routes are checked first so that items like Series (which Jellyfin
+    // marks as IsFolder=true) are not accidentally treated as generic containers.
     val navigateToMedia: (JellyfinMediaItem) -> Unit = { item ->
-        if (item.isContainerType()) {
-            onMediaItemClick("home/${item.id}")
-        } else {
-            when (item.type) {
-                "Series" -> onMediaItemClick("series/${item.id}")
-                "MusicAlbum" -> onMediaItemClick("album/${item.id}")
-                "MusicArtist" -> onMediaItemClick("artist/${item.id}")
-                else -> onMediaItemClick("player/${item.id}") // Movies, Episodes, Audio, etc.
+        when (item.type) {
+            "Series" -> onMediaItemClick("series/${item.id}")
+            "MusicAlbum" -> onMediaItemClick("album/${item.id}")
+            "MusicArtist" -> onMediaItemClick("artist/${item.id}")
+            else -> if (item.isContainerType()) {
+                onMediaItemClick("home/${item.id}") // BoxSet, CollectionFolder, etc.
+            } else {
+                onMediaItemClick("player/${item.id}") // Movies, Episodes, Audio, etc.
             }
         }
     }
