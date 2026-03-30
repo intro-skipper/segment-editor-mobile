@@ -97,7 +97,7 @@ class SeriesViewModel @Inject constructor(
                 val episodes = episodesResult.getOrThrow().items
 
                 // Load seasons to get their provider IDs (TVDB IDs)
-                val seasonsResult = mediaRepository.getSeasons(seriesId, userId)
+                val seasonsResult = mediaRepository.getSeasons(seriesId, userId, fields = listOf("ProviderIds"))
                 val seasonTvdbIds = if (seasonsResult.isSuccessful) {
                     seasonsResult.body()?.items?.associate { it.id to it.providerIds?.get("Tvdb")?.toIntOrNull() } ?: emptyMap()
                 } else {
