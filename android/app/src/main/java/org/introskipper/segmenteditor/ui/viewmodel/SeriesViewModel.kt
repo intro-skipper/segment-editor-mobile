@@ -232,6 +232,7 @@ class SeriesViewModel @Inject constructor(
                             requests.add(
                                 SkipMeSubmitRequest(
                                     tmdbId = seriesTmdbId,
+                                    tvdbSeriesId = seriesTvdbId,
                                     tvdbSeasonId = tvdbSeasonId,
                                     tvdbId = tvdbEpisodeId,
                                     segment = skipMeType,
