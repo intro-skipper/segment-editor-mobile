@@ -86,7 +86,7 @@
     <string name="settings_change_server_dialog_message">This will disconnect from the current server and return to the connection wizard. Are you sure?</string>
     
     <string name="settings_section_admin">Admin Actions</string>
-    <string name="settings_compress_shared">Merge Old Shares</string>
+    <string name="settings_compress_shared">Compress SkipMe.db Records</string>
     <string name="settings_compress_shared_success">Merge successful: %1$d records compressed</string>
     <string name="settings_compress_shared_failed">Merge failed: %1$s</string>
     <string name="settings_compress_shared_error">Merge error: %1$s</string>
