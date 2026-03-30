@@ -15,6 +15,9 @@ data class SkipMeSubmitRequest(
     @SerializedName("tmdb_id")
     val tmdbId: Int? = null,
 
+    @SerializedName("tvdb_series_id")
+    val tvdbSeriesId: Int? = null,
+
     @SerializedName("tvdb_season_id")
     val tvdbSeasonId: Int? = null,
 

@@ -934,6 +934,7 @@ class PlayerViewModel @Inject constructor(
 
             val request = SkipMeSubmitRequest(
                 tmdbId = tmdbId,
+                tvdbSeriesId = state.seriesTvdbId,
                 tvdbSeasonId = tvdbSeasonId,
                 tvdbId = tvdbId,
                 segment = skipMeType,
