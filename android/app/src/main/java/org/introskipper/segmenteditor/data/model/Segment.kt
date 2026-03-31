@@ -23,18 +23,29 @@ data class Segment(
     @SerializedName("EndTicks")
     val endTicks: Long,
 
-    @SerializedName("CreatorId")
-    val creatorId: String? = null
+    // SegmentProviderId identifies which provider (e.g. "SkipMe.db", "IntroSkipper") created the
+    // segment.  Jellyfin stores this as MediaSegment.SegmentProviderId in its database and is
+    // expected to surface it in MediaSegmentDto once the upstream API exposes the field.
+    @SerializedName("SegmentProviderId")
+    val segmentProviderId: String? = null
 ) {
     // Convert ticks to seconds (Jellyfin uses 10,000,000 ticks per second)
     fun getStartSeconds(): Double = startTicks / 10_000_000.0
     fun getEndSeconds(): Double = endTicks / 10_000_000.0
     
     companion object {
+        const val SKIPME_PROVIDER_ID = "SkipMe.db"
+
         // Convert seconds to ticks
         fun secondsToTicks(seconds: Double): Long = (seconds * 10_000_000).toLong()
     }
 }
+
+/**
+ * Returns a list with all SkipMe.db-provided segments removed.
+ * Used when the user has enabled "Filter SkipMe.db Segments" in settings.
+ */
+fun List<Segment>.filterSkipMe(): List<Segment> = filter { it.segmentProviderId != Segment.SKIPME_PROVIDER_ID }
 
 data class SegmentCreateRequest(
     @SerializedName("ItemId")

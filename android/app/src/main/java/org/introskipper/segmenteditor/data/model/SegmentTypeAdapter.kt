@@ -57,6 +57,9 @@ class SegmentTypeAdapter : JsonDeserializer<Segment> {
         val itemId = getStringOrDefault(jsonObject, "ItemId", "")
         val startTicks = getLongOrDefault(jsonObject, "StartTicks", 0L)
         val endTicks = getLongOrDefault(jsonObject, "EndTicks", 0L)
+        // SegmentProviderId identifies the provider (e.g. "SkipMe.db") — see Jellyfin
+        // MediaSegment.SegmentProviderId.  Null when not yet returned by the server.
+        val segmentProviderId = jsonObject.get("SegmentProviderId")?.takeIf { !it.isJsonNull }?.asString
         
         // Handle Type field - can be either integer or string
         val type = parseTypeField(jsonObject.get("Type"))
@@ -66,7 +69,8 @@ class SegmentTypeAdapter : JsonDeserializer<Segment> {
             itemId = itemId,
             type = type,
             startTicks = startTicks,
-            endTicks = endTicks
+            endTicks = endTicks,
+            segmentProviderId = segmentProviderId
         )
     }
     
