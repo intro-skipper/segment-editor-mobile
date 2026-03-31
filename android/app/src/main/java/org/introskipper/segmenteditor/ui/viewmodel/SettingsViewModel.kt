@@ -37,6 +37,7 @@ data class SettingsUiState(
     val preferDirectPlay: Boolean = true,
     val autoPlayNextEpisode: Boolean = true,
     val preferLocalPreviews: Boolean = false,
+    val disableSkipMeSegments: Boolean = true,
     val exportFormat: ExportFormat = ExportFormat.JSON,
     val prettyPrintJson: Boolean = true,
     val itemsPerPage: Int = 20,
@@ -104,6 +105,7 @@ class SettingsViewModel @Inject constructor(
                 preferDirectPlay = securePreferences.getPreferDirectPlay(),
                 autoPlayNextEpisode = securePreferences.getAutoPlayNextEpisode(),
                 preferLocalPreviews = securePreferences.getPreferLocalPreviews(),
+                disableSkipMeSegments = securePreferences.getDisableSkipMeSegments(),
                 exportFormat = securePreferences.getExportFormat(),
                 prettyPrintJson = securePreferences.getPrettyPrintJson(),
                 itemsPerPage = securePreferences.getItemsPerPage(),
@@ -212,6 +214,11 @@ class SettingsViewModel @Inject constructor(
     fun setPreferLocalPreviews(prefer: Boolean) {
         securePreferences.setPreferLocalPreviews(prefer)
         _uiState.value = _uiState.value.copy(preferLocalPreviews = prefer)
+    }
+
+    fun setDisableSkipMeSegments(disabled: Boolean) {
+        securePreferences.setDisableSkipMeSegments(disabled)
+        _uiState.value = _uiState.value.copy(disableSkipMeSegments = disabled)
     }
 
     fun setExportFormat(format: ExportFormat) {

@@ -21,7 +21,10 @@ data class Segment(
     val startTicks: Long,
     
     @SerializedName("EndTicks")
-    val endTicks: Long
+    val endTicks: Long,
+
+    @SerializedName("CreatorId")
+    val creatorId: String? = null
 ) {
     // Convert ticks to seconds (Jellyfin uses 10,000,000 ticks per second)
     fun getStartSeconds(): Double = startTicks / 10_000_000.0

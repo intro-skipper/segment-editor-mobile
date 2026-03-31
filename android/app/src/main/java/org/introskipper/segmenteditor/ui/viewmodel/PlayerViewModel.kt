@@ -229,12 +229,17 @@ class PlayerViewModel @Inject constructor(
                 val result = segmentRepository.getSegmentsResult(itemId)
                 result.fold(
                     onSuccess = { segments ->
-                        Log.d(TAG, "Successfully loaded ${segments.size} segments for $itemId")
-                        segments.forEachIndexed { index, segment ->
+                        val filtered = if (securePreferences.getDisableSkipMeSegments()) {
+                            segments.filter { it.creatorId != SKIPME_PROVIDER_ID }
+                        } else {
+                            segments
+                        }
+                        Log.d(TAG, "Successfully loaded ${filtered.size} segments for $itemId")
+                        filtered.forEachIndexed { index, segment ->
                             Log.d(TAG, "Segment $index: type=${segment.type}, start=${segment.getStartSeconds()}s, end=${segment.getEndSeconds()}s")
                         }
-                        _uiState.update { it.copy(segments = segments) }
-                        _events.value = PlayerEvent.SegmentLoaded(segments)
+                        _uiState.update { it.copy(segments = filtered) }
+                        _events.value = PlayerEvent.SegmentLoaded(filtered)
                     },
                     onFailure = { error ->
                         Log.w(TAG, "Failed to load segments for $itemId (non-critical): ${error.message}", error)
@@ -964,5 +969,6 @@ class PlayerViewModel @Inject constructor(
 
     companion object {
         private const val TAG = "PlayerViewModel"
+        private const val SKIPME_PROVIDER_ID = "SkipMe.db"
     }
 }

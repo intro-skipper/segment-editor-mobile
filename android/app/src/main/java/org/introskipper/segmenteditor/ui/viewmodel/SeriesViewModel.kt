@@ -145,12 +145,16 @@ class SeriesViewModel @Inject constructor(
             val currentState = _uiState.value
             if (currentState !is SeriesUiState.Success) return@launch
 
+            val disableSkipMeSegments = securePreferences.getDisableSkipMeSegments()
+
             // Load segments for all episodes in parallel
             val updatedEpisodesBySeason = episodesBySeason.mapValues { (_, episodes) ->
                 episodes.map { episodeWithSegments ->
                     async {
                         val segmentResult = segmentRepository.getSegmentsResult(episodeWithSegments.episode.id)
-                        val segments = segmentResult.getOrNull() ?: emptyList()
+                        val segments = (segmentResult.getOrNull() ?: emptyList()).let { list ->
+                            if (disableSkipMeSegments) list.filter { it.creatorId != SKIPME_PROVIDER_ID } else list
+                        }
                         episodeWithSegments.copy(
                             segments = segments,
                             segmentCount = segments.size
@@ -275,5 +279,9 @@ class SeriesViewModel @Inject constructor(
 
     fun refresh(seriesId: String) {
         loadSeries(seriesId)
+    }
+
+    companion object {
+        private const val SKIPME_PROVIDER_ID = "SkipMe.db"
     }
 }
