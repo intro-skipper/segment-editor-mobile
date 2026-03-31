@@ -36,6 +36,7 @@ import org.introskipper.segmenteditor.data.model.MediaStream
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.SegmentType
 import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
+import org.introskipper.segmenteditor.data.model.filterSkipMe
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
@@ -230,7 +231,7 @@ class PlayerViewModel @Inject constructor(
                 result.fold(
                     onSuccess = { segments ->
                         val filtered = if (securePreferences.getDisableSkipMeSegments()) {
-                            segments.filter { it.creatorId != SKIPME_PROVIDER_ID }
+                            segments.filterSkipMe()
                         } else {
                             segments
                         }
@@ -969,6 +970,5 @@ class PlayerViewModel @Inject constructor(
 
     companion object {
         private const val TAG = "PlayerViewModel"
-        private const val SKIPME_PROVIDER_ID = "SkipMe.db"
     }
 }

@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.api.SkipMeApiService
+import org.introskipper.segmenteditor.data.model.filterSkipMe
 import org.introskipper.segmenteditor.data.model.SegmentType
 import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
 import org.introskipper.segmenteditor.data.repository.MediaRepository
@@ -153,7 +154,7 @@ class SeriesViewModel @Inject constructor(
                     async {
                         val segmentResult = segmentRepository.getSegmentsResult(episodeWithSegments.episode.id)
                         val segments = (segmentResult.getOrNull() ?: emptyList()).let { list ->
-                            if (disableSkipMeSegments) list.filter { it.creatorId != SKIPME_PROVIDER_ID } else list
+                            if (disableSkipMeSegments) list.filterSkipMe() else list
                         }
                         episodeWithSegments.copy(
                             segments = segments,
@@ -279,9 +280,5 @@ class SeriesViewModel @Inject constructor(
 
     fun refresh(seriesId: String) {
         loadSeries(seriesId)
-    }
-
-    companion object {
-        private const val SKIPME_PROVIDER_ID = "SkipMe.db"
     }
 }
