@@ -261,6 +261,13 @@ fun SettingsScreen(
                         checked = uiState.preferLocalPreviews,
                         onCheckedChange = viewModel::setPreferLocalPreviews
                     )
+
+                    SwitchSettingItem(
+                        title = translatedString(R.string.settings_disable_skipme_segments),
+                        subtitle = translatedString(R.string.settings_disable_skipme_segments_subtitle),
+                        checked = uiState.disableSkipMeSegments,
+                        onCheckedChange = viewModel::setDisableSkipMeSegments
+                    )
                 }
             }
             

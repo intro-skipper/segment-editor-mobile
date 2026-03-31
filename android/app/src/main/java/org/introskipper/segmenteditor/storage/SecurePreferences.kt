@@ -165,6 +165,14 @@ class SecurePreferences(context: Context) {
     fun getPreferLocalPreviews(): Boolean {
         return sharedPreferences.getBoolean(KEY_PREFER_LOCAL_PREVIEWS, false)
     }
+
+    fun setDisableSkipMeSegments(disabled: Boolean) {
+        sharedPreferences.edit { putBoolean(KEY_DISABLE_SKIPME_SEGMENTS, disabled) }
+    }
+
+    fun getDisableSkipMeSegments(): Boolean {
+        return sharedPreferences.getBoolean(KEY_DISABLE_SKIPME_SEGMENTS, true)
+    }
     
     // ========== Utility Methods ==========
     
@@ -210,5 +218,6 @@ class SecurePreferences(context: Context) {
         // Video player keys
         private const val KEY_PREFER_DIRECT_PLAY = "prefer_direct_play"
         private const val KEY_PREFER_LOCAL_PREVIEWS = "prefer_local_previews"
+        private const val KEY_DISABLE_SKIPME_SEGMENTS = "disable_skipme_segments"
     }
 }
