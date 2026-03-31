@@ -62,8 +62,8 @@
     <string name="settings_prefer_local_previews_subtitle">Use native scrubber frame extraction</string>
     <string name="settings_preview_disabled">🚫 Disabled</string>
 
-    <string name="settings_disable_skipme_segments">Ignore SkipMe.db Segments</string>
-    <string name="settings_disable_skipme_segments_subtitle">Do not display segments from SkipMe.db</string>
+    <string name="settings_disable_skipme_segments">Filter SkipMe.db Segments</string>
+    <string name="settings_disable_skipme_segments_subtitle">Ignore segments provided by SkipMe.db</string>
     
     <string name="settings_section_export">Export</string>
     <string name="settings_export_format">Default Export Format</string>
