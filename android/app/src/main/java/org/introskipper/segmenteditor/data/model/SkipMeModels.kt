@@ -9,7 +9,7 @@ import com.google.gson.annotations.SerializedName
 
 /**
  * Request body for POST /v1/submit to the SkipMe.db API.
- * At least one of [tmdbId] or [tvdbId] is required.
+ * At least one of [tmdbId], [tvdbId], or [aniListId] is required.
  */
 data class SkipMeSubmitRequest(
     @SerializedName("tmdb_id")
@@ -23,6 +23,9 @@ data class SkipMeSubmitRequest(
 
     @SerializedName("tvdb_id")
     val tvdbId: Int? = null,
+
+    @SerializedName("anilist_id")
+    val aniListId: Int? = null,
 
     @SerializedName("segment")
     val segment: String,

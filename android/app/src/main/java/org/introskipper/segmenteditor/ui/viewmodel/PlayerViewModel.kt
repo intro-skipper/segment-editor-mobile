@@ -185,7 +185,8 @@ class PlayerViewModel @Inject constructor(
                     state.copy(
                         seriesTmdbId = series?.providerIds?.get("Tmdb")?.toIntOrNull(),
                         seriesTvdbId = series?.providerIds?.get("Tvdb")?.toIntOrNull(),
-                        seasonTvdbId = season?.providerIds?.get("Tvdb")?.toIntOrNull()
+                        seasonTvdbId = season?.providerIds?.get("Tvdb")?.toIntOrNull(),
+                        seriesAniListId = series?.providerIds?.get("AniList")?.toIntOrNull()
                     )
                 }
             } catch (e: Exception) {
@@ -907,9 +908,10 @@ class PlayerViewModel @Inject constructor(
             val tmdbId = state.seriesTmdbId
             val tvdbSeasonId = state.seasonTvdbId
             val tvdbId = mediaItem?.providerIds?.get("Tvdb")?.toIntOrNull()
+            val aniListId = state.seriesAniListId
 
-            if (tmdbId == null && tvdbId == null) {
-                Log.w(TAG, "Skipping SkipMe.db share: no series-level TMDB or TVDB ID available")
+            if (tmdbId == null && tvdbId == null && aniListId == null) {
+                Log.w(TAG, "Skipping SkipMe.db share: no series-level TMDB, TVDB, or AniList ID available")
                 _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_no_ids))
                 return@launch
             }
@@ -950,6 +952,7 @@ class PlayerViewModel @Inject constructor(
                 tvdbSeriesId = state.seriesTvdbId,
                 tvdbSeasonId = tvdbSeasonId,
                 tvdbId = tvdbId,
+                aniListId = aniListId,
                 segment = skipMeType,
                 season = mediaItem?.parentIndexNumber,
                 episode = mediaItem?.indexNumber,

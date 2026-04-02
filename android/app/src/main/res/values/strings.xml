@@ -295,7 +295,7 @@
     <!-- SkipMe Share -->
     <string name="segment_share_description">Share with SkipMe.db</string>
     <string name="share_unsupported_type">Segment type cannot be shared with SkipMe.db</string>
-    <string name="share_no_ids">Cannot share: no TMDB or TVDB episode ID</string>
+    <string name="share_no_ids">Cannot share: no TMDB, TVDB, or AniList episode ID</string>
     <string name="share_no_duration">Cannot share: episode duration unknown</string>
     <string name="share_invalid_timing">Cannot share: segment timing invalid</string>
     <string name="share_exceeds_duration">Cannot share: segment exceeds episode duration</string>

@@ -213,6 +213,7 @@ class SeriesViewModel @Inject constructor(
                 val requests = mutableListOf<SkipMeSubmitRequest>()
                 val seriesTvdbId = currentState.series.providerIds?.get("Tvdb")?.toIntOrNull()
                 val seriesTmdbId = currentState.series.providerIds?.get("Tmdb")?.toIntOrNull()
+                val seriesAniListId = currentState.series.providerIds?.get("AniList")?.toIntOrNull()
                 
                 episodes.forEach { episodeWithSegments ->
                     val episode = episodeWithSegments.episode
@@ -222,7 +223,7 @@ class SeriesViewModel @Inject constructor(
                     val tvdbSeasonId = currentState.seasonTvdbIds[episode.seasonId ?: ""]
                     val durationMs = episode.runTimeTicks?.div(10_000)
 
-                    if ((seriesTmdbId != null || seriesTvdbId != null) && durationMs != null && durationMs > 0) {
+                    if ((seriesTmdbId != null || seriesTvdbId != null || seriesAniListId != null) && durationMs != null && durationMs > 0) {
                         segments.forEach { segment ->
                             val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType()
                             if (skipMeType == null) return@forEach
@@ -240,6 +241,7 @@ class SeriesViewModel @Inject constructor(
                                     tvdbSeriesId = seriesTvdbId,
                                     tvdbSeasonId = tvdbSeasonId,
                                     tvdbId = tvdbEpisodeId,
+                                    aniListId = seriesAniListId,
                                     segment = skipMeType,
                                     season = episode.parentIndexNumber,
                                     episode = episode.indexNumber,
