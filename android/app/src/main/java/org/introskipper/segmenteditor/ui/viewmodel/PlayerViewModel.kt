@@ -130,6 +130,12 @@ class PlayerViewModel @Inject constructor(
                         // If it's an episode, load its series and season info for sharing
                         if (mediaItem.type == "Episode") {
                             loadExtraMetadataForSharing(mediaItem)
+                        } else if (mediaItem.type == "Movie") {
+                            _uiState.update { state ->
+                                state.copy(
+                                    seriesTmdbId = mediaItem.providerIds?.get("Tmdb")?.toIntOrNull()
+                                )
+                            }
                         }
                     },
                     onFailure = { error ->
