@@ -32,6 +32,7 @@ import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.api.SkipMeApiService
 import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.data.model.MediaItem
+import org.introskipper.segmenteditor.data.model.MediaItemType
 import org.introskipper.segmenteditor.data.model.MediaStream
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.SegmentType
@@ -128,14 +129,14 @@ class PlayerViewModel @Inject constructor(
                         findNextEpisode(mediaItem)
                         
                         // If it's an episode, load its series and season info for sharing
-                        if (mediaItem.type == "Episode") {
-                            loadExtraMetadataForSharing(mediaItem)
-                        } else if (mediaItem.type == "Movie") {
-                            _uiState.update { state ->
+                        when (mediaItem.itemType) {
+                            MediaItemType.EPISODE -> loadExtraMetadataForSharing(mediaItem)
+                            MediaItemType.MOVIE -> _uiState.update { state ->
                                 state.copy(
                                     seriesTmdbId = mediaItem.providerIds?.get("Tmdb")?.toIntOrNull()
                                 )
                             }
+                            MediaItemType.UNKNOWN -> Log.w(TAG, "Unsupported media item type for sharing metadata: ${mediaItem.type}")
                         }
                     },
                     onFailure = { error ->
@@ -195,7 +196,7 @@ class PlayerViewModel @Inject constructor(
 
     private fun findNextEpisode(mediaItem: MediaItem) {
         // Only look for next episode if it's an episode and has season/series info
-        if (mediaItem.type != "Episode" || mediaItem.seriesId == null || mediaItem.seasonId == null) {
+        if (mediaItem.itemType != MediaItemType.EPISODE || mediaItem.seriesId == null || mediaItem.seasonId == null) {
             return
         }
 
