@@ -20,6 +20,7 @@ data class PlayerUiState(
     val seriesTmdbId: Int? = null,
     val seriesTvdbId: Int? = null,
     val seasonTvdbId: Int? = null,
+    val seriesAniListId: Int? = null,
     
     // Playback state
     val isPlaying: Boolean = false,
