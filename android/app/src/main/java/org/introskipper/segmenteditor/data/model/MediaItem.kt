@@ -8,6 +8,21 @@ package org.introskipper.segmenteditor.data.model
 import com.google.gson.annotations.SerializedName
 
 /**
+ * Known Jellyfin BaseItemKind values relevant to this app.
+ * Maps from the raw [MediaItem.type] string returned by the Jellyfin API.
+ */
+enum class MediaItemType(val typeName: String) {
+    EPISODE("Episode"),
+    MOVIE("Movie"),
+    UNKNOWN("");
+
+    companion object {
+        fun fromTypeName(name: String?): MediaItemType =
+            entries.firstOrNull { it.typeName == name } ?: UNKNOWN
+    }
+}
+
+/**
  * Represents a Jellyfin BaseItemDto - a media item from the Jellyfin server.
  * This includes movies, TV shows, episodes, audio tracks, and other media types.
  */
@@ -99,6 +114,9 @@ data class MediaItem(
     @SerializedName("ProviderIds")
     val providerIds: Map<String, String>? = null
 ) {
+    /** Typed representation of [type]; use this instead of comparing the raw string. */
+    val itemType: MediaItemType get() = MediaItemType.fromTypeName(type)
+
     /**
      * Gets the runtime in seconds
      */
@@ -123,8 +141,8 @@ data class MediaItem(
      * Gets display title with episode information if available
      */
     fun getDisplayTitle(): String {
-        return when (type) {
-            "Episode" -> {
+        return when (itemType) {
+            MediaItemType.EPISODE -> {
                 val episodeInfo = buildString {
                     if (parentIndexNumber != null) append("S$parentIndexNumber")
                     if (indexNumber != null) append("E$indexNumber")
@@ -135,7 +153,7 @@ data class MediaItem(
                     name ?: "Unknown"
                 }
             }
-            else -> name ?: "Unknown"
+            MediaItemType.MOVIE, MediaItemType.UNKNOWN -> name ?: "Unknown"
         }
     }
 }
