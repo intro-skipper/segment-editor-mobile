@@ -129,12 +129,12 @@ fun AboutDialog(
                     onClick = {
                         ChromeIntegration.openBrowserTab(
                             context,
-                            "https://github.com/intro-skipper/segment-editor-mobile/blob/main/LICENSE"
+                            "https://github.com/intro-skipper/segment-editor-mobile/blob/main/PRIVACY.md"
                         )
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(translatedString(R.string.about_licenses))
+                    Text(translatedString(R.string.about_privacy))
                 }
             }
         }
