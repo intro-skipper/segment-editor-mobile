@@ -210,7 +210,8 @@ class SeriesViewModel @Inject constructor(
             _uiState.update { currentState.copy(isSharing = true) }
             
             try {
-                val requests = mutableListOf<SkipMeSubmitRequest>()
+                // Use a Set to avoid submitting duplicate requests (identical timestamps/metadata)
+                val uniqueRequests = mutableSetOf<SkipMeSubmitRequest>()
                 val seriesTvdbId = currentState.series.providerIds?.get("Tvdb")?.toIntOrNull()
                 val seriesTmdbId = currentState.series.providerIds?.get("Tmdb")?.toIntOrNull()
                 val seriesAniListId = currentState.series.providerIds?.get("AniList")?.toIntOrNull()
@@ -235,7 +236,7 @@ class SeriesViewModel @Inject constructor(
                                 return@forEach
                             }
 
-                            requests.add(
+                            uniqueRequests.add(
                                 SkipMeSubmitRequest(
                                     tmdbId = seriesTmdbId,
                                     tvdbSeriesId = seriesTvdbId,
@@ -254,13 +255,13 @@ class SeriesViewModel @Inject constructor(
                     }
                 }
 
-                if (requests.isEmpty()) {
+                if (uniqueRequests.isEmpty()) {
                     _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
                     _uiState.update { (it as SeriesUiState.Success).copy(isSharing = false) }
                     return@launch
                 }
 
-                val response = skipMeApiService.submitCollection(requests)
+                val response = skipMeApiService.submitCollection(uniqueRequests.toList())
                 if (response.isSuccessful) {
                     val count = response.body()?.submitted ?: 0
                     _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_success_collection, count)))
