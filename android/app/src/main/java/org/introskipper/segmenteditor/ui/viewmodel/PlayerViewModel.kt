@@ -589,13 +589,17 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun handlePlaybackEnded() {
-        val nextId = _uiState.value.nextItemId
+        val uiState = _uiState.value
+        val nextId = uiState.nextItemId
         val autoPlayEnabled = securePreferences.getAutoPlayNextEpisode()
         
         Log.d(TAG, "Playback ended. nextItemId=$nextId, autoPlayEnabled=$autoPlayEnabled")
         
         if (autoPlayEnabled && nextId != null) {
             _events.value = PlayerEvent.NavigateToPlayer(nextId)
+        } else if (uiState.mediaItem?.itemType == MediaItemType.MOVIE) {
+            // For movies, stay on the player screen instead of returning to menu
+            _uiState.update { it.copy(showControls = true, isPlaying = false) }
         } else {
             _events.value = PlayerEvent.PlaybackEnded
         }
