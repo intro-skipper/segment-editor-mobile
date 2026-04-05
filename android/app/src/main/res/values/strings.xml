@@ -95,7 +95,7 @@
     <string name="settings_section_admin">SkipMe.db</string>
 
     <string name="settings_section_codecs">Compatible Codecs</string>
-    <string name="settings_codecs_subtitle">View device supported video and audio codecs</string>
+    <string name="settings_codecs_subtitle">View supported audio and video codecs for this device</string>
     <string name="settings_video_codecs">Video Codecs</string>
     <string name="settings_audio_codecs">Audio Codecs</string>
 
