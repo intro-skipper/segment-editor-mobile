@@ -6,7 +6,8 @@
 package org.introskipper.segmenteditor.ui.screen
 
 import android.widget.Toast
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,12 +51,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.semantics.CustomAccessibilityAction
-import androidx.compose.ui.semantics.customActions
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -156,25 +153,23 @@ fun SeriesScreen(
                 val state = uiState
                 if (state is SeriesUiState.Success && !state.isLoadingSegments && !state.isShared) {
                     val seasonsToShare = state.episodesBySeason.keys.filter { it != 0 }
+                    val fabInteractionSource = remember { MutableInteractionSource() }
                     
                     Box {
                         FloatingActionButton(
-                            onClick = { showShareMenu = true },
+                            // onClick is handled by combinedClickable below to support long press
+                            onClick = {},
                             modifier = Modifier
-                                .pointerInput(Unit) {
-                                    detectTapGestures(onLongPress = {
+                                .combinedClickable(
+                                    interactionSource = fabInteractionSource,
+                                    indication = null,
+                                    onClick = { showShareMenu = true },
+                                    onLongClickLabel = context.getString(R.string.series_submit_metadata_action),
+                                    onLongClick = {
                                         hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                                         viewModel.submitMetadata()
-                                    })
-                                }
-                                .semantics {
-                                    customActions = listOf(
-                                        CustomAccessibilityAction(
-                                            label = context.getString(R.string.series_submit_metadata_action),
-                                            action = { viewModel.submitMetadata(); true }
-                                        )
-                                    )
-                                },
+                                    }
+                                ),
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ) {
