@@ -184,15 +184,6 @@ fun SeriesScreen(
                                     }
                                 )
                             }
-                            DropdownMenuItem(
-                                text = {
-                                    Text(translatedString(R.string.series_submit_metadata))
-                                },
-                                onClick = {
-                                    showShareMenu = false
-                                    viewModel.submitMetadata()
-                                }
-                            )
                             if (seasonsToShare.size > 1) {
                                 DropdownMenuItem(
                                     text = {
@@ -204,6 +195,15 @@ fun SeriesScreen(
                                     }
                                 )
                             }
+                            DropdownMenuItem(
+                                text = {
+                                    Text(translatedString(R.string.series_submit_metadata))
+                                },
+                                onClick = {
+                                    showShareMenu = false
+                                    viewModel.submitMetadata()
+                                }
+                            )
                         }
                     }
                 }
