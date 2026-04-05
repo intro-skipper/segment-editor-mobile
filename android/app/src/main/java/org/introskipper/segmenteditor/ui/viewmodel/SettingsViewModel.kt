@@ -272,13 +272,16 @@ class SettingsViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(showBackfillDialog = false)
     }
 
+    private fun hasAnyIdentifier(vararg ids: Int?): Boolean = ids.any { it != null }
+
     private fun loadMediaForBackfill() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoadingMediaForBackfill = true, mediaForBackfill = emptyList())
             try {
+                // Use a generous limit; most home servers have far fewer than 1000 series/movies
                 val response = jellyfinRepository.getMediaItems(
                     includeItemTypes = listOf("Series", "Movie"),
-                    limit = 500
+                    limit = 1000
                 )
                 val items = response.items
                     .filter { it.type == "Series" || it.type == "Movie" }
@@ -315,16 +318,11 @@ class SettingsViewModel @Inject constructor(
                         val movie = jellyfinRepository.getMediaItem(item.id)
                         val tvdbId = movie.providerIds?.get("Tvdb")?.toIntOrNull()
                         val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull()
-                        if (tvdbId == null && tmdbId == null) {
+                        if (!hasAnyIdentifier(tvdbId, tmdbId)) {
                             _events.emit(SettingsEvent.ShowToast(UiText.StringResource(R.string.backfill_no_identifiers)))
                             return@launch
                         }
-                        requests.add(
-                            SkipMeBackfillRequest(
-                                tvdbId = tvdbId,
-                                tmdbId = tmdbId
-                            )
-                        )
+                        requests.add(SkipMeBackfillRequest(tvdbId = tvdbId, tmdbId = tmdbId))
                     }
                     MediaItemType.SERIES -> {
                         val series = jellyfinRepository.getMediaItem(item.id)
@@ -332,7 +330,7 @@ class SettingsViewModel @Inject constructor(
                         val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
                         val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
 
-                        if (seriesTvdbId == null && seriesTmdbId == null && seriesAniListId == null) {
+                        if (!hasAnyIdentifier(seriesTvdbId, seriesTmdbId, seriesAniListId)) {
                             _events.emit(SettingsEvent.ShowToast(UiText.StringResource(R.string.backfill_no_identifiers)))
                             return@launch
                         }
@@ -342,9 +340,10 @@ class SettingsViewModel @Inject constructor(
                         val seasonTvdbIds = seasons.associate { it.id to it.providerIds?.get("Tvdb")?.toIntOrNull() }
 
                         for (season in seasons) {
-                            var startIndex = 0
                             val pageSize = 100
-                            while (true) {
+                            var startIndex = 0
+                            var hasMore = true
+                            while (hasMore) {
                                 val episodesResponse = jellyfinRepository.getEpisodes(
                                     seriesId = item.id,
                                     seasonId = season.id,
@@ -367,7 +366,8 @@ class SettingsViewModel @Inject constructor(
                                     )
                                 }
                                 startIndex += episodesResponse.items.size
-                                if (startIndex >= episodesResponse.totalRecordCount || episodesResponse.items.isEmpty()) break
+                                hasMore = episodesResponse.items.isNotEmpty() &&
+                                    startIndex < episodesResponse.totalRecordCount
                             }
                         }
                     }
