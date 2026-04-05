@@ -5,6 +5,8 @@
 
 package org.introskipper.segmenteditor.api
 
+import org.introskipper.segmenteditor.data.model.SkipMeBackfillRequest
+import org.introskipper.segmenteditor.data.model.SkipMeBackfillResponse
 import org.introskipper.segmenteditor.data.model.SkipMeCollectionSubmitResponse
 import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
 import org.introskipper.segmenteditor.data.model.SkipMeSubmitResponse
@@ -23,4 +25,9 @@ interface SkipMeApi {
     suspend fun submitCollection(
         @Body requests: List<SkipMeSubmitRequest>
     ): Response<SkipMeCollectionSubmitResponse>
+
+    @POST("v1/backfill")
+    suspend fun backfill(
+        @Body requests: List<SkipMeBackfillRequest>
+    ): Response<SkipMeBackfillResponse>
 }
