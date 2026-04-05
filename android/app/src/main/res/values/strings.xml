@@ -65,7 +65,7 @@
     <string name="settings_disable_skipme_segments">Hide SkipMe.db Segments</string>
     <string name="settings_disable_skipme_segments_subtitle">Filter segments provided by SkipMe.db</string>
     <string name="settings_submit_metadata">Submit Metadata to SkipMe.db</string>
-    <string name="settings_submit_metadata_subtitle">Backfill missing identifier fields for existing SkipMe.db submissions</string>
+    <string name="settings_submit_metadata_subtitle">Backfill missing identifier fields for SkipMe.db submissions</string>
     <string name="settings_submit_metadata_dialog_title">Select Series or Movie</string>
     <string name="settings_submit_metadata_loading">Loading media…</string>
     <string name="settings_submit_metadata_empty">No series or movies found</string>
