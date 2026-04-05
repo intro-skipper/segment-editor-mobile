@@ -299,19 +299,6 @@ fun SettingsScreen(
                         checked = uiState.disableSkipMeSegments,
                         onCheckedChange = viewModel::setDisableSkipMeSegments
                     )
-                    ClickableSettingItem(
-                        title = translatedString(R.string.settings_compress_shared),
-                        subtitle = null,
-                        onClick = viewModel::mergeRecords,
-                        trailingContent = {
-                            if (uiState.isMergingRecords) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp
-                                )
-                            }
-                        }
-                    )
                 }
             }
             

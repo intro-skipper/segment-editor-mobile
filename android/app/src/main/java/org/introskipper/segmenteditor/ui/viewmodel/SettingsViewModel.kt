@@ -49,8 +49,7 @@ data class SettingsUiState(
     val serverVersion: String = "",
     val serverName: String = "",
     val supportedVideoCodecs: List<String> = emptyList(),
-    val supportedAudioCodecs: List<String> = emptyList(),
-    val isMergingRecords: Boolean = false
+    val supportedAudioCodecs: List<String> = emptyList()
 )
 
 data class LibraryInfo(
@@ -251,34 +250,4 @@ class SettingsViewModel @Inject constructor(
         securePreferences.clearAuthentication()
     }
 
-    fun mergeRecords() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isMergingRecords = true)
-            try {
-                val response = skipMeApiService.mergeRecords()
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    if (body?.ok == true) {
-                        _events.emit(SettingsEvent.ShowToast(
-                            UiText.StringResource(R.string.settings_compress_shared_success, body.merged)
-                        ))
-                    } else {
-                        _events.emit(SettingsEvent.ShowToast(
-                            UiText.StringResource(R.string.settings_compress_shared_server_error)
-                        ))
-                    }
-                } else {
-                    _events.emit(SettingsEvent.ShowToast(
-                        UiText.StringResource(R.string.settings_compress_shared_failed, response.code().toString())
-                    ))
-                }
-            } catch (e: Exception) {
-                _events.emit(SettingsEvent.ShowToast(
-                    UiText.StringResource(R.string.settings_compress_shared_error, e.message ?: "")
-                ))
-            } finally {
-                _uiState.value = _uiState.value.copy(isMergingRecords = false)
-            }
-        }
-    }
 }
