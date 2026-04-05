@@ -196,7 +196,6 @@
     <string name="series_episodes_error_load">Failed to load episodes</string>
     <string name="series_total_episodes">%1$d episodes</string>
     <string name="series_entire_show">All Seasons</string>
-    <string name="series_submit_metadata">Metadata Only</string>
 
     <!-- Episode Card -->
     <string name="episode_duration_minutes">%1$d min</string>
