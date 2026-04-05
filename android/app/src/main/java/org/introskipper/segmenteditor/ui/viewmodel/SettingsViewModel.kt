@@ -288,7 +288,10 @@ class SettingsViewModel @Inject constructor(
                 val allItems = if (libraries.isNotEmpty()) {
                     val result = mutableListOf<MediaInfo>()
                     for (library in libraries) {
-                        val libraryName = (library.name as? UiText.DynamicString)?.value ?: ""
+                        val libraryName = when (val n = library.name) {
+                            is UiText.DynamicString -> n.value
+                            is UiText.StringResource -> ""
+                        }
                         val response = jellyfinRepository.getMediaItems(
                             includeItemTypes = listOf("Series", "Movie"),
                             parentIds = listOf(library.id),
