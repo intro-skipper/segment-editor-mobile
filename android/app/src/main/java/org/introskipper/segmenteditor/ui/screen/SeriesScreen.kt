@@ -6,7 +6,6 @@
 package org.introskipper.segmenteditor.ui.screen
 
 import android.widget.Toast
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,13 +35,10 @@ import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -52,7 +48,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -155,46 +150,22 @@ fun SeriesScreen(
                     val seasonsToShare = state.episodesBySeason.keys.filter { it != 0 }
                     
                     Box {
-                        TooltipBox(
-                            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                            tooltip = {
-                                Surface(
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                    shape = MaterialTheme.shapes.extraSmall,
-                                    shadowElevation = 4.dp
-                                ) {
-                                    Text(
-                                        text = translatedString(R.string.series_submit_metadata),
-                                        modifier = Modifier.padding(8.dp),
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                            },
-                            state = rememberTooltipState()
+                        FloatingActionButton(
+                            onClick = { showShareMenu = true },
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ) {
-                            FloatingActionButton(
-                                onClick = { showShareMenu = true },
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.pointerInput(Unit) {
-                                    detectTapGestures(
-                                        onTap = { showShareMenu = true },
-                                        onLongPress = { viewModel.submitMetadata() }
-                                    )
-                                }
-                            ) {
-                                if (state.isSharing || state.isSubmittingMetadata) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(24.dp),
-                                        strokeWidth = 2.dp,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = Icons.Default.Share,
-                                        contentDescription = translatedString(R.string.share_season_segments)
-                                    )
-                                }
+                            if (state.isSharing || state.isSubmittingMetadata) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Share,
+                                    contentDescription = translatedString(R.string.share_season_segments)
+                                )
                             }
                         }
 
@@ -213,6 +184,15 @@ fun SeriesScreen(
                                     }
                                 )
                             }
+                            DropdownMenuItem(
+                                text = {
+                                    Text(translatedString(R.string.series_submit_metadata))
+                                },
+                                onClick = {
+                                    showShareMenu = false
+                                    viewModel.submitMetadata()
+                                }
+                            )
                             if (seasonsToShare.size > 1) {
                                 DropdownMenuItem(
                                     text = {
