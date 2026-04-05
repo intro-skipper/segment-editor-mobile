@@ -24,6 +24,7 @@ import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.api.SkipMeApiService
 import org.introskipper.segmenteditor.data.model.MediaItemType
 import org.introskipper.segmenteditor.data.model.SkipMeBackfillRequest
+import org.introskipper.segmenteditor.data.model.getImageUrl
 import org.introskipper.segmenteditor.data.repository.AuthRepository
 import org.introskipper.segmenteditor.data.repository.JellyfinRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
@@ -67,7 +68,9 @@ data class LibraryInfo(
 data class MediaInfo(
     val id: String,
     val name: String,
-    val type: MediaItemType
+    val type: MediaItemType,
+    val imageUrl: String? = null,
+    val libraryName: String = ""
 )
 
 sealed class SettingsEvent {
@@ -278,25 +281,56 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoadingMediaForBackfill = true, mediaForBackfill = emptyList())
             try {
-                // Use a generous limit; most home servers have far fewer than 1000 series/movies
-                val response = jellyfinRepository.getMediaItems(
-                    includeItemTypes = listOf("Series", "Movie"),
-                    limit = 1000
-                )
-                val items = response.items
-                    .filter { it.type == "Series" || it.type == "Movie" }
-                    .mapNotNull { mediaItem ->
-                        val type = mediaItem.itemType
-                        if (type != MediaItemType.SERIES && type != MediaItemType.MOVIE) return@mapNotNull null
-                        MediaInfo(
-                            id = mediaItem.id,
-                            name = mediaItem.name ?: return@mapNotNull null,
-                            type = type
+                val serverUrl = _uiState.value.serverUrl
+                val libraries = _uiState.value.availableLibraries
+
+                // Use a generous limit; most home servers have far fewer than 1000 series/movies per library
+                val allItems = if (libraries.isNotEmpty()) {
+                    val result = mutableListOf<MediaInfo>()
+                    for (library in libraries) {
+                        val libraryName = (library.name as? UiText.DynamicString)?.value ?: ""
+                        val response = jellyfinRepository.getMediaItems(
+                            includeItemTypes = listOf("Series", "Movie"),
+                            parentIds = listOf(library.id),
+                            limit = 1000
                         )
+                        response.items
+                            .filter { it.type == "Series" || it.type == "Movie" }
+                            .mapNotNullTo(result) { mediaItem ->
+                                val type = mediaItem.itemType
+                                if (type != MediaItemType.SERIES && type != MediaItemType.MOVIE) return@mapNotNullTo null
+                                MediaInfo(
+                                    id = mediaItem.id,
+                                    name = mediaItem.name ?: return@mapNotNullTo null,
+                                    type = type,
+                                    imageUrl = if (serverUrl.isNotEmpty()) mediaItem.getImageUrl(serverUrl, maxWidth = 120) else null,
+                                    libraryName = libraryName
+                                )
+                            }
                     }
-                    .sortedBy { it.name }
+                    result.sortedWith(compareBy({ it.libraryName }, { it.name }))
+                } else {
+                    // Fallback: single request when libraries haven't loaded yet, sort by name
+                    val response = jellyfinRepository.getMediaItems(
+                        includeItemTypes = listOf("Series", "Movie"),
+                        limit = 1000
+                    )
+                    response.items
+                        .filter { it.type == "Series" || it.type == "Movie" }
+                        .mapNotNull { mediaItem ->
+                            val type = mediaItem.itemType
+                            if (type != MediaItemType.SERIES && type != MediaItemType.MOVIE) return@mapNotNull null
+                            MediaInfo(
+                                id = mediaItem.id,
+                                name = mediaItem.name ?: return@mapNotNull null,
+                                type = type,
+                                imageUrl = if (serverUrl.isNotEmpty()) mediaItem.getImageUrl(serverUrl, maxWidth = 120) else null
+                            )
+                        }
+                        .sortedBy { it.name }
+                }
                 _uiState.value = _uiState.value.copy(
-                    mediaForBackfill = items,
+                    mediaForBackfill = allItems,
                     isLoadingMediaForBackfill = false
                 )
             } catch (e: Exception) {
