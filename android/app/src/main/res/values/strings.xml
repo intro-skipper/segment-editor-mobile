@@ -95,7 +95,7 @@
     <string name="settings_section_admin">SkipMe.db</string>
 
     <string name="settings_section_codecs">Compatible Codecs</string>
-    <string name="settings_codecs_subtitle">View supported audio and video codecs for this device</string>
+    <string name="settings_codecs_subtitle">View supported audio and video codecs</string>
     <string name="settings_video_codecs">Video Codecs</string>
     <string name="settings_audio_codecs">Audio Codecs</string>
 
@@ -196,7 +196,7 @@
     <string name="series_episodes_error_load">Failed to load episodes</string>
     <string name="series_total_episodes">%1$d episodes</string>
     <string name="series_entire_show">All Seasons</string>
-    <string name="series_submit_metadata">Metadata Only</string>
+    <string name="series_submit_metadata">Episode Metadata</string>
 
     <!-- Episode Card -->
     <string name="episode_duration_minutes">%1$d min</string>
