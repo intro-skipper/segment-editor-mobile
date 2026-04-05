@@ -445,7 +445,7 @@ fun BackfillMediaDialog(
                     }
                     else -> {
                         LazyColumn {
-                            items(mediaItems) { item ->
+                            items(mediaItems, key = { it.id }) { item ->
                                 TextButton(
                                     onClick = { onItemSelected(item) },
                                     modifier = Modifier.fillMaxWidth()
