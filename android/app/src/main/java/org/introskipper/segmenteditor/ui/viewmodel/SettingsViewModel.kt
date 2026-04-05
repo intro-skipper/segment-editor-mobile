@@ -283,7 +283,8 @@ class SettingsViewModel @Inject constructor(
                 val items = response.items
                     .filter { it.type == "Series" || it.type == "Movie" }
                     .mapNotNull { mediaItem ->
-                        val type = if (mediaItem.type == "Movie") MediaItemType.MOVIE else MediaItemType.UNKNOWN
+                        val type = mediaItem.itemType
+                        if (type != MediaItemType.SERIES && type != MediaItemType.MOVIE) return@mapNotNull null
                         MediaInfo(
                             id = mediaItem.id,
                             name = mediaItem.name ?: return@mapNotNull null,
@@ -325,8 +326,7 @@ class SettingsViewModel @Inject constructor(
                             )
                         )
                     }
-                    else -> {
-                        // Series (type == UNKNOWN since MediaItemType has no Series entry)
+                    MediaItemType.SERIES -> {
                         val series = jellyfinRepository.getMediaItem(item.id)
                         val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
                         val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
@@ -370,6 +370,10 @@ class SettingsViewModel @Inject constructor(
                                 if (startIndex >= episodesResponse.totalRecordCount || episodesResponse.items.isEmpty()) break
                             }
                         }
+                    }
+                    else -> {
+                        _events.emit(SettingsEvent.ShowToast(UiText.StringResource(R.string.backfill_no_identifiers)))
+                        return@launch
                     }
                 }
 
