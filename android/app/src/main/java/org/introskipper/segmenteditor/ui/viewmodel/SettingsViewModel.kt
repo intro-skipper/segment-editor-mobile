@@ -62,7 +62,8 @@ data class SettingsUiState(
 
 data class LibraryInfo(
     val id: String,
-    val name: UiText
+    val name: UiText,
+    val collectionType: String? = null
 )
 
 data class MediaInfo(
@@ -70,7 +71,8 @@ data class MediaInfo(
     val name: String,
     val type: MediaItemType,
     val imageUrl: String? = null,
-    val libraryName: String = ""
+    val libraryName: String = "",
+    val libraryCollectionType: String? = null
 )
 
 sealed class SettingsEvent {
@@ -193,7 +195,8 @@ class SettingsViewModel @Inject constructor(
                     LibraryInfo(
                         id = mediaItem.id,
                         name = mediaItem.name?.let { UiText.DynamicString(it) } 
-                            ?: UiText.StringResource(R.string.library_unknown)
+                            ?: UiText.StringResource(R.string.library_unknown),
+                        collectionType = mediaItem.collectionType
                     )
                 }
                 _uiState.value = _uiState.value.copy(
@@ -277,6 +280,18 @@ class SettingsViewModel @Inject constructor(
 
     private fun hasAnyIdentifier(vararg ids: Int?): Boolean = ids.any { it != null }
 
+    private fun libraryTypeOrder(collectionType: String?): Int = when (collectionType?.lowercase()) {
+        "tvshows" -> 0
+        "movies" -> 1
+        else -> 2
+    }
+
+    private fun mediaTypeOrder(type: MediaItemType): Int = when (type) {
+        MediaItemType.SERIES -> 0
+        MediaItemType.MOVIE -> 1
+        else -> 2
+    }
+
     private fun loadMediaForBackfill() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoadingMediaForBackfill = true, mediaForBackfill = emptyList())
@@ -307,11 +322,12 @@ class SettingsViewModel @Inject constructor(
                                     name = mediaItem.name ?: return@mapNotNullTo null,
                                     type = type,
                                     imageUrl = if (serverUrl.isNotEmpty()) mediaItem.getImageUrl(serverUrl, maxWidth = 120) else null,
-                                    libraryName = libraryName
+                                    libraryName = libraryName,
+                                    libraryCollectionType = library.collectionType
                                 )
                             }
                     }
-                    result.sortedWith(compareBy({ it.libraryName }, { it.name }))
+                    result.sortedWith(compareBy({ libraryTypeOrder(it.libraryCollectionType) }, { it.libraryName }, { it.name }))
                 } else {
                     // Fallback: single request when libraries haven't loaded yet, sort by name
                     val response = jellyfinRepository.getMediaItems(
@@ -330,7 +346,7 @@ class SettingsViewModel @Inject constructor(
                                 imageUrl = if (serverUrl.isNotEmpty()) mediaItem.getImageUrl(serverUrl, maxWidth = 120) else null
                             )
                         }
-                        .sortedBy { it.name }
+                        .sortedWith(compareBy({ mediaTypeOrder(it.type) }, { it.name }))
                 }
                 _uiState.value = _uiState.value.copy(
                     mediaForBackfill = allItems,
