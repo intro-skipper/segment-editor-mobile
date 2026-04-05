@@ -49,8 +49,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -79,6 +84,7 @@ fun SeriesScreen(
     val uiState by viewModel.uiState.collectAsState()
     val serverUrl = securePreferences.getServerUrl() ?: ""
     val context = LocalContext.current
+    val hapticFeedback = LocalHapticFeedback.current
     var dominantColor by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(seriesId) {
@@ -154,9 +160,21 @@ fun SeriesScreen(
                     Box {
                         FloatingActionButton(
                             onClick = { showShareMenu = true },
-                            modifier = Modifier.pointerInput(Unit) {
-                                detectTapGestures(onLongPress = { viewModel.submitMetadata() })
-                            },
+                            modifier = Modifier
+                                .pointerInput(Unit) {
+                                    detectTapGestures(onLongPress = {
+                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        viewModel.submitMetadata()
+                                    })
+                                }
+                                .semantics {
+                                    customActions = listOf(
+                                        CustomAccessibilityAction(
+                                            label = context.getString(R.string.series_submit_metadata_action),
+                                            action = { viewModel.submitMetadata(); true }
+                                        )
+                                    )
+                                },
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ) {
