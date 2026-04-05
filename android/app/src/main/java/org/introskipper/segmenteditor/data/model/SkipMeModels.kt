@@ -74,3 +74,41 @@ data class SkipMeCollectionSubmitResponse(
     @SerializedName("submitted")
     val submitted: Int = 0
 )
+
+/**
+ * Request item for POST /v1/backfill.
+ * Fills in missing identifier fields on existing accepted submissions.
+ * At least one valid matching strategy must be present per item.
+ */
+data class SkipMeBackfillRequest(
+    @SerializedName("tvdb_id")
+    val tvdbId: Int? = null,
+
+    @SerializedName("tmdb_id")
+    val tmdbId: Int? = null,
+
+    @SerializedName("tvdb_season_id")
+    val tvdbSeasonId: Int? = null,
+
+    @SerializedName("tvdb_series_id")
+    val tvdbSeriesId: Int? = null,
+
+    @SerializedName("anilist_id")
+    val aniListId: Int? = null,
+
+    @SerializedName("season")
+    val season: Int? = null,
+
+    @SerializedName("episode")
+    val episode: Int? = null
+)
+
+/**
+ * Response body for POST /v1/backfill.
+ */
+data class SkipMeBackfillResponse(
+    @SerializedName("ok")
+    val ok: Boolean,
+    @SerializedName("updated")
+    val updated: Int = 0
+)

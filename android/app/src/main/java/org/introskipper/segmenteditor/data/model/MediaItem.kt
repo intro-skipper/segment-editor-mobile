@@ -14,6 +14,7 @@ import com.google.gson.annotations.SerializedName
 enum class MediaItemType(val typeName: String) {
     EPISODE("Episode"),
     MOVIE("Movie"),
+    SERIES("Series"),
     UNKNOWN("");
 
     companion object {
@@ -153,7 +154,7 @@ data class MediaItem(
                     name ?: "Unknown"
                 }
             }
-            MediaItemType.MOVIE, MediaItemType.UNKNOWN -> name ?: "Unknown"
+            MediaItemType.MOVIE, MediaItemType.SERIES, MediaItemType.UNKNOWN -> name ?: "Unknown"
         }
     }
 }

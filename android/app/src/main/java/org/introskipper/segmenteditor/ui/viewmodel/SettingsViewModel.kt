@@ -6,6 +6,7 @@
 package org.introskipper.segmenteditor.ui.viewmodel
 
 import android.media.MediaCodecList
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,6 +22,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.api.SkipMeApiService
+import org.introskipper.segmenteditor.data.model.MediaItemType
+import org.introskipper.segmenteditor.data.model.SkipMeBackfillRequest
 import org.introskipper.segmenteditor.data.repository.AuthRepository
 import org.introskipper.segmenteditor.data.repository.JellyfinRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
@@ -49,12 +52,22 @@ data class SettingsUiState(
     val serverVersion: String = "",
     val serverName: String = "",
     val supportedVideoCodecs: List<String> = emptyList(),
-    val supportedAudioCodecs: List<String> = emptyList()
+    val supportedAudioCodecs: List<String> = emptyList(),
+    val showBackfillDialog: Boolean = false,
+    val mediaForBackfill: List<MediaInfo> = emptyList(),
+    val isLoadingMediaForBackfill: Boolean = false,
+    val isSubmittingBackfill: Boolean = false
 )
 
 data class LibraryInfo(
     val id: String,
     val name: UiText
+)
+
+data class MediaInfo(
+    val id: String,
+    val name: String,
+    val type: MediaItemType
 )
 
 sealed class SettingsEvent {
@@ -248,6 +261,142 @@ class SettingsViewModel @Inject constructor(
 
     fun clearAuthenticationAndRestart() {
         securePreferences.clearAuthentication()
+    }
+
+    fun showBackfillDialog() {
+        _uiState.value = _uiState.value.copy(showBackfillDialog = true)
+        loadMediaForBackfill()
+    }
+
+    fun dismissBackfillDialog() {
+        _uiState.value = _uiState.value.copy(showBackfillDialog = false)
+    }
+
+    private fun hasAnyIdentifier(vararg ids: Int?): Boolean = ids.any { it != null }
+
+    private fun loadMediaForBackfill() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoadingMediaForBackfill = true, mediaForBackfill = emptyList())
+            try {
+                // Use a generous limit; most home servers have far fewer than 1000 series/movies
+                val response = jellyfinRepository.getMediaItems(
+                    includeItemTypes = listOf("Series", "Movie"),
+                    limit = 1000
+                )
+                val items = response.items
+                    .filter { it.type == "Series" || it.type == "Movie" }
+                    .mapNotNull { mediaItem ->
+                        val type = mediaItem.itemType
+                        if (type != MediaItemType.SERIES && type != MediaItemType.MOVIE) return@mapNotNull null
+                        MediaInfo(
+                            id = mediaItem.id,
+                            name = mediaItem.name ?: return@mapNotNull null,
+                            type = type
+                        )
+                    }
+                    .sortedBy { it.name }
+                _uiState.value = _uiState.value.copy(
+                    mediaForBackfill = items,
+                    isLoadingMediaForBackfill = false
+                )
+            } catch (e: Exception) {
+                Log.e("SettingsViewModel", "Failed to load media for backfill", e)
+                _uiState.value = _uiState.value.copy(isLoadingMediaForBackfill = false)
+                _events.emit(SettingsEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_generic, e.message ?: "")))
+            }
+        }
+    }
+
+    fun submitMetadataForItem(item: MediaInfo) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSubmittingBackfill = true, showBackfillDialog = false)
+            try {
+                val requests = mutableListOf<SkipMeBackfillRequest>()
+
+                when (item.type) {
+                    MediaItemType.MOVIE -> {
+                        val movie = jellyfinRepository.getMediaItem(item.id)
+                        val tvdbId = movie.providerIds?.get("Tvdb")?.toIntOrNull()
+                        val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull()
+                        if (!hasAnyIdentifier(tvdbId, tmdbId)) {
+                            _events.emit(SettingsEvent.ShowToast(UiText.StringResource(R.string.backfill_no_identifiers)))
+                            return@launch
+                        }
+                        requests.add(SkipMeBackfillRequest(tvdbId = tvdbId, tmdbId = tmdbId))
+                    }
+                    MediaItemType.SERIES -> {
+                        val series = jellyfinRepository.getMediaItem(item.id)
+                        val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
+                        val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
+                        val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
+
+                        if (!hasAnyIdentifier(seriesTvdbId, seriesTmdbId, seriesAniListId)) {
+                            _events.emit(SettingsEvent.ShowToast(UiText.StringResource(R.string.backfill_no_identifiers)))
+                            return@launch
+                        }
+
+                        val seasonsResponse = jellyfinRepository.getSeasons(item.id)
+                        val seasons = seasonsResponse.items.filter { it.indexNumber != 0 }
+                        val seasonTvdbIds = seasons.associate { it.id to it.providerIds?.get("Tvdb")?.toIntOrNull() }
+
+                        for (season in seasons) {
+                            val pageSize = 100
+                            var startIndex = 0
+                            var hasMore = true
+                            while (hasMore) {
+                                val episodesResponse = jellyfinRepository.getEpisodes(
+                                    seriesId = item.id,
+                                    seasonId = season.id,
+                                    startIndex = startIndex,
+                                    limit = pageSize
+                                )
+                                for (episode in episodesResponse.items) {
+                                    val tvdbEpisodeId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+                                    val tvdbSeasonId = seasonTvdbIds[episode.seasonId ?: ""]
+                                    requests.add(
+                                        SkipMeBackfillRequest(
+                                            tvdbId = tvdbEpisodeId,
+                                            tmdbId = seriesTmdbId,
+                                            tvdbSeasonId = tvdbSeasonId,
+                                            tvdbSeriesId = seriesTvdbId,
+                                            aniListId = seriesAniListId,
+                                            season = episode.parentIndexNumber,
+                                            episode = episode.indexNumber
+                                        )
+                                    )
+                                }
+                                startIndex += episodesResponse.items.size
+                                hasMore = episodesResponse.items.isNotEmpty() &&
+                                    startIndex < episodesResponse.totalRecordCount
+                            }
+                        }
+                    }
+                    else -> {
+                        _events.emit(SettingsEvent.ShowToast(UiText.StringResource(R.string.backfill_no_identifiers)))
+                        return@launch
+                    }
+                }
+
+                if (requests.isEmpty()) {
+                    _events.emit(SettingsEvent.ShowToast(UiText.StringResource(R.string.backfill_no_identifiers)))
+                    return@launch
+                }
+
+                val response = skipMeApiService.backfill(requests)
+                if (response.isSuccessful) {
+                    val updated = response.body()?.updated ?: 0
+                    _events.emit(SettingsEvent.ShowToast(UiText.StringResource(R.string.backfill_success, updated)))
+                } else {
+                    _events.emit(SettingsEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_http, response.code())))
+                }
+            } catch (e: Exception) {
+                Log.e("SettingsViewModel", "Error submitting metadata backfill", e)
+                val message = e.message ?: ""
+                _events.emit(SettingsEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_generic, message)))
+            } finally {
+                _uiState.value = _uiState.value.copy(isSubmittingBackfill = false)
+            }
+        }
     }
 
 }

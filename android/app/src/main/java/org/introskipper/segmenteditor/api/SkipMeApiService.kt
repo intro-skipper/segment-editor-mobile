@@ -6,6 +6,8 @@
 package org.introskipper.segmenteditor.api
 
 import okhttp3.OkHttpClient
+import org.introskipper.segmenteditor.data.model.SkipMeBackfillRequest
+import org.introskipper.segmenteditor.data.model.SkipMeBackfillResponse
 import org.introskipper.segmenteditor.data.model.SkipMeCollectionSubmitResponse
 import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
 import org.introskipper.segmenteditor.data.model.SkipMeSubmitResponse
@@ -28,5 +30,9 @@ class SkipMeApiService(baseUrl: String, httpClient: OkHttpClient) {
 
     suspend fun submitCollection(requests: List<SkipMeSubmitRequest>): Response<SkipMeCollectionSubmitResponse> {
         return api.submitCollection(requests)
+    }
+
+    suspend fun backfill(requests: List<SkipMeBackfillRequest>): Response<SkipMeBackfillResponse> {
+        return api.backfill(requests)
     }
 }
