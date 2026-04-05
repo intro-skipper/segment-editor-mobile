@@ -23,6 +23,7 @@ import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.api.SkipMeApiService
 import org.introskipper.segmenteditor.data.model.filterSkipMe
 import org.introskipper.segmenteditor.data.model.SegmentType
+import org.introskipper.segmenteditor.data.model.SkipMeBackfillRequest
 import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
@@ -277,6 +278,69 @@ class SeriesViewModel @Inject constructor(
                 _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_failed_collection_generic, message)))
             } finally {
                 _uiState.update { (it as SeriesUiState.Success).copy(isSharing = false) }
+            }
+        }
+    }
+
+    /**
+     * Submits metadata backfill for this series to SkipMe.db, using the already-loaded state.
+     */
+    fun submitMetadata() {
+        val currentState = _uiState.value
+        if (currentState !is SeriesUiState.Success) return
+
+        viewModelScope.launch {
+            _uiState.update { (it as SeriesUiState.Success).copy(isSubmittingMetadata = true) }
+            try {
+                val seriesTvdbId = currentState.series.providerIds?.get("Tvdb")?.toIntOrNull()
+                val seriesTmdbId = currentState.series.providerIds?.get("Tmdb")?.toIntOrNull()
+                val seriesAniListId = currentState.series.providerIds?.get("AniList")?.toIntOrNull()
+
+                if (seriesTvdbId == null && seriesTmdbId == null && seriesAniListId == null) {
+                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_no_identifiers)))
+                    return@launch
+                }
+
+                val requests = mutableListOf<SkipMeBackfillRequest>()
+                currentState.episodesBySeason
+                    .filter { it.key != 0 } // Exclude specials
+                    .forEach { (_, episodes) ->
+                        episodes.forEach { episodeWithSegments ->
+                            val episode = episodeWithSegments.episode
+                            val tvdbEpisodeId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+                            val tvdbSeasonId = currentState.seasonTvdbIds[episode.seasonId ?: ""]
+                            requests.add(
+                                SkipMeBackfillRequest(
+                                    tvdbId = tvdbEpisodeId,
+                                    tmdbId = seriesTmdbId,
+                                    tvdbSeasonId = tvdbSeasonId,
+                                    tvdbSeriesId = seriesTvdbId,
+                                    aniListId = seriesAniListId,
+                                    season = episode.parentIndexNumber,
+                                    episode = episode.indexNumber
+                                )
+                            )
+                        }
+                    }
+
+                if (requests.isEmpty()) {
+                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_no_identifiers)))
+                    return@launch
+                }
+
+                val response = skipMeApiService.backfill(requests)
+                if (response.isSuccessful) {
+                    val updated = response.body()?.updated ?: 0
+                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_success, updated)))
+                } else {
+                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_http, response.code())))
+                }
+            } catch (e: Exception) {
+                Log.e("SeriesViewModel", "Error submitting metadata", e)
+                val message = e.message ?: ""
+                _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_generic, message)))
+            } finally {
+                _uiState.update { (it as? SeriesUiState.Success)?.copy(isSubmittingMetadata = false) ?: it }
             }
         }
     }

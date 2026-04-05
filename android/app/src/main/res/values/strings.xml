@@ -64,12 +64,6 @@
 
     <string name="settings_disable_skipme_segments">Hide SkipMe.db Segments</string>
     <string name="settings_disable_skipme_segments_subtitle">Filter segments provided by SkipMe.db</string>
-    <string name="settings_submit_metadata">Submit Metadata to SkipMe.db</string>
-    <string name="settings_submit_metadata_subtitle">Backfill missing identifier fields for SkipMe.db submissions</string>
-    <string name="settings_submit_metadata_dialog_title">Select Series or Movie</string>
-    <string name="settings_submit_metadata_loading">Loading media…</string>
-    <string name="settings_submit_metadata_empty">No series or movies found</string>
-    <string name="settings_submit_metadata_submitting">Submitting metadata…</string>
     <string name="backfill_success">Updated %1$d records in SkipMe.db</string>
     <string name="backfill_failed_http">SkipMe.db backfill failed (HTTP %1$d)</string>
     <string name="backfill_failed_generic">Failed to submit metadata: %1$s</string>
@@ -101,6 +95,7 @@
     <string name="settings_section_admin">SkipMe.db</string>
 
     <string name="settings_section_codecs">Compatible Codecs</string>
+    <string name="settings_codecs_subtitle">View device supported video and audio codecs</string>
     <string name="settings_video_codecs">Video Codecs</string>
     <string name="settings_audio_codecs">Audio Codecs</string>
 
@@ -201,6 +196,7 @@
     <string name="series_episodes_error_load">Failed to load episodes</string>
     <string name="series_total_episodes">%1$d episodes</string>
     <string name="series_entire_show">All Seasons</string>
+    <string name="series_submit_metadata">Metadata Only</string>
 
     <!-- Episode Card -->
     <string name="episode_duration_minutes">%1$d min</string>
