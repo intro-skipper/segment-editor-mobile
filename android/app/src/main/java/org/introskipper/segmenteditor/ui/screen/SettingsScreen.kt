@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -36,6 +37,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -373,7 +375,7 @@ fun SettingsScreen(
     }
     
     if (uiState.showBackfillDialog) {
-        BackfillMediaDialog(
+        BackfillMediaSheet(
             mediaItems = uiState.mediaForBackfill,
             isLoading = uiState.isLoadingMediaForBackfill,
             onItemSelected = { viewModel.submitMetadataForItem(it) },
@@ -406,115 +408,124 @@ fun SettingsScreen(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun BackfillMediaDialog(
+fun BackfillMediaSheet(
     mediaItems: List<MediaInfo>,
     isLoading: Boolean,
     onItemSelected: (MediaInfo) -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(translatedString(R.string.settings_submit_metadata_dialog_title)) },
-        text = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(360.dp)
-            ) {
-                when {
-                    isLoading -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                CircularProgressIndicator()
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = translatedString(R.string.settings_submit_metadata_loading),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                        }
-                    }
-                    mediaItems.isEmpty() -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+        ) {
+            Text(
+                text = translatedString(R.string.settings_submit_metadata_dialog_title),
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            when {
+                isLoading -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator()
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = translatedString(R.string.settings_submit_metadata_empty),
+                                text = translatedString(R.string.settings_submit_metadata_loading),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
                     }
-                    else -> {
-                        val grouped = mediaItems.groupBy { it.libraryName }
-                        LazyColumn {
-                            grouped.forEach { (libraryName, items) ->
-                                if (libraryName.isNotEmpty()) {
-                                    stickyHeader(key = "header_$libraryName") {
-                                        Text(
-                                            text = libraryName,
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary,
+                }
+                mediaItems.isEmpty() -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = translatedString(R.string.settings_submit_metadata_empty),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+                else -> {
+                    val grouped = mediaItems.groupBy { it.libraryName }
+                    LazyColumn {
+                        grouped.forEach { (libraryName, items) ->
+                            if (libraryName.isNotEmpty()) {
+                                stickyHeader(key = "header_$libraryName") {
+                                    Text(
+                                        text = libraryName,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(MaterialTheme.colorScheme.surface)
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                            items(items, key = { it.id }) { item ->
+                                TextButton(
+                                    onClick = { onItemSelected(item) },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Box(
                                             modifier = Modifier
-                                                .fillMaxWidth()
-                                                .background(MaterialTheme.colorScheme.surface)
-                                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                                .size(width = 48.dp, height = 72.dp)
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                        ) {
+                                            if (item.imageUrl != null) {
+                                                AsyncImage(
+                                                    model = item.imageUrl,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    contentScale = ContentScale.Crop
+                                                )
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(
+                                            text = item.name,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            modifier = Modifier.weight(1f)
                                         )
                                     }
                                 }
-                                items(items, key = { it.id }) { item ->
-                                    TextButton(
-                                        onClick = { onItemSelected(item) },
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(width = 48.dp, height = 72.dp)
-                                                    .clip(RoundedCornerShape(4.dp))
-                                                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                                            ) {
-                                                if (item.imageUrl != null) {
-                                                    AsyncImage(
-                                                        model = item.imageUrl,
-                                                        contentDescription = null,
-                                                        modifier = Modifier.fillMaxSize(),
-                                                        contentScale = ContentScale.Crop
-                                                    )
-                                                }
-                                            }
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Text(
-                                                text = item.name,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                modifier = Modifier.weight(1f)
-                                            )
-                                        }
-                                    }
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                                }
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                             }
                         }
                     }
                 }
             }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Text(translatedString(R.string.cancel))
             }
+            Spacer(modifier = Modifier.height(16.dp))
         }
-    )
+    }
 }
 
 @Composable
