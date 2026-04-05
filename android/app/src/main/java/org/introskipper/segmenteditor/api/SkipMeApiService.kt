@@ -7,7 +7,6 @@ package org.introskipper.segmenteditor.api
 
 import okhttp3.OkHttpClient
 import org.introskipper.segmenteditor.data.model.SkipMeCollectionSubmitResponse
-import org.introskipper.segmenteditor.data.model.SkipMeMergeResponse
 import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
 import org.introskipper.segmenteditor.data.model.SkipMeSubmitResponse
 import retrofit2.Response
@@ -29,9 +28,5 @@ class SkipMeApiService(baseUrl: String, httpClient: OkHttpClient) {
 
     suspend fun submitCollection(requests: List<SkipMeSubmitRequest>): Response<SkipMeCollectionSubmitResponse> {
         return api.submitCollection(requests)
-    }
-
-    suspend fun mergeRecords(): Response<SkipMeMergeResponse> {
-        return api.mergeRecords()
     }
 }

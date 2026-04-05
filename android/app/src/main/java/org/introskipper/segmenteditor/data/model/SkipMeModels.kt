@@ -74,13 +74,3 @@ data class SkipMeCollectionSubmitResponse(
     @SerializedName("submitted")
     val submitted: Int = 0
 )
-
-/**
- * Response body for POST /v1/admin/merge-records.
- */
-data class SkipMeMergeResponse(
-    @SerializedName("ok")
-    val ok: Boolean,
-    @SerializedName("merged")
-    val merged: Int = 0
-)
