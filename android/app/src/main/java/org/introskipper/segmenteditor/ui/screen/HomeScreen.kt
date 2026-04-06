@@ -9,12 +9,14 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -22,6 +24,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -198,14 +201,58 @@ fun HomeScreen(
                         }
                     }
                     is HomeUiState.Success -> {
+                        var showShareDialog by remember { mutableStateOf(false) }
+                        var selectedItem by remember { mutableStateOf<JellyfinMediaItem?>(null) }
+
                         MediaGrid(
                             items = state.items,
                             onItemClick = navigateToMedia,
                             onItemLongClick = { item ->
-                                viewModel.submitMetadata(item)
+                                selectedItem = item
+                                showShareDialog = true
                             },
+                            submittingItemId = state.submittingItemId,
                             modifier = Modifier.weight(1f)
                         )
+
+                        if (showShareDialog && selectedItem != null) {
+                            AlertDialog(
+                                onDismissRequest = { showShareDialog = false },
+                                title = { Text(translatedString(R.string.share_selection_title)) },
+                                text = {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text(
+                                            text = selectedItem?.name ?: "",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            modifier = Modifier.padding(bottom = 8.dp)
+                                        )
+                                        Button(
+                                            onClick = {
+                                                viewModel.shareSegments(selectedItem!!)
+                                                showShareDialog = false
+                                            },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text(translatedString(R.string.share_segments))
+                                        }
+                                        Button(
+                                            onClick = {
+                                                viewModel.submitMetadata(selectedItem!!)
+                                                showShareDialog = false
+                                            },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text(translatedString(R.string.share_metadata))
+                                        }
+                                    }
+                                },
+                                confirmButton = {
+                                    TextButton(onClick = { showShareDialog = false }) {
+                                        Text(translatedString(R.string.cancel))
+                                    }
+                                }
+                            )
+                        }
 
                         // Pagination controls - only show navigation when not displaying all items
                         Column(

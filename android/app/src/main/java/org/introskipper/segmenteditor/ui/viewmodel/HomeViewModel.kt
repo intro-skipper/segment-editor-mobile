@@ -22,12 +22,16 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.R
+import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.api.SkipMeApiService
 import org.introskipper.segmenteditor.data.model.JellyfinMediaItem
+import org.introskipper.segmenteditor.data.model.SegmentType
 import org.introskipper.segmenteditor.data.model.SkipMeBackfillRequest
+import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
 import org.introskipper.segmenteditor.data.model.toJellyfinMediaItem
 import org.introskipper.segmenteditor.data.repository.JellyfinRepository
 import org.introskipper.segmenteditor.data.repository.MediaRepository
+import org.introskipper.segmenteditor.data.repository.SegmentRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.util.UiText
 import javax.inject.Inject
@@ -37,6 +41,7 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val jellyfinRepository: JellyfinRepository,
     private val mediaRepository: MediaRepository,
+    private val segmentRepository: SegmentRepository,
     private val securePreferences: SecurePreferences,
     private val skipMeApiService: SkipMeApiService
 ) : ViewModel() {
@@ -250,6 +255,37 @@ class HomeViewModel @Inject constructor(
                             }
                         }
                     }
+                    "Season" -> {
+                        val season = jellyfinRepository.getMediaItem(item.id)
+                        val seriesId = season.seriesId ?: return@launch
+                        val series = jellyfinRepository.getMediaItem(seriesId)
+                        val episodes = mediaRepository.getEpisodes(
+                            seriesId = seriesId,
+                            userId = userId,
+                            seasonId = item.id,
+                            fields = listOf("ProviderIds", "ParentIndexNumber", "IndexNumber")
+                        )
+                        if (episodes.isSuccessful) {
+                            val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
+                            val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
+                            val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
+                            val seasonTvdbId = season.providerIds?.get("Tvdb")?.toIntOrNull()
+
+                            episodes.body()?.items?.forEach { episode ->
+                                requests.add(
+                                    SkipMeBackfillRequest(
+                                        tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull(),
+                                        tmdbId = seriesTmdbId,
+                                        tvdbSeasonId = seasonTvdbId,
+                                        tvdbSeriesId = seriesTvdbId,
+                                        aniListId = seriesAniListId,
+                                        season = episode.parentIndexNumber,
+                                        episode = episode.indexNumber
+                                    )
+                                )
+                            }
+                        }
+                    }
                     "Movie" -> {
                         val movie = jellyfinRepository.getMediaItem(item.id)
                         requests.add(
@@ -275,6 +311,172 @@ class HomeViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e("HomeViewModel", "Error submitting metadata", e)
                 _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_generic, e.message ?: "")))
+            } finally {
+                _uiState.update { (it as? HomeUiState.Success)?.copy(submittingItemId = null) ?: it }
+            }
+        }
+    }
+
+    fun shareSegments(item: JellyfinMediaItem) {
+        viewModelScope.launch {
+            val currentState = _uiState.value as? HomeUiState.Success ?: return@launch
+            _uiState.update { currentState.copy(submittingItemId = item.id) }
+            
+            try {
+                val userId = securePreferences.getUserId() ?: return@launch
+                val uniqueRequests = mutableSetOf<SkipMeSubmitRequest>()
+
+                when (item.type) {
+                    "Series" -> {
+                        // Load full series info to get episodes
+                        val series = jellyfinRepository.getMediaItem(item.id)
+                        val episodesResponse = mediaRepository.getEpisodes(
+                            seriesId = item.id,
+                            userId = userId,
+                            fields = JellyfinApiService.EPISODE_FIELDS
+                        )
+
+                        if (episodesResponse.isSuccessful) {
+                            val episodes = episodesResponse.body()?.items ?: emptyList()
+                            
+                            val seasonsResponse = mediaRepository.getSeasons(item.id, userId, fields = listOf("ProviderIds"))
+                            val seasonTvdbIds = seasonsResponse.body()?.items?.associate { it.id to it.providerIds?.get("Tvdb")?.toIntOrNull() } ?: emptyMap()
+
+                            val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
+                            val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
+                            val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
+
+                            for (episode in episodes) {
+                                if ((episode.parentIndexNumber ?: 0) == 0) continue
+                                
+                                val segmentResult = segmentRepository.getSegmentsResult(episode.id)
+                                val segments = segmentResult.getOrNull() ?: continue
+                                
+                                val tvdbEpisodeId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+                                val tvdbSeasonId = seasonTvdbIds[episode.seasonId ?: ""]
+                                val durationMs = episode.runTimeTicks?.div(10_000)
+
+                                if ((seriesTmdbId != null || seriesTvdbId != null || seriesAniListId != null) && durationMs != null && durationMs > 0) {
+                                    segments.forEach { segment ->
+                                        val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType() ?: return@forEach
+                                        val startMs = segment.startTicks / 10_000
+                                        val endMs = segment.endTicks / 10_000
+                                        if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
+                                            uniqueRequests.add(
+                                                SkipMeSubmitRequest(
+                                                    tmdbId = seriesTmdbId,
+                                                    tvdbSeriesId = seriesTvdbId,
+                                                    tvdbSeasonId = tvdbSeasonId,
+                                                    tvdbId = tvdbEpisodeId,
+                                                    aniListId = seriesAniListId,
+                                                    segment = skipMeType,
+                                                    season = episode.parentIndexNumber,
+                                                    episode = episode.indexNumber,
+                                                    durationMs = durationMs,
+                                                    startMs = startMs,
+                                                    endMs = endMs
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    "Season" -> {
+                        val season = jellyfinRepository.getMediaItem(item.id)
+                        val seriesId = season.seriesId ?: return@launch
+                        val series = jellyfinRepository.getMediaItem(seriesId)
+                        val episodesResponse = mediaRepository.getEpisodes(
+                            seriesId = seriesId,
+                            userId = userId,
+                            seasonId = item.id,
+                            fields = JellyfinApiService.EPISODE_FIELDS
+                        )
+                        if (episodesResponse.isSuccessful) {
+                            val episodes = episodesResponse.body()?.items ?: emptyList()
+                            val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
+                            val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
+                            val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
+                            val seasonTvdbId = season.providerIds?.get("Tvdb")?.toIntOrNull()
+
+                            for (episode in episodes) {
+                                val segmentResult = segmentRepository.getSegmentsResult(episode.id)
+                                val segments = segmentResult.getOrNull() ?: continue
+                                val tvdbEpisodeId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+                                val durationMs = episode.runTimeTicks?.div(10_000)
+
+                                if ((seriesTmdbId != null || seriesTvdbId != null || seriesAniListId != null) && durationMs != null && durationMs > 0) {
+                                    segments.forEach { segment ->
+                                        val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType() ?: return@forEach
+                                        val startMs = segment.startTicks / 10_000
+                                        val endMs = segment.endTicks / 10_000
+                                        if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
+                                            uniqueRequests.add(
+                                                SkipMeSubmitRequest(
+                                                    tmdbId = seriesTmdbId,
+                                                    tvdbSeriesId = seriesTvdbId,
+                                                    tvdbSeasonId = seasonTvdbId,
+                                                    tvdbId = tvdbEpisodeId,
+                                                    aniListId = seriesAniListId,
+                                                    segment = skipMeType,
+                                                    season = episode.parentIndexNumber,
+                                                    episode = episode.indexNumber,
+                                                    durationMs = durationMs,
+                                                    startMs = startMs,
+                                                    endMs = endMs
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    "Movie" -> {
+                        val movie = jellyfinRepository.getMediaItem(item.id)
+                        val segmentResult = segmentRepository.getSegmentsResult(item.id)
+                        val segments = segmentResult.getOrNull() ?: emptyList()
+                        
+                        val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull()
+                        val durationMs = movie.runTimeTicks?.div(10_000)
+                        
+                        if (tmdbId != null && durationMs != null && durationMs > 0) {
+                            segments.forEach { segment ->
+                                val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType() ?: return@forEach
+                                val startMs = segment.startTicks / 10_000
+                                val endMs = segment.endTicks / 10_000
+                                if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
+                                    uniqueRequests.add(
+                                        SkipMeSubmitRequest(
+                                            tmdbId = tmdbId,
+                                            segment = skipMeType,
+                                            durationMs = durationMs,
+                                            startMs = startMs,
+                                            endMs = endMs
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (uniqueRequests.isEmpty()) {
+                    _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
+                    return@launch
+                }
+
+                val response = skipMeApiService.submitCollection(uniqueRequests.toList())
+                if (response.isSuccessful) {
+                    val count = response.body()?.submitted ?: 0
+                    _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_success_collection, count)))
+                } else {
+                    _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_failed_http, response.code())))
+                }
+            } catch (e: Exception) {
+                Log.e("HomeViewModel", "Error sharing segments", e)
+                _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_failed_collection_generic, e.message ?: "")))
             } finally {
                 _uiState.update { (it as? HomeUiState.Success)?.copy(submittingItemId = null) ?: it }
             }

@@ -55,7 +55,9 @@ data class JellyfinMediaItem(
     val runTimeTicks: Long?,
     val officialRating: String?,
     val type: String?,
-    val isFolder: Boolean = false
+    val isFolder: Boolean = false,
+    val seriesId: String? = null,
+    val seasonId: String? = null
 )
 
 /**
@@ -77,6 +79,8 @@ fun MediaItem.toJellyfinMediaItem(serverUrl: String): JellyfinMediaItem {
         runTimeTicks = runTimeTicks,
         officialRating = null, // Would need to be fetched from additional fields
         type = type,
-        isFolder = isFolder
+        isFolder = isFolder,
+        seriesId = seriesId,
+        seasonId = seasonId
     )
 }

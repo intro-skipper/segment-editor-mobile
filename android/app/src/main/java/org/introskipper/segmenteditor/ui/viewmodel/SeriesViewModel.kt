@@ -23,6 +23,7 @@ import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.api.SkipMeApiService
 import org.introskipper.segmenteditor.data.model.filterSkipMe
 import org.introskipper.segmenteditor.data.model.SegmentType
+import org.introskipper.segmenteditor.data.model.SkipMeBackfillRequest
 import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
@@ -99,10 +100,14 @@ class SeriesViewModel @Inject constructor(
 
                 // Load seasons to get their provider IDs (TVDB IDs)
                 val seasonsResult = mediaRepository.getSeasons(seriesId, userId, fields = listOf("ProviderIds"))
-                val seasonTvdbIds = if (seasonsResult.isSuccessful) {
-                    seasonsResult.body()?.items?.associate { it.id to it.providerIds?.get("Tvdb")?.toIntOrNull() } ?: emptyMap()
-                } else {
-                    emptyMap()
+                val seasonTvdbIds = mutableMapOf<String, Int?>()
+                val seasonIdsByNumber = mutableMapOf<Int, String>()
+                
+                if (seasonsResult.isSuccessful) {
+                    seasonsResult.body()?.items?.forEach { season ->
+                        seasonTvdbIds[season.id] = season.providerIds?.get("Tvdb")?.toIntOrNull()
+                        season.indexNumber?.let { num -> seasonIdsByNumber[num] = season.id }
+                    }
                 }
 
                 // Group episodes by season
@@ -125,6 +130,7 @@ class SeriesViewModel @Inject constructor(
                     episodesBySeason = episodesBySeason,
                     seasonNames = seasonNames,
                     seasonTvdbIds = seasonTvdbIds,
+                    seasonIdsByNumber = seasonIdsByNumber,
                     isLoadingSegments = true
                 )
 
@@ -185,8 +191,10 @@ class SeriesViewModel @Inject constructor(
         if (currentState !is SeriesUiState.Success) return
 
         val episodes = currentState.episodesBySeason[seasonNumber] ?: return
-        val regularSeasonCount = currentState.episodesBySeason.keys.count { it != 0 }
-        shareEpisodes(episodes, hideAfterSuccess = regularSeasonCount <= 1)
+        _uiState.update { currentState.copy(isSharing = true, submittingSeasonNumber = seasonNumber) }
+        shareEpisodes(episodes, hideAfterSuccess = false) {
+             _uiState.update { (it as? SeriesUiState.Success)?.copy(isSharing = false, submittingSeasonNumber = null) ?: it }
+        }
     }
 
     /**
@@ -201,13 +209,19 @@ class SeriesViewModel @Inject constructor(
             .values
             .flatten()
         
-        shareEpisodes(allEpisodes, hideAfterSuccess = true)
+        _uiState.update { currentState.copy(isSharing = true) }
+        shareEpisodes(allEpisodes, hideAfterSuccess = true) {
+             _uiState.update { (it as? SeriesUiState.Success)?.copy(isSharing = false) ?: it }
+        }
     }
 
-    private fun shareEpisodes(episodes: List<EpisodeWithSegments>, hideAfterSuccess: Boolean) {
+    private fun shareEpisodes(
+        episodes: List<EpisodeWithSegments>, 
+        hideAfterSuccess: Boolean,
+        onComplete: () -> Unit
+    ) {
         viewModelScope.launch {
-            val currentState = _uiState.value as? SeriesUiState.Success ?: return@launch
-            _uiState.update { currentState.copy(isSharing = true) }
+            val currentState = _uiState.value as? SeriesUiState.Success ?: run { onComplete(); return@launch }
             
             try {
                 // Use a Set to avoid submitting duplicate requests (identical timestamps/metadata)
@@ -232,7 +246,6 @@ class SeriesViewModel @Inject constructor(
                             val startMs = segment.startTicks / 10_000
                             val endMs = segment.endTicks / 10_000
                             if (startMs < 0 || endMs <= startMs || endMs > durationMs) {
-                                Log.w("SeriesViewModel", "Skipping invalid segment for episode ${episode.id}: startMs=$startMs endMs=$endMs durationMs=$durationMs")
                                 return@forEach
                             }
 
@@ -257,7 +270,6 @@ class SeriesViewModel @Inject constructor(
 
                 if (uniqueRequests.isEmpty()) {
                     _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
-                    _uiState.update { (it as SeriesUiState.Success).copy(isSharing = false) }
                     return@launch
                 }
 
@@ -275,6 +287,102 @@ class SeriesViewModel @Inject constructor(
                 Log.e("SeriesViewModel", "Error sharing segments", e)
                 val message = e.message ?: "Unknown error"
                 _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_failed_collection_generic, message)))
+            } finally {
+                onComplete()
+            }
+        }
+    }
+
+    fun submitSeasonMetadata(seasonNumber: Int) {
+        viewModelScope.launch {
+            val currentState = _uiState.value as? SeriesUiState.Success ?: return@launch
+            val episodes = currentState.episodesBySeason[seasonNumber] ?: return@launch
+            
+            _uiState.update { currentState.copy(submittingSeasonNumber = seasonNumber) }
+            try {
+                val requests = mutableListOf<SkipMeBackfillRequest>()
+                val seriesTmdbId = currentState.series.providerIds?.get("Tmdb")?.toIntOrNull()
+                val seriesTvdbId = currentState.series.providerIds?.get("Tvdb")?.toIntOrNull()
+                val seriesAniListId = currentState.series.providerIds?.get("AniList")?.toIntOrNull()
+
+                episodes.forEach { episodeWithSegments ->
+                    val episode = episodeWithSegments.episode
+                    requests.add(
+                        SkipMeBackfillRequest(
+                            tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull(),
+                            tmdbId = seriesTmdbId,
+                            tvdbSeasonId = currentState.seasonTvdbIds[episode.seasonId ?: ""],
+                            tvdbSeriesId = seriesTvdbId,
+                            aniListId = seriesAniListId,
+                            season = episode.parentIndexNumber,
+                            episode = episode.indexNumber
+                        )
+                    )
+                }
+
+                if (requests.isEmpty()) {
+                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_no_identifiers)))
+                    return@launch
+                }
+
+                val response = skipMeApiService.backfill(requests)
+                if (response.isSuccessful) {
+                    val updated = response.body()?.updated ?: 0
+                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_success, updated)))
+                } else {
+                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_http, response.code())))
+                }
+            } catch (e: Exception) {
+                Log.e("SeriesViewModel", "Error submitting metadata", e)
+                _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_generic, e.message ?: "")))
+            } finally {
+                _uiState.update { (it as? SeriesUiState.Success)?.copy(submittingSeasonNumber = null) ?: it }
+            }
+        }
+    }
+
+    fun submitSeriesMetadata() {
+        viewModelScope.launch {
+            val currentState = _uiState.value as? SeriesUiState.Success ?: return@launch
+            _uiState.update { currentState.copy(isSharing = true) }
+            try {
+                val requests = mutableListOf<SkipMeBackfillRequest>()
+                val seriesTmdbId = currentState.series.providerIds?.get("Tmdb")?.toIntOrNull()
+                val seriesTvdbId = currentState.series.providerIds?.get("Tvdb")?.toIntOrNull()
+                val seriesAniListId = currentState.series.providerIds?.get("AniList")?.toIntOrNull()
+
+                currentState.episodesBySeason.values.flatten().forEach { episodeWithSegments ->
+                    val episode = episodeWithSegments.episode
+                    if ((episode.parentIndexNumber ?: 0) == 0) return@forEach
+                    
+                    requests.add(
+                        SkipMeBackfillRequest(
+                            tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull(),
+                            tmdbId = seriesTmdbId,
+                            tvdbSeasonId = currentState.seasonTvdbIds[episode.seasonId ?: ""],
+                            tvdbSeriesId = seriesTvdbId,
+                            aniListId = seriesAniListId,
+                            season = episode.parentIndexNumber,
+                            episode = episode.indexNumber
+                        )
+                    )
+                }
+
+                if (requests.isEmpty()) {
+                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_no_identifiers)))
+                    return@launch
+                }
+
+                val response = skipMeApiService.backfill(requests)
+                if (response.isSuccessful) {
+                    val updated = response.body()?.updated ?: 0
+                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_success, updated)))
+                } else {
+                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_http, response.code())))
+                }
+            } catch (e: Exception) {
+                Log.e("SeriesViewModel", "Error submitting metadata", e)
+                _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_generic, e.message ?: "")))
             } finally {
                 _uiState.update { (it as? SeriesUiState.Success)?.copy(isSharing = false) ?: it }
             }

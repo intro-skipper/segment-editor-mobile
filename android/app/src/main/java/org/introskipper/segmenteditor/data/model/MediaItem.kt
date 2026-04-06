@@ -15,6 +15,7 @@ enum class MediaItemType(val typeName: String) {
     EPISODE("Episode"),
     MOVIE("Movie"),
     SERIES("Series"),
+    SEASON("Season"),
     UNKNOWN("");
 
     companion object {
@@ -154,7 +155,7 @@ data class MediaItem(
                     name ?: "Unknown"
                 }
             }
-            MediaItemType.MOVIE, MediaItemType.SERIES, MediaItemType.UNKNOWN -> name ?: "Unknown"
+            MediaItemType.MOVIE, MediaItemType.SERIES, MediaItemType.SEASON, MediaItemType.UNKNOWN -> name ?: "Unknown"
         }
     }
 }

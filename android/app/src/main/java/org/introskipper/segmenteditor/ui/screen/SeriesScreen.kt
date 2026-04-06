@@ -6,9 +6,12 @@
 package org.introskipper.segmenteditor.ui.screen
 
 import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -35,6 +39,7 @@ import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -66,7 +71,7 @@ import org.introskipper.segmenteditor.ui.theme.SegmentEditorTheme
 import org.introskipper.segmenteditor.ui.util.getDominantColor
 import org.introskipper.segmenteditor.ui.viewmodel.SeriesViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SeriesScreen(
     seriesId: String,
@@ -181,17 +186,6 @@ fun SeriesScreen(
                                     onClick = {
                                         showShareMenu = false
                                         viewModel.shareSeasonSegments(seasonNumber)
-                                    }
-                                )
-                            }
-                            if (seasonsToShare.size > 1) {
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(state.series.name ?: translatedString(R.string.series_entire_show))
-                                    },
-                                    onClick = {
-                                        showShareMenu = false
-                                        viewModel.shareEntireSeries()
                                     }
                                 )
                             }
@@ -322,18 +316,75 @@ fun SeriesScreen(
                                     contentColor = MaterialTheme.colorScheme.primary
                                 ) {
                                     sortedSeasons.forEachIndexed { index, seasonNumber ->
+                                        var showSeasonShareDialog by remember { mutableStateOf(false) }
+
                                         Tab(
                                             selected = selectedSeasonIndex == index,
                                             onClick = { selectedSeasonIndex = index },
+                                            modifier = Modifier.combinedClickable(
+                                                onClick = { selectedSeasonIndex = index },
+                                                onLongClick = { 
+                                                    selectedSeasonIndex = index
+                                                    showSeasonShareDialog = true 
+                                                }
+                                            ),
                                             text = { 
-                                                Text(
-                                                    text = state.seasonNames[seasonNumber] ?: translatedString(R.string.series_season_format, seasonNumber),
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    color = if (selectedSeasonIndex == index) 
-                                                        MaterialTheme.colorScheme.primary 
-                                                    else 
-                                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                                ) 
+                                                Box {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Text(
+                                                            text = state.seasonNames[seasonNumber] ?: translatedString(R.string.series_season_format, seasonNumber),
+                                                            style = MaterialTheme.typography.titleMedium,
+                                                            color = if (selectedSeasonIndex == index) 
+                                                                MaterialTheme.colorScheme.primary 
+                                                            else 
+                                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                        if (state.submittingSeasonNumber == seasonNumber) {
+                                                            Spacer(modifier = Modifier.size(8.dp))
+                                                            CircularProgressIndicator(
+                                                                modifier = Modifier.size(12.dp),
+                                                                strokeWidth = 2.dp,
+                                                                color = MaterialTheme.colorScheme.primary
+                                                            )
+                                                        }
+                                                    }
+
+                                                    if (showSeasonShareDialog) {
+                                                        AlertDialog(
+                                                            onDismissRequest = { showSeasonShareDialog = false },
+                                                            title = { Text(translatedString(R.string.share_selection_title)) },
+                                                            text = { Text(state.seasonNames[seasonNumber] ?: translatedString(R.string.series_season_format, seasonNumber)) },
+                                                            confirmButton = {
+                                                                Row(
+                                                                    modifier = Modifier.fillMaxWidth(),
+                                                                    horizontalArrangement = Arrangement.End
+                                                                ) {
+                                                                    TextButton(
+                                                                        onClick = {
+                                                                            viewModel.shareSeasonSegments(seasonNumber)
+                                                                            showSeasonShareDialog = false
+                                                                        }
+                                                                    ) {
+                                                                        Text(translatedString(R.string.share_segments))
+                                                                    }
+                                                                    TextButton(
+                                                                        onClick = {
+                                                                            viewModel.submitSeasonMetadata(seasonNumber)
+                                                                            showSeasonShareDialog = false
+                                                                        }
+                                                                    ) {
+                                                                        Text(translatedString(R.string.share_metadata))
+                                                                    }
+                                                                }
+                                                            },
+                                                            dismissButton = {
+                                                                TextButton(onClick = { showSeasonShareDialog = false }) {
+                                                                    Text(translatedString(R.string.cancel))
+                                                                }
+                                                            }
+                                                        )
+                                                    }
+                                                }
                                             }
                                         )
                                     }
@@ -367,18 +418,75 @@ fun SeriesScreen(
                                 ) {
                                     // Single season header
                                     item {
+                                        var showSeasonShareDialog by remember { mutableStateOf(false) }
+                                        val seasonNumber = selectedSeasonNumber ?: 1
+
                                         Surface(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(vertical = 8.dp),
+                                                .padding(vertical = 8.dp)
+                                                .combinedClickable(
+                                                    onClick = { },
+                                                    onLongClick = { showSeasonShareDialog = true }
+                                                ),
                                             color = MaterialTheme.colorScheme.secondaryContainer
                                         ) {
-                                            Text(
-                                                text = state.seasonNames[selectedSeasonNumber] ?: translatedString(R.string.series_season_format, selectedSeasonNumber ?: 1),
-                                                style = MaterialTheme.typography.titleMedium,
-                                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                modifier = Modifier.padding(12.dp)
-                                            )
+                                            Box {
+                                                Row(
+                                                    modifier = Modifier.padding(12.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        text = state.seasonNames[selectedSeasonNumber] ?: translatedString(R.string.series_season_format, seasonNumber),
+                                                        style = MaterialTheme.typography.titleMedium,
+                                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                        modifier = Modifier.weight(1f)
+                                                    )
+                                                    if (state.submittingSeasonNumber == seasonNumber) {
+                                                        CircularProgressIndicator(
+                                                            modifier = Modifier.size(16.dp),
+                                                            strokeWidth = 2.dp,
+                                                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                                                        )
+                                                    }
+                                                }
+
+                                                if (showSeasonShareDialog) {
+                                                    AlertDialog(
+                                                        onDismissRequest = { showSeasonShareDialog = false },
+                                                        title = { Text(translatedString(R.string.share_selection_title)) },
+                                                        text = { Text(state.seasonNames[selectedSeasonNumber] ?: translatedString(R.string.series_season_format, seasonNumber)) },
+                                                        confirmButton = {
+                                                            Row(
+                                                                modifier = Modifier.fillMaxWidth(),
+                                                                horizontalArrangement = Arrangement.End
+                                                            ) {
+                                                                TextButton(
+                                                                    onClick = {
+                                                                        viewModel.shareSeasonSegments(seasonNumber)
+                                                                        showSeasonShareDialog = false
+                                                                    }
+                                                                ) {
+                                                                    Text(translatedString(R.string.share_segments))
+                                                                }
+                                                                TextButton(
+                                                                    onClick = {
+                                                                        viewModel.submitSeasonMetadata(seasonNumber)
+                                                                        showSeasonShareDialog = false
+                                                                    }
+                                                                ) {
+                                                                    Text(translatedString(R.string.share_metadata))
+                                                                }
+                                                            }
+                                                        },
+                                                        dismissButton = {
+                                                            TextButton(onClick = { showSeasonShareDialog = false }) {
+                                                                Text(translatedString(R.string.cancel))
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                     

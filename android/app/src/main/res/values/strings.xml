@@ -306,4 +306,7 @@
     <string name="share_no_segments_found">No valid segments found to share</string>
     <string name="share_success_collection">Shared %1$d segments with SkipMe.db</string>
     <string name="share_failed_collection_generic">Error sharing collection: %1$s</string>
+    <string name="share_segments">Segments</string>
+    <string name="share_metadata">Metadata</string>
+    <string name="share_selection_title">Share with SkipMe.db</string>
 </resources>

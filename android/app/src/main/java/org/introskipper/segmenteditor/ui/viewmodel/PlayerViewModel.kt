@@ -136,7 +136,7 @@ class PlayerViewModel @Inject constructor(
                                     seriesTmdbId = mediaItem.providerIds?.get("Tmdb")?.toIntOrNull()
                                 )
                             }
-                            MediaItemType.SERIES, MediaItemType.UNKNOWN -> Log.w(TAG, "Unsupported media item type for sharing metadata: ${mediaItem.type}")
+                            MediaItemType.SEASON, MediaItemType.SERIES, MediaItemType.UNKNOWN -> Log.w(TAG, "Unsupported media item type for sharing metadata: ${mediaItem.type}")
                         }
                     },
                     onFailure = { error ->
