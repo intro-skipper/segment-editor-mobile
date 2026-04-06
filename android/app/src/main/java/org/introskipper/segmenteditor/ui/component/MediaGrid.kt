@@ -19,6 +19,8 @@ import org.introskipper.segmenteditor.data.model.JellyfinMediaItem
 fun MediaGrid(
     items: List<JellyfinMediaItem>,
     onItemClick: (JellyfinMediaItem) -> Unit,
+    onItemLongClick: ((JellyfinMediaItem) -> Unit)? = null,
+    submittingItemId: String? = null,
     modifier: Modifier = Modifier
 ) {
     LazyVerticalGrid(
@@ -31,7 +33,9 @@ fun MediaGrid(
         items(items) { item ->
             MediaCard(
                 item = item,
-                onClick = { onItemClick(item) }
+                onClick = { onItemClick(item) },
+                onLongClick = onItemLongClick?.let { { it(item) } },
+                isSubmitting = item.id == submittingItemId
             )
         }
     }

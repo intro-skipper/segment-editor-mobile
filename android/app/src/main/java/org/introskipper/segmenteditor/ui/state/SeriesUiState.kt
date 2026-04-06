@@ -18,8 +18,7 @@ sealed class SeriesUiState {
         val seasonTvdbIds: Map<String, Int?> = emptyMap(),
         val isSharing: Boolean = false,
         val isShared: Boolean = false,
-        val isLoadingSegments: Boolean = false,
-        val isSubmittingMetadata: Boolean = false
+        val isLoadingSegments: Boolean = false
     ) : SeriesUiState()
     data class Error(val message: UiText) : SeriesUiState()
 }

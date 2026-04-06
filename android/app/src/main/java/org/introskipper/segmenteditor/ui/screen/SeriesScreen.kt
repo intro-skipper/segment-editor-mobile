@@ -155,7 +155,7 @@ fun SeriesScreen(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ) {
-                            if (state.isSharing || state.isSubmittingMetadata) {
+                            if (state.isSharing) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(24.dp),
                                     strokeWidth = 2.dp,
@@ -195,15 +195,6 @@ fun SeriesScreen(
                                     }
                                 )
                             }
-                            DropdownMenuItem(
-                                text = {
-                                    Text(translatedString(R.string.series_submit_metadata))
-                                },
-                                onClick = {
-                                    showShareMenu = false
-                                    viewModel.submitMetadata()
-                                }
-                            )
                         }
                     }
                 }

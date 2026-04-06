@@ -5,6 +5,7 @@
 
 package org.introskipper.segmenteditor.ui.viewmodel
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -12,21 +13,32 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.introskipper.segmenteditor.R
+import org.introskipper.segmenteditor.api.SkipMeApiService
 import org.introskipper.segmenteditor.data.model.JellyfinMediaItem
+import org.introskipper.segmenteditor.data.model.SkipMeBackfillRequest
 import org.introskipper.segmenteditor.data.model.toJellyfinMediaItem
 import org.introskipper.segmenteditor.data.repository.JellyfinRepository
+import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
+import org.introskipper.segmenteditor.ui.util.UiText
 import javax.inject.Inject
 
 @OptIn(FlowPreview::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val jellyfinRepository: JellyfinRepository,
-    private val securePreferences: SecurePreferences
+    private val mediaRepository: MediaRepository,
+    private val securePreferences: SecurePreferences,
+    private val skipMeApiService: SkipMeApiService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
@@ -37,6 +49,9 @@ class HomeViewModel @Inject constructor(
 
     private val _showAllItems = MutableStateFlow(false)
     val showAllItems: StateFlow<Boolean> = _showAllItems
+
+    private val _events = MutableSharedFlow<HomeEvent>()
+    val events: SharedFlow<HomeEvent> = _events.asSharedFlow()
 
     private var currentLibraryId: String? = null
     private var currentCollectionType: String? = null
@@ -187,11 +202,97 @@ class HomeViewModel @Inject constructor(
             }
         }
     }
+
+    fun submitMetadata(item: JellyfinMediaItem) {
+        viewModelScope.launch {
+            val currentState = _uiState.value as? HomeUiState.Success ?: return@launch
+            _uiState.update { currentState.copy(submittingItemId = item.id) }
+            
+            try {
+                val userId = securePreferences.getUserId() ?: return@launch
+                val requests = mutableListOf<SkipMeBackfillRequest>()
+
+                when (item.type) {
+                    "Series" -> {
+                        // Load full series info to get episodes
+                        val series = jellyfinRepository.getMediaItem(item.id)
+                        val episodes = mediaRepository.getEpisodes(
+                            seriesId = item.id,
+                            userId = userId,
+                            fields = listOf("ProviderIds", "ParentIndexNumber", "IndexNumber")
+                        )
+
+                        if (episodes.isSuccessful) {
+                            val seasonTvdbIds = mutableMapOf<String, Int?>()
+                            val seasons = mediaRepository.getSeasons(item.id, userId, fields = listOf("ProviderIds"))
+                            if (seasons.isSuccessful) {
+                                seasons.body()?.items?.forEach { 
+                                    seasonTvdbIds[it.id] = it.providerIds?.get("Tvdb")?.toIntOrNull()
+                                }
+                            }
+
+                            val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
+                            val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
+                            val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
+
+                            episodes.body()?.items?.filter { (it.parentIndexNumber ?: 0) != 0 }?.forEach { episode ->
+                                requests.add(
+                                    SkipMeBackfillRequest(
+                                        tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull(),
+                                        tmdbId = seriesTmdbId,
+                                        tvdbSeasonId = seasonTvdbIds[episode.seasonId ?: ""],
+                                        tvdbSeriesId = seriesTvdbId,
+                                        aniListId = seriesAniListId,
+                                        season = episode.parentIndexNumber,
+                                        episode = episode.indexNumber
+                                    )
+                                )
+                            }
+                        }
+                    }
+                    "Movie" -> {
+                        val movie = jellyfinRepository.getMediaItem(item.id)
+                        requests.add(
+                            SkipMeBackfillRequest(
+                                tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull()
+                            )
+                        )
+                    }
+                }
+
+                if (requests.isEmpty()) {
+                    _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.backfill_no_identifiers)))
+                    return@launch
+                }
+
+                val response = skipMeApiService.backfill(requests)
+                if (response.isSuccessful) {
+                    val updated = response.body()?.updated ?: 0
+                    _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.backfill_success, updated)))
+                } else {
+                    _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_http, response.code())))
+                }
+            } catch (e: Exception) {
+                Log.e("HomeViewModel", "Error submitting metadata", e)
+                _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_generic, e.message ?: "")))
+            } finally {
+                _uiState.update { (it as? HomeUiState.Success)?.copy(submittingItemId = null) ?: it }
+            }
+        }
+    }
 }
 
 sealed class HomeUiState {
     object Loading : HomeUiState()
     object Empty : HomeUiState()
-    data class Success(val items: List<JellyfinMediaItem>, val totalItems: Int) : HomeUiState()
+    data class Success(
+        val items: List<JellyfinMediaItem>,
+        val totalItems: Int,
+        val submittingItemId: String? = null
+    ) : HomeUiState()
     data class Error(val message: String) : HomeUiState()
+}
+
+sealed class HomeEvent {
+    data class ShowToast(val message: UiText) : HomeEvent()
 }

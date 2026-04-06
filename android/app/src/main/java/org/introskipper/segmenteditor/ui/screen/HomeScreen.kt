@@ -5,6 +5,7 @@
 
 package org.introskipper.segmenteditor.ui.screen
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -49,6 +51,7 @@ import org.introskipper.segmenteditor.ui.component.WavyCircularProgressIndicator
 import org.introskipper.segmenteditor.ui.viewmodel.HomeUiState
 import org.introskipper.segmenteditor.ui.viewmodel.HomeViewModel
 import org.introskipper.segmenteditor.ui.component.translatedString
+import org.introskipper.segmenteditor.ui.viewmodel.HomeEvent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,6 +66,7 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val showAllItems by viewModel.showAllItems.collectAsState()
+    val context = LocalContext.current
     
     // Refresh data when screen resumes if settings might have changed
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -82,6 +86,16 @@ fun HomeScreen(
     // Load items for the selected library
     LaunchedEffect(libraryId, collectionType) {
         viewModel.setLibraryId(libraryId, collectionType)
+    }
+
+    LaunchedEffect(viewModel.events) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is HomeEvent.ShowToast -> {
+                    Toast.makeText(context, event.message.asString(context), Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     // Smart navigation based on media type.
@@ -187,6 +201,9 @@ fun HomeScreen(
                         MediaGrid(
                             items = state.items,
                             onItemClick = navigateToMedia,
+                            onItemLongClick = { item ->
+                                viewModel.submitMetadata(item)
+                            },
                             modifier = Modifier.weight(1f)
                         )
 
