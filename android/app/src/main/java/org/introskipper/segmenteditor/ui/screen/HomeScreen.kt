@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -218,14 +219,21 @@ fun HomeScreen(
                         if (showShareDialog && selectedItem != null) {
                             AlertDialog(
                                 onDismissRequest = { showShareDialog = false },
-                                title = { Text(translatedString(R.string.share_selection_title)) },
+                                icon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Share,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                },
+                                title = { 
+                                    Text(
+                                        text = selectedItem?.name ?: "",
+                                        style = MaterialTheme.typography.headlineSmall
+                                    )
+                                },
                                 text = {
                                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Text(
-                                            text = selectedItem?.name ?: "",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            modifier = Modifier.padding(bottom = 8.dp)
-                                        )
                                         Button(
                                             onClick = {
                                                 viewModel.shareSegments(selectedItem!!)
