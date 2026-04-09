@@ -451,7 +451,7 @@ class HomeViewModel @Inject constructor(
 
                         when {
                             submitted > 0 -> _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_success_collection, submitted)))
-                            firstFailCode != null -> _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_failed_http, firstFailCode!!)))
+                            firstFailCode != null -> _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_failed_http, firstFailCode)))
                             else -> _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
                         }
                     }
