@@ -277,7 +277,7 @@ class SeriesViewModel @Inject constructor(
                         tvdbSeriesId = seriesTvdbId,
                         tvdbSeasonId = key.tvdbSeasonId,
                         tmdbId = seriesTmdbId,
-                        aniListId = seriesAniListId,
+                        aniListId = if (key.seasonNumber == 1) seriesAniListId else null,
                         season = key.seasonNumber,
                         items = items.toList()
                     )
@@ -323,7 +323,7 @@ class SeriesViewModel @Inject constructor(
                             tmdbId = seriesTmdbId,
                             tvdbSeasonId = currentState.seasonTvdbIds[episode.seasonId ?: ""],
                             tvdbSeriesId = seriesTvdbId,
-                            aniListId = seriesAniListId,
+                            aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null,
                             season = episode.parentIndexNumber,
                             episode = episode.indexNumber
                         )
@@ -371,7 +371,7 @@ class SeriesViewModel @Inject constructor(
                             tmdbId = seriesTmdbId,
                             tvdbSeasonId = currentState.seasonTvdbIds[episode.seasonId ?: ""],
                             tvdbSeriesId = seriesTvdbId,
-                            aniListId = seriesAniListId,
+                            aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null,
                             season = episode.parentIndexNumber,
                             episode = episode.indexNumber
                         )
