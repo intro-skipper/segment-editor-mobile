@@ -66,9 +66,57 @@ data class SkipMeSubmission(
 )
 
 /**
- * Response body for POST /v1/submit/collection.
+ * Per-episode item for POST /v1/submit/season.
  */
-data class SkipMeCollectionSubmitResponse(
+data class SkipMeSeasonItem(
+    @SerializedName("tvdb_id")
+    val tvdbId: Int? = null,
+
+    @SerializedName("episode")
+    val episode: Int?,
+
+    @SerializedName("segment")
+    val segment: String,
+
+    @SerializedName("duration_ms")
+    val durationMs: Long,
+
+    @SerializedName("start_ms")
+    val startMs: Long,
+
+    @SerializedName("end_ms")
+    val endMs: Long
+)
+
+/**
+ * Request body for POST /v1/submit/season.
+ * Groups all episode timestamps for one season into a single request.
+ * At least one of [tmdbId], [tvdbSeriesId], or [aniListId] is required.
+ */
+data class SkipMeSeasonSubmitRequest(
+    @SerializedName("tvdb_series_id")
+    val tvdbSeriesId: Int? = null,
+
+    @SerializedName("tvdb_season_id")
+    val tvdbSeasonId: Int? = null,
+
+    @SerializedName("tmdb_id")
+    val tmdbId: Int? = null,
+
+    @SerializedName("anilist_id")
+    val aniListId: Int? = null,
+
+    @SerializedName("season")
+    val season: Int?,
+
+    @SerializedName("items")
+    val items: List<SkipMeSeasonItem>
+)
+
+/**
+ * Response body for POST /v1/submit/season.
+ */
+data class SkipMeSeasonSubmitResponse(
     @SerializedName("ok")
     val ok: Boolean,
     @SerializedName("submitted")
