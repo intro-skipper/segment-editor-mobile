@@ -250,7 +250,7 @@ class HomeViewModel @Inject constructor(
                                         tmdbId = seriesTmdbId,
                                         tvdbSeasonId = seasonTvdbIds[episode.seasonId ?: ""],
                                         tvdbSeriesId = seriesTvdbId,
-                                        aniListId = seriesAniListId,
+                                        aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null,
                                         season = episode.parentIndexNumber,
                                         episode = episode.indexNumber
                                     )
@@ -281,7 +281,7 @@ class HomeViewModel @Inject constructor(
                                         tmdbId = seriesTmdbId,
                                         tvdbSeasonId = seasonTvdbId,
                                         tvdbSeriesId = seriesTvdbId,
-                                        aniListId = seriesAniListId,
+                                        aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null,
                                         season = episode.parentIndexNumber,
                                         episode = episode.indexNumber
                                     )
@@ -513,7 +513,7 @@ class HomeViewModel @Inject constructor(
                 tvdbSeriesId = tvdbSeriesId,
                 tvdbSeasonId = key.tvdbSeasonId,
                 tmdbId = tmdbId,
-                aniListId = aniListId,
+                aniListId = if (key.seasonNumber == 1) aniListId else null,
                 season = key.seasonNumber,
                 items = items.toList()
             )

@@ -956,7 +956,7 @@ class PlayerViewModel @Inject constructor(
                 tvdbSeriesId = state.seriesTvdbId,
                 tvdbSeasonId = tvdbSeasonId,
                 tvdbId = tvdbId,
-                aniListId = aniListId,
+                aniListId = if (mediaItem?.parentIndexNumber == 1) aniListId else null,
                 segment = skipMeType,
                 season = mediaItem?.parentIndexNumber,
                 episode = mediaItem?.indexNumber,
