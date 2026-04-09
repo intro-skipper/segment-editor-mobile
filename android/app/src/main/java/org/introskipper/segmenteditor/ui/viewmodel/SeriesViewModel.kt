@@ -24,7 +24,8 @@ import org.introskipper.segmenteditor.api.SkipMeApiService
 import org.introskipper.segmenteditor.data.model.filterSkipMe
 import org.introskipper.segmenteditor.data.model.SegmentType
 import org.introskipper.segmenteditor.data.model.SkipMeBackfillRequest
-import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
+import org.introskipper.segmenteditor.data.model.SkipMeSeasonItem
+import org.introskipper.segmenteditor.data.model.SkipMeSeasonSubmitRequest
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
@@ -224,16 +225,18 @@ class SeriesViewModel @Inject constructor(
             val currentState = _uiState.value as? SeriesUiState.Success ?: run { onComplete(); return@launch }
             
             try {
-                // Use a Set to avoid submitting duplicate requests (identical timestamps/metadata)
-                val uniqueRequests = mutableSetOf<SkipMeSubmitRequest>()
                 val seriesTvdbId = currentState.series.providerIds?.get("Tvdb")?.toIntOrNull()
                 val seriesTmdbId = currentState.series.providerIds?.get("Tmdb")?.toIntOrNull()
                 val seriesAniListId = currentState.series.providerIds?.get("AniList")?.toIntOrNull()
-                
+
+                // Group deduplicated items by (season number, tvdb season id)
+                data class SeasonKey(val seasonNumber: Int?, val tvdbSeasonId: Int?)
+                val itemsBySeason = mutableMapOf<SeasonKey, MutableSet<SkipMeSeasonItem>>()
+
                 episodes.forEach { episodeWithSegments ->
                     val episode = episodeWithSegments.episode
                     val segments = episodeWithSegments.segments ?: return@forEach
-                    
+
                     val tvdbEpisodeId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
                     val tvdbSeasonId = currentState.seasonTvdbIds[episode.seasonId ?: ""]
                     val durationMs = episode.runTimeTicks?.div(10_000)
@@ -249,16 +252,12 @@ class SeriesViewModel @Inject constructor(
                                 return@forEach
                             }
 
-                            uniqueRequests.add(
-                                SkipMeSubmitRequest(
-                                    tmdbId = seriesTmdbId,
-                                    tvdbSeriesId = seriesTvdbId,
-                                    tvdbSeasonId = tvdbSeasonId,
+                            val key = SeasonKey(episode.parentIndexNumber, tvdbSeasonId)
+                            itemsBySeason.getOrPut(key) { mutableSetOf() }.add(
+                                SkipMeSeasonItem(
                                     tvdbId = tvdbEpisodeId,
-                                    aniListId = seriesAniListId,
-                                    segment = skipMeType,
-                                    season = episode.parentIndexNumber,
                                     episode = episode.indexNumber,
+                                    segment = skipMeType,
                                     durationMs = durationMs,
                                     startMs = startMs,
                                     endMs = endMs
@@ -268,12 +267,23 @@ class SeriesViewModel @Inject constructor(
                     }
                 }
 
-                if (uniqueRequests.isEmpty()) {
+                if (itemsBySeason.isEmpty()) {
                     _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
                     return@launch
                 }
 
-                val response = skipMeApiService.submitCollection(uniqueRequests.toList())
+                val seasonRequests = itemsBySeason.map { (key, items) ->
+                    SkipMeSeasonSubmitRequest(
+                        tvdbSeriesId = seriesTvdbId,
+                        tvdbSeasonId = key.tvdbSeasonId,
+                        tmdbId = seriesTmdbId,
+                        aniListId = seriesAniListId,
+                        season = key.seasonNumber,
+                        items = items.toList()
+                    )
+                }
+
+                val response = skipMeApiService.submitSeason(seasonRequests)
                 if (response.isSuccessful) {
                     val count = response.body()?.submitted ?: 0
                     _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_success_collection, count)))

@@ -25,8 +25,11 @@ import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.api.SkipMeApiService
 import org.introskipper.segmenteditor.data.model.JellyfinMediaItem
+import org.introskipper.segmenteditor.data.model.MediaItem
 import org.introskipper.segmenteditor.data.model.SegmentType
 import org.introskipper.segmenteditor.data.model.SkipMeBackfillRequest
+import org.introskipper.segmenteditor.data.model.SkipMeSeasonItem
+import org.introskipper.segmenteditor.data.model.SkipMeSeasonSubmitRequest
 import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
 import org.introskipper.segmenteditor.data.model.toJellyfinMediaItem
 import org.introskipper.segmenteditor.data.repository.JellyfinRepository
@@ -324,11 +327,9 @@ class HomeViewModel @Inject constructor(
             
             try {
                 val userId = securePreferences.getUserId() ?: return@launch
-                val uniqueRequests = mutableSetOf<SkipMeSubmitRequest>()
 
                 when (item.type) {
                     "Series" -> {
-                        // Load full series info to get episodes
                         val series = jellyfinRepository.getMediaItem(item.id)
                         val episodesResponse = mediaRepository.getEpisodes(
                             seriesId = item.id,
@@ -336,51 +337,40 @@ class HomeViewModel @Inject constructor(
                             fields = JellyfinApiService.EPISODE_FIELDS
                         )
 
-                        if (episodesResponse.isSuccessful) {
-                            val episodes = episodesResponse.body()?.items ?: emptyList()
-                            
-                            val seasonsResponse = mediaRepository.getSeasons(item.id, userId, fields = listOf("ProviderIds"))
-                            val seasonTvdbIds = seasonsResponse.body()?.items?.associate { it.id to it.providerIds?.get("Tvdb")?.toIntOrNull() } ?: emptyMap()
+                        if (!episodesResponse.isSuccessful) {
+                            _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
+                            return@launch
+                        }
 
-                            val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
-                            val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
-                            val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
+                        val episodes = (episodesResponse.body()?.items ?: emptyList())
+                            .filter { (it.parentIndexNumber ?: 0) != 0 }
 
-                            for (episode in episodes) {
-                                if ((episode.parentIndexNumber ?: 0) == 0) continue
-                                
-                                val segmentResult = segmentRepository.getSegmentsResult(episode.id)
-                                val segments = segmentResult.getOrNull() ?: continue
-                                
-                                val tvdbEpisodeId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
-                                val tvdbSeasonId = seasonTvdbIds[episode.seasonId ?: ""]
-                                val durationMs = episode.runTimeTicks?.div(10_000)
+                        val seasonsResponse = mediaRepository.getSeasons(item.id, userId, fields = listOf("ProviderIds"))
+                        val seasonTvdbIds = seasonsResponse.body()?.items?.associate { it.id to it.providerIds?.get("Tvdb")?.toIntOrNull() } ?: emptyMap()
 
-                                if ((seriesTmdbId != null || seriesTvdbId != null || seriesAniListId != null) && durationMs != null && durationMs > 0) {
-                                    segments.forEach { segment ->
-                                        val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType() ?: return@forEach
-                                        val startMs = segment.startTicks / 10_000
-                                        val endMs = segment.endTicks / 10_000
-                                        if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
-                                            uniqueRequests.add(
-                                                SkipMeSubmitRequest(
-                                                    tmdbId = seriesTmdbId,
-                                                    tvdbSeriesId = seriesTvdbId,
-                                                    tvdbSeasonId = tvdbSeasonId,
-                                                    tvdbId = tvdbEpisodeId,
-                                                    aniListId = seriesAniListId,
-                                                    segment = skipMeType,
-                                                    season = episode.parentIndexNumber,
-                                                    episode = episode.indexNumber,
-                                                    durationMs = durationMs,
-                                                    startMs = startMs,
-                                                    endMs = endMs
-                                                )
-                                            )
-                                        }
-                                    }
-                                }
-                            }
+                        val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
+                        val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
+                        val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
+
+                        val seasonRequests = buildSeasonRequests(
+                            episodes = episodes,
+                            tvdbSeriesId = seriesTvdbId,
+                            tmdbId = seriesTmdbId,
+                            aniListId = seriesAniListId,
+                            tvdbSeasonIdFor = { episode -> seasonTvdbIds[episode.seasonId ?: ""] }
+                        )
+
+                        if (seasonRequests.isEmpty()) {
+                            _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
+                            return@launch
+                        }
+
+                        val response = skipMeApiService.submitSeason(seasonRequests)
+                        if (response.isSuccessful) {
+                            val count = response.body()?.submitted ?: 0
+                            _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_success_collection, count)))
+                        } else {
+                            _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_failed_http, response.code())))
                         }
                     }
                     "Season" -> {
@@ -393,86 +383,78 @@ class HomeViewModel @Inject constructor(
                             seasonId = item.id,
                             fields = JellyfinApiService.EPISODE_FIELDS
                         )
-                        if (episodesResponse.isSuccessful) {
-                            val episodes = episodesResponse.body()?.items ?: emptyList()
-                            val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
-                            val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
-                            val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
-                            val seasonTvdbId = season.providerIds?.get("Tvdb")?.toIntOrNull()
 
-                            for (episode in episodes) {
-                                val segmentResult = segmentRepository.getSegmentsResult(episode.id)
-                                val segments = segmentResult.getOrNull() ?: continue
-                                val tvdbEpisodeId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
-                                val durationMs = episode.runTimeTicks?.div(10_000)
+                        if (!episodesResponse.isSuccessful) {
+                            _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
+                            return@launch
+                        }
 
-                                if ((seriesTmdbId != null || seriesTvdbId != null || seriesAniListId != null) && durationMs != null && durationMs > 0) {
-                                    segments.forEach { segment ->
-                                        val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType() ?: return@forEach
-                                        val startMs = segment.startTicks / 10_000
-                                        val endMs = segment.endTicks / 10_000
-                                        if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
-                                            uniqueRequests.add(
-                                                SkipMeSubmitRequest(
-                                                    tmdbId = seriesTmdbId,
-                                                    tvdbSeriesId = seriesTvdbId,
-                                                    tvdbSeasonId = seasonTvdbId,
-                                                    tvdbId = tvdbEpisodeId,
-                                                    aniListId = seriesAniListId,
-                                                    segment = skipMeType,
-                                                    season = episode.parentIndexNumber,
-                                                    episode = episode.indexNumber,
-                                                    durationMs = durationMs,
-                                                    startMs = startMs,
-                                                    endMs = endMs
-                                                )
-                                            )
-                                        }
-                                    }
-                                }
-                            }
+                        val episodes = episodesResponse.body()?.items ?: emptyList()
+                        val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
+                        val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
+                        val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
+                        val seasonTvdbId = season.providerIds?.get("Tvdb")?.toIntOrNull()
+
+                        val seasonRequests = buildSeasonRequests(
+                            episodes = episodes,
+                            tvdbSeriesId = seriesTvdbId,
+                            tmdbId = seriesTmdbId,
+                            aniListId = seriesAniListId,
+                            tvdbSeasonIdFor = { _ -> seasonTvdbId }
+                        )
+
+                        if (seasonRequests.isEmpty()) {
+                            _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
+                            return@launch
+                        }
+
+                        val response = skipMeApiService.submitSeason(seasonRequests)
+                        if (response.isSuccessful) {
+                            val count = response.body()?.submitted ?: 0
+                            _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_success_collection, count)))
+                        } else {
+                            _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_failed_http, response.code())))
                         }
                     }
                     "Movie" -> {
                         val movie = jellyfinRepository.getMediaItem(item.id)
                         val segmentResult = segmentRepository.getSegmentsResult(item.id)
                         val segments = segmentResult.getOrNull() ?: emptyList()
-                        
+
                         val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull()
                         val durationMs = movie.runTimeTicks?.div(10_000)
-                        
-                        if (tmdbId != null && durationMs != null && durationMs > 0) {
-                            segments.forEach { segment ->
-                                val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType() ?: return@forEach
-                                val startMs = segment.startTicks / 10_000
-                                val endMs = segment.endTicks / 10_000
-                                if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
-                                    uniqueRequests.add(
-                                        SkipMeSubmitRequest(
-                                            tmdbId = tmdbId,
-                                            segment = skipMeType,
-                                            durationMs = durationMs,
-                                            startMs = startMs,
-                                            endMs = endMs
-                                        )
+
+                        if (tmdbId == null || durationMs == null || durationMs <= 0 || segments.isEmpty()) {
+                            _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
+                            return@launch
+                        }
+
+                        var submitted = 0
+                        var firstFailCode: Int? = null
+                        segments.forEach { segment ->
+                            val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType() ?: return@forEach
+                            val startMs = segment.startTicks / 10_000
+                            val endMs = segment.endTicks / 10_000
+                            if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
+                                val response = skipMeApiService.submitSegment(
+                                    SkipMeSubmitRequest(
+                                        tmdbId = tmdbId,
+                                        segment = skipMeType,
+                                        durationMs = durationMs,
+                                        startMs = startMs,
+                                        endMs = endMs
                                     )
-                                }
+                                )
+                                if (response.isSuccessful) submitted++ else if (firstFailCode == null) firstFailCode = response.code()
                             }
                         }
+
+                        when {
+                            submitted > 0 -> _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_success_collection, submitted)))
+                            firstFailCode != null -> _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_failed_http, firstFailCode!!)))
+                            else -> _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
+                        }
                     }
-                }
-
-                if (uniqueRequests.isEmpty()) {
-                    _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
-                    return@launch
-                }
-
-                val response = skipMeApiService.submitCollection(uniqueRequests.toList())
-                if (response.isSuccessful) {
-                    val count = response.body()?.submitted ?: 0
-                    _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_success_collection, count)))
-                } else {
-                    _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_failed_http, response.code())))
                 }
             } catch (e: Exception) {
                 Log.e("HomeViewModel", "Error sharing segments", e)
@@ -480,6 +462,61 @@ class HomeViewModel @Inject constructor(
             } finally {
                 _uiState.update { (it as? HomeUiState.Success)?.copy(submittingItemId = null) ?: it }
             }
+        }
+    }
+
+    /**
+     * Groups episodes by (season number, tvdb season id) and builds the list of
+     * [SkipMeSeasonSubmitRequest] objects for POST /v1/submit/season.
+     */
+    private suspend fun buildSeasonRequests(
+        episodes: List<MediaItem>,
+        tvdbSeriesId: Int?,
+        tmdbId: Int?,
+        aniListId: Int?,
+        tvdbSeasonIdFor: (MediaItem) -> Int?
+    ): List<SkipMeSeasonSubmitRequest> {
+        if (tvdbSeriesId == null && tmdbId == null && aniListId == null) return emptyList()
+
+        data class SeasonKey(val seasonNumber: Int?, val tvdbSeasonId: Int?)
+        val itemsBySeason = mutableMapOf<SeasonKey, MutableSet<SkipMeSeasonItem>>()
+
+        for (episode in episodes) {
+            val segmentResult = segmentRepository.getSegmentsResult(episode.id)
+            val segments = segmentResult.getOrNull() ?: continue
+            val tvdbEpisodeId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+            val durationMs = episode.runTimeTicks?.div(10_000) ?: continue
+            if (durationMs <= 0) continue
+
+            segments.forEach { segment ->
+                val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType() ?: return@forEach
+                val startMs = segment.startTicks / 10_000
+                val endMs = segment.endTicks / 10_000
+                if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
+                    val key = SeasonKey(episode.parentIndexNumber, tvdbSeasonIdFor(episode))
+                    itemsBySeason.getOrPut(key) { mutableSetOf() }.add(
+                        SkipMeSeasonItem(
+                            tvdbId = tvdbEpisodeId,
+                            episode = episode.indexNumber,
+                            segment = skipMeType,
+                            durationMs = durationMs,
+                            startMs = startMs,
+                            endMs = endMs
+                        )
+                    )
+                }
+            }
+        }
+
+        return itemsBySeason.map { (key, items) ->
+            SkipMeSeasonSubmitRequest(
+                tvdbSeriesId = tvdbSeriesId,
+                tvdbSeasonId = key.tvdbSeasonId,
+                tmdbId = tmdbId,
+                aniListId = aniListId,
+                season = key.seasonNumber,
+                items = items.toList()
+            )
         }
     }
 }

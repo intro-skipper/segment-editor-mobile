@@ -7,7 +7,8 @@ package org.introskipper.segmenteditor.api
 
 import org.introskipper.segmenteditor.data.model.SkipMeBackfillRequest
 import org.introskipper.segmenteditor.data.model.SkipMeBackfillResponse
-import org.introskipper.segmenteditor.data.model.SkipMeCollectionSubmitResponse
+import org.introskipper.segmenteditor.data.model.SkipMeSeasonSubmitRequest
+import org.introskipper.segmenteditor.data.model.SkipMeSeasonSubmitResponse
 import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
 import org.introskipper.segmenteditor.data.model.SkipMeSubmitResponse
 import retrofit2.Response
@@ -21,10 +22,10 @@ interface SkipMeApi {
         @Body request: SkipMeSubmitRequest
     ): Response<SkipMeSubmitResponse>
 
-    @POST("v1/submit/collection")
-    suspend fun submitCollection(
-        @Body requests: List<SkipMeSubmitRequest>
-    ): Response<SkipMeCollectionSubmitResponse>
+    @POST("v1/submit/season")
+    suspend fun submitSeason(
+        @Body requests: List<SkipMeSeasonSubmitRequest>
+    ): Response<SkipMeSeasonSubmitResponse>
 
     @POST("v1/backfill")
     suspend fun backfill(
