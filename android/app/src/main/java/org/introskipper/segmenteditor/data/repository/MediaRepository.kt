@@ -84,7 +84,8 @@ class MediaRepository(
         startIndex: Int? = null,
         limit: Int? = null,
         sortBy: String = "SortName",
-        sortOrder: String = "Ascending"
+        sortOrder: String = "Ascending",
+        fields: List<String>? = JellyfinApiService.DETAIL_FIELDS
     ): Response<ItemsResponse> {
         return getItems(
             userId = userId,
@@ -95,7 +96,7 @@ class MediaRepository(
             sortOrder = sortOrder,
             startIndex = startIndex,
             limit = limit,
-            fields = JellyfinApiService.DETAIL_FIELDS
+            fields = fields
         )
     }
     
@@ -108,7 +109,8 @@ class MediaRepository(
         startIndex: Int? = null,
         limit: Int? = null,
         sortBy: String = "SortName",
-        sortOrder: String = "Ascending"
+        sortOrder: String = "Ascending",
+        fields: List<String>? = JellyfinApiService.DETAIL_FIELDS
     ): Response<ItemsResponse> {
         return getItems(
             userId = userId,
@@ -119,7 +121,7 @@ class MediaRepository(
             sortOrder = sortOrder,
             startIndex = startIndex,
             limit = limit,
-            fields = JellyfinApiService.DETAIL_FIELDS
+            fields = fields
         )
     }
     

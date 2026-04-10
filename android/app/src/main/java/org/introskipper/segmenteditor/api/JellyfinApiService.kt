@@ -48,9 +48,9 @@ class JellyfinApiService(private val securePreferences: SecurePreferences) {
         
         val okHttpClient = OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
             .build()
         
         // Create Gson with custom type adapter for Segment to handle Type field
@@ -239,6 +239,7 @@ class JellyfinApiService(private val securePreferences: SecurePreferences) {
     
     companion object {
         // Common field sets for queries
+        val MINIMAL_FIELDS = listOf("ProviderIds")
         val BASIC_FIELDS = listOf("PrimaryImageAspectRatio", "ImageTags")
         val DETAIL_FIELDS = listOf(
             "Overview", "PrimaryImageAspectRatio", "ImageTags", "MediaSources",
@@ -246,7 +247,8 @@ class JellyfinApiService(private val securePreferences: SecurePreferences) {
         )
         val EPISODE_FIELDS = listOf(
             "Overview", "PrimaryImageAspectRatio", "ImageTags", "MediaSources",
-            "SeriesName", "SeasonName", "IndexNumber", "ParentIndexNumber", "ProviderIds"
+            "SeriesName", "SeasonName", "IndexNumber", "ParentIndexNumber", "ProviderIds", "RunTimeTicks"
         )
+        val SHARING_FIELDS = listOf("ProviderIds", "ParentIndexNumber", "IndexNumber", "RunTimeTicks", "SeasonId")
     }
 }
