@@ -87,7 +87,7 @@ fun LibraryScreen(
     // Keep the screen on while a library-level sharing operation is in progress
     val isSharingActive = (uiState as? LibraryUiState.Success)?.isSharingLibraryId != null
     DisposableEffect(isSharingActive) {
-        if (isSharingActive) view.keepScreenOn = true
+        view.keepScreenOn = isSharingActive
         onDispose { view.keepScreenOn = false }
     }
 

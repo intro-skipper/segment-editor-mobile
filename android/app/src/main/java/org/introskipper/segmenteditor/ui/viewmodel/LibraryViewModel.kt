@@ -327,7 +327,7 @@ class LibraryViewModel @Inject constructor(
         if (totalUpdated > 0 || firstFailCode == null) {
             _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.backfill_success, totalUpdated)))
         } else {
-            _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_http, firstFailCode!!)))
+            _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_http, firstFailCode ?: 0)))
         }
     }
 
@@ -362,7 +362,7 @@ class LibraryViewModel @Inject constructor(
         if (totalUpdated > 0 || firstFailCode == null) {
             _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.backfill_success, totalUpdated)))
         } else {
-            _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_http, firstFailCode!!)))
+            _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_http, firstFailCode ?: 0)))
         }
     }
 
