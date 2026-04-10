@@ -157,9 +157,10 @@ class LibraryViewModel @Inject constructor(
                         mediaRepository.getSeasons(series.id, userId, fields = listOf("ProviderIds"))
                     }
                     val episodesResponse = episodesDeferred.await()
+                    val seasonsResponse = seasonsDeferred.await()
                     if (!episodesResponse.isSuccessful) return@async emptyList()
 
-                    val seasonTvdbIds = seasonsDeferred.await().body()?.items
+                    val seasonTvdbIds = seasonsResponse.body()?.items
                         ?.associate { it.id to it.providerIds?.get("Tvdb")?.toIntOrNull() } ?: emptyMap()
                     val episodes = (episodesResponse.body()?.items ?: emptyList())
                         .filter { (it.parentIndexNumber ?: 0) != 0 }
@@ -271,9 +272,10 @@ class LibraryViewModel @Inject constructor(
                         mediaRepository.getSeasons(series.id, userId, fields = listOf("ProviderIds"))
                     }
                     val episodesResponse = episodesDeferred.await()
+                    val seasonsResponse = seasonsDeferred.await()
                     if (!episodesResponse.isSuccessful) return@async emptyList()
 
-                    val seasonTvdbIds = seasonsDeferred.await().body()?.items
+                    val seasonTvdbIds = seasonsResponse.body()?.items
                         ?.associate { it.id to it.providerIds?.get("Tvdb")?.toIntOrNull() } ?: emptyMap()
 
                     (episodesResponse.body()?.items ?: emptyList())
@@ -380,7 +382,11 @@ class LibraryViewModel @Inject constructor(
         var firstFailCode: Int? = null
         for (request in requests) {
             val response = skipMeApiService.submitSegment(request)
-            if (response.isSuccessful) submitted++ else if (firstFailCode == null) firstFailCode = response.code()
+            if (response.isSuccessful) {
+                submitted++
+            } else if (firstFailCode == null) {
+                firstFailCode = response.code()
+            }
         }
         return Pair(submitted, firstFailCode)
     }
