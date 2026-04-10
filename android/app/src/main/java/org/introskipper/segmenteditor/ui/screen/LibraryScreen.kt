@@ -5,8 +5,10 @@
 
 package org.introskipper.segmenteditor.ui.screen
 
+import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,20 +18,25 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -47,7 +54,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -61,10 +67,11 @@ import org.introskipper.segmenteditor.ui.component.WavyCircularProgressIndicator
 import org.introskipper.segmenteditor.ui.state.ThemeState
 import org.introskipper.segmenteditor.ui.util.getDominantColor
 import org.introskipper.segmenteditor.ui.viewmodel.Library
+import org.introskipper.segmenteditor.ui.viewmodel.LibraryEvent
 import org.introskipper.segmenteditor.ui.viewmodel.LibraryUiState
 import org.introskipper.segmenteditor.ui.viewmodel.LibraryViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun LibraryScreen(
     onLibraryClick: (String, String?) -> Unit,
@@ -73,6 +80,17 @@ fun LibraryScreen(
     themeState: ThemeState
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    LaunchedEffect(viewModel.events) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is LibraryEvent.ShowToast -> {
+                    Toast.makeText(context, event.message.asString(context), Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -153,10 +171,18 @@ fun LibraryScreen(
                     ) {
                         items(state.libraries.count()) { item ->
                             val library = state.libraries[item]
+                            val isSharing = state.isSharingLibraryId == library.id
                             LibraryCard(
                                 library = library,
+                                isSharing = isSharing,
                                 onClick = { 
                                     onLibraryClick(library.id, library.collectionType) 
+                                },
+                                onShareSegments = {
+                                    viewModel.shareLibrarySegments(library.id, library.collectionType)
+                                },
+                                onShareMetadata = {
+                                    viewModel.submitLibraryMetadata(library.id, library.collectionType)
                                 },
                                 getPrimaryImageUrl = { itemId, imageTag -> viewModel.getPrimaryImageUrl(itemId, imageTag) },
                                 onColorSampled = { color ->
@@ -195,7 +221,10 @@ fun LibraryScreen(
 @Composable
 private fun LibraryCard(
     library: Library,
+    isSharing: Boolean,
     onClick: () -> Unit,
+    onShareSegments: () -> Unit,
+    onShareMetadata: () -> Unit,
     getPrimaryImageUrl: (String, String) -> String,
     onColorSampled: (Int?) -> Unit,
     modifier: Modifier = Modifier
@@ -207,18 +236,28 @@ private fun LibraryCard(
         null
     }
 
+    var showShareDialog by remember { mutableStateOf(false) }
+
     LaunchedEffect(primaryImageUrl) {
         if (primaryImageUrl != null) {
             val color = getDominantColor(context, primaryImageUrl)
             onColorSampled(color)
         }
     }
+
+    // Only show long press for supported library types
+    val supportsSharing = library.collectionType == "tvshows" || library.collectionType == "movies"
     
     Card(
         modifier = modifier
             .fillMaxWidth()
             .height(240.dp)
-            .clickable(onClick = onClick, role = Role.Button),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = if (supportsSharing) {
+                    { showShareDialog = true }
+                } else null
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -269,8 +308,63 @@ private fun LibraryCard(
                         )
                     }
                 }
+                if (isSharing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .align(Alignment.Bottom),
+                        strokeWidth = 2.dp,
+                        color = if (primaryImageUrl != null) Color.White else MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
+    }
+
+    if (showShareDialog) {
+        AlertDialog(
+            onDismissRequest = { showShareDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = {
+                Text(
+                    text = library.name,
+                    style = MaterialTheme.typography.headlineSmall
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            onShareSegments()
+                            showShareDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(translatedString(R.string.share_segments))
+                    }
+                    Button(
+                        onClick = {
+                            onShareMetadata()
+                            showShareDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(translatedString(R.string.share_metadata))
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showShareDialog = false }) {
+                    Text(translatedString(R.string.cancel))
+                }
+            }
+        )
     }
 }
 
