@@ -137,13 +137,13 @@ dependencies {
     implementation 'com.google.mlkit:translate:17.0.3'
 
     // ExoPlayer for video playback
-    ext.media3_version = '1.9.3'
+    ext.media3_version = '1.10.0'
     implementation "androidx.media3:media3-datasource-okhttp:$media3_version"
     implementation "androidx.media3:media3-exoplayer:$media3_version"
     implementation "androidx.media3:media3-exoplayer-hls:$media3_version"
     implementation "androidx.media3:media3-ui:$media3_version"
     implementation "androidx.media3:media3-ui-compose:$media3_version"
-    ext.nextlib_version = "$media3_version-0.12.0"
+    ext.nextlib_version = "$media3_version-0.12.1"
     implementation("io.github.anilbeesetti:nextlib-media3ext:$nextlib_version")
 
     // Security for encrypted preferences
