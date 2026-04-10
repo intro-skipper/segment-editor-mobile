@@ -310,9 +310,7 @@ private fun LibraryCard(
                 }
                 if (isSharing) {
                     CircularProgressIndicator(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .align(Alignment.Bottom),
+                        modifier = Modifier.size(24.dp),
                         strokeWidth = 2.dp,
                         color = if (primaryImageUrl != null) Color.White else MaterialTheme.colorScheme.primary
                     )
