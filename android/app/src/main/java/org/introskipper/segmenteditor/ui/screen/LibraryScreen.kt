@@ -54,6 +54,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -81,6 +82,14 @@ fun LibraryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val view = LocalView.current
+
+    // Keep the screen on while a library-level sharing operation is in progress
+    val isSharingActive = (uiState as? LibraryUiState.Success)?.isSharingLibraryId != null
+    DisposableEffect(isSharingActive) {
+        if (isSharingActive) view.keepScreenOn = true
+        onDispose { view.keepScreenOn = false }
+    }
 
     LaunchedEffect(viewModel.events) {
         viewModel.events.collect { event ->

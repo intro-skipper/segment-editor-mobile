@@ -35,6 +35,8 @@ import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.util.UiText
 import javax.inject.Inject
 
+private const val BATCH_SIZE = 100
+
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val jellyfinRepository: JellyfinRepository,
@@ -181,12 +183,23 @@ class LibraryViewModel @Inject constructor(
             return
         }
 
-        val response = skipMeApiService.submitSeason(allRequests)
-        if (response.isSuccessful) {
-            val count = response.body()?.submitted ?: 0
-            _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.share_success_collection, count)))
+        var totalSubmitted = 0
+        var firstFailCode: Int? = null
+        for (chunk in allRequests.chunked(BATCH_SIZE)) {
+            val response = skipMeApiService.submitSeason(chunk)
+            if (response.isSuccessful) {
+                totalSubmitted += response.body()?.submitted ?: 0
+            } else if (firstFailCode == null) {
+                firstFailCode = response.code()
+            }
+        }
+
+        if (totalSubmitted > 0) {
+            _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.share_success_collection, totalSubmitted)))
+        } else if (firstFailCode != null) {
+            _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.share_failed_http, firstFailCode)))
         } else {
-            _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.share_failed_http, response.code())))
+            _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
         }
     }
 
@@ -300,12 +313,21 @@ class LibraryViewModel @Inject constructor(
             return
         }
 
-        val response = skipMeApiService.backfill(requests)
-        if (response.isSuccessful) {
-            val updated = response.body()?.updated ?: 0
-            _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.backfill_success, updated)))
+        var totalUpdated = 0
+        var firstFailCode: Int? = null
+        for (chunk in requests.chunked(BATCH_SIZE)) {
+            val response = skipMeApiService.backfill(chunk)
+            if (response.isSuccessful) {
+                totalUpdated += response.body()?.updated ?: 0
+            } else if (firstFailCode == null) {
+                firstFailCode = response.code()
+            }
+        }
+
+        if (totalUpdated > 0 || firstFailCode == null) {
+            _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.backfill_success, totalUpdated)))
         } else {
-            _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_http, response.code())))
+            _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_http, firstFailCode!!)))
         }
     }
 
@@ -326,12 +348,21 @@ class LibraryViewModel @Inject constructor(
             return
         }
 
-        val response = skipMeApiService.backfill(requests)
-        if (response.isSuccessful) {
-            val updated = response.body()?.updated ?: 0
-            _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.backfill_success, updated)))
+        var totalUpdated = 0
+        var firstFailCode: Int? = null
+        for (chunk in requests.chunked(BATCH_SIZE)) {
+            val response = skipMeApiService.backfill(chunk)
+            if (response.isSuccessful) {
+                totalUpdated += response.body()?.updated ?: 0
+            } else if (firstFailCode == null) {
+                firstFailCode = response.code()
+            }
+        }
+
+        if (totalUpdated > 0 || firstFailCode == null) {
+            _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.backfill_success, totalUpdated)))
         } else {
-            _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_http, response.code())))
+            _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_http, firstFailCode!!)))
         }
     }
 
