@@ -9,6 +9,9 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -119,30 +122,14 @@ class LibraryViewModel @Inject constructor(
      * Shares all segments for the entire library to SkipMe.db.
      * TV show libraries submit via season batches; movie libraries submit per segment.
      */
-    fun shareLibrarySegments(libraryId: String, collectionType: String?) {
-        val currentState = _uiState.value as? LibraryUiState.Success ?: return
-        _uiState.update { currentState.copy(isSharingLibraryId = libraryId) }
-
-        viewModelScope.launch {
-            try {
-                val userId = securePreferences.getUserId() ?: run {
-                    _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.auth_error_not_authenticated)))
-                    return@launch
-                }
-
-                when (collectionType) {
-                    "tvshows" -> shareLibraryTvShows(libraryId, userId)
-                    "movies"  -> shareLibraryMovies(libraryId, userId)
-                    else -> _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.share_unsupported_type)))
-                }
-            } catch (e: Exception) {
-                Log.e("LibraryViewModel", "Error sharing library segments", e)
-                _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.share_failed_collection_generic, e.message ?: "")))
-            } finally {
-                _uiState.update { (it as? LibraryUiState.Success)?.copy(isSharingLibraryId = null) ?: it }
-            }
-        }
-    }
+    fun shareLibrarySegments(libraryId: String, collectionType: String?) =
+        launchLibraryOperation(
+            libraryId = libraryId,
+            collectionType = collectionType,
+            errorRes = R.string.share_failed_collection_generic,
+            onTvShows = { userId -> shareLibraryTvShows(libraryId, userId) },
+            onMovies  = { userId -> shareLibraryMovies(libraryId, userId) }
+        )
 
     private suspend fun shareLibraryTvShows(libraryId: String, userId: String) {
         val seriesResponse = mediaRepository.getSeries(userId = userId, parentId = libraryId)
@@ -151,35 +138,41 @@ class LibraryViewModel @Inject constructor(
             return
         }
 
-        val allRequests = mutableListOf<SkipMeSeasonSubmitRequest>()
+        // Fetch episodes + seasons for all series in parallel, then build season requests
+        val allRequests = coroutineScope {
+            (seriesResponse.body()?.items ?: emptyList()).map { series ->
+                async {
+                    val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
+                    val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
+                    val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
 
-        for (series in seriesResponse.body()?.items ?: emptyList()) {
-            val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
-            val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
-            val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
+                    val episodesDeferred = async {
+                        mediaRepository.getEpisodes(
+                            seriesId = series.id,
+                            userId = userId,
+                            fields = JellyfinApiService.EPISODE_FIELDS
+                        )
+                    }
+                    val seasonsDeferred = async {
+                        mediaRepository.getSeasons(series.id, userId, fields = listOf("ProviderIds"))
+                    }
+                    val episodesResponse = episodesDeferred.await()
+                    if (!episodesResponse.isSuccessful) return@async emptyList()
 
-            val episodesResponse = mediaRepository.getEpisodes(
-                seriesId = series.id,
-                userId = userId,
-                fields = JellyfinApiService.EPISODE_FIELDS
-            )
-            if (!episodesResponse.isSuccessful) continue
+                    val seasonTvdbIds = seasonsDeferred.await().body()?.items
+                        ?.associate { it.id to it.providerIds?.get("Tvdb")?.toIntOrNull() } ?: emptyMap()
+                    val episodes = (episodesResponse.body()?.items ?: emptyList())
+                        .filter { (it.parentIndexNumber ?: 0) != 0 }
 
-            val episodes = (episodesResponse.body()?.items ?: emptyList())
-                .filter { (it.parentIndexNumber ?: 0) != 0 }
-
-            val seasonsResponse = mediaRepository.getSeasons(series.id, userId, fields = listOf("ProviderIds"))
-            val seasonTvdbIds = seasonsResponse.body()?.items
-                ?.associate { it.id to it.providerIds?.get("Tvdb")?.toIntOrNull() } ?: emptyMap()
-
-            val requests = buildSeasonRequests(
-                episodes = episodes,
-                tvdbSeriesId = seriesTvdbId,
-                tmdbId = seriesTmdbId,
-                aniListId = seriesAniListId,
-                tvdbSeasonIdFor = { episode -> seasonTvdbIds[episode.seasonId ?: ""] }
-            )
-            allRequests.addAll(requests)
+                    buildSeasonRequests(
+                        episodes = episodes,
+                        tvdbSeriesId = seriesTvdbId,
+                        tmdbId = seriesTmdbId,
+                        aniListId = seriesAniListId,
+                        tvdbSeasonIdFor = { episode -> seasonTvdbIds[episode.seasonId ?: ""] }
+                    )
+                }
+            }.awaitAll().flatten()
         }
 
         if (allRequests.isEmpty()) {
@@ -203,34 +196,39 @@ class LibraryViewModel @Inject constructor(
             return
         }
 
+        // Fetch segments for all movies concurrently, then submit sequentially
+        val allRequests = coroutineScope {
+            (moviesResponse.body()?.items ?: emptyList()).mapNotNull { movie ->
+                val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull() ?: return@mapNotNull null
+                val durationMs = movie.runTimeTicks?.div(10_000) ?: return@mapNotNull null
+                if (durationMs <= 0) return@mapNotNull null
+                async {
+                    val segments = segmentRepository.getSegmentsResult(movie.id).getOrNull()
+                        ?: return@async emptyList<SkipMeSubmitRequest>()
+                    segments.mapNotNull { segment ->
+                        val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType()
+                            ?: return@mapNotNull null
+                        val startMs = segment.startTicks / 10_000
+                        val endMs = segment.endTicks / 10_000
+                        if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
+                            SkipMeSubmitRequest(
+                                tmdbId = tmdbId,
+                                segment = skipMeType,
+                                durationMs = durationMs,
+                                startMs = startMs,
+                                endMs = endMs
+                            )
+                        } else null
+                    }
+                }
+            }.awaitAll().flatten()
+        }
+
         var submitted = 0
         var firstFailCode: Int? = null
-
-        for (movie in moviesResponse.body()?.items ?: emptyList()) {
-            val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull() ?: continue
-            val durationMs = movie.runTimeTicks?.div(10_000) ?: continue
-            if (durationMs <= 0) continue
-
-            val segmentResult = segmentRepository.getSegmentsResult(movie.id)
-            val segments = segmentResult.getOrNull() ?: continue
-
-            for (segment in segments) {
-                val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType() ?: continue
-                val startMs = segment.startTicks / 10_000
-                val endMs = segment.endTicks / 10_000
-                if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
-                    val response = skipMeApiService.submitSegment(
-                        SkipMeSubmitRequest(
-                            tmdbId = tmdbId,
-                            segment = skipMeType,
-                            durationMs = durationMs,
-                            startMs = startMs,
-                            endMs = endMs
-                        )
-                    )
-                    if (response.isSuccessful) submitted++ else if (firstFailCode == null) firstFailCode = response.code()
-                }
-            }
+        for (request in allRequests) {
+            val response = skipMeApiService.submitSegment(request)
+            if (response.isSuccessful) submitted++ else if (firstFailCode == null) firstFailCode = response.code()
         }
 
         when {
@@ -243,30 +241,14 @@ class LibraryViewModel @Inject constructor(
     /**
      * Submits metadata backfill for the entire library to SkipMe.db.
      */
-    fun submitLibraryMetadata(libraryId: String, collectionType: String?) {
-        val currentState = _uiState.value as? LibraryUiState.Success ?: return
-        _uiState.update { currentState.copy(isSharingLibraryId = libraryId) }
-
-        viewModelScope.launch {
-            try {
-                val userId = securePreferences.getUserId() ?: run {
-                    _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.auth_error_not_authenticated)))
-                    return@launch
-                }
-
-                when (collectionType) {
-                    "tvshows" -> submitLibraryTvShowsMetadata(libraryId, userId)
-                    "movies"  -> submitLibraryMoviesMetadata(libraryId, userId)
-                    else -> _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.share_unsupported_type)))
-                }
-            } catch (e: Exception) {
-                Log.e("LibraryViewModel", "Error submitting library metadata", e)
-                _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_generic, e.message ?: "")))
-            } finally {
-                _uiState.update { (it as? LibraryUiState.Success)?.copy(isSharingLibraryId = null) ?: it }
-            }
-        }
-    }
+    fun submitLibraryMetadata(libraryId: String, collectionType: String?) =
+        launchLibraryOperation(
+            libraryId = libraryId,
+            collectionType = collectionType,
+            errorRes = R.string.backfill_failed_generic,
+            onTvShows = { userId -> submitLibraryTvShowsMetadata(libraryId, userId) },
+            onMovies  = { userId -> submitLibraryMoviesMetadata(libraryId, userId) }
+        )
 
     private suspend fun submitLibraryTvShowsMetadata(libraryId: String, userId: String) {
         val seriesResponse = mediaRepository.getSeries(userId = userId, parentId = libraryId)
@@ -275,39 +257,45 @@ class LibraryViewModel @Inject constructor(
             return
         }
 
-        val requests = mutableListOf<SkipMeBackfillRequest>()
+        // Fetch episodes + seasons for all series in parallel, then accumulate backfill requests
+        val requests = coroutineScope {
+            (seriesResponse.body()?.items ?: emptyList()).map { series ->
+                async {
+                    val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
+                    val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
+                    val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
 
-        for (series in seriesResponse.body()?.items ?: emptyList()) {
-            val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
-            val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
-            val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
-
-            val episodesResponse = mediaRepository.getEpisodes(
-                seriesId = series.id,
-                userId = userId,
-                fields = listOf("ProviderIds", "ParentIndexNumber", "IndexNumber")
-            )
-            if (!episodesResponse.isSuccessful) continue
-
-            val seasonsResponse = mediaRepository.getSeasons(series.id, userId, fields = listOf("ProviderIds"))
-            val seasonTvdbIds = seasonsResponse.body()?.items
-                ?.associate { it.id to it.providerIds?.get("Tvdb")?.toIntOrNull() } ?: emptyMap()
-
-            (episodesResponse.body()?.items ?: emptyList())
-                .filter { (it.parentIndexNumber ?: 0) != 0 }
-                .forEach { episode ->
-                    requests.add(
-                        SkipMeBackfillRequest(
-                            tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull(),
-                            tmdbId = seriesTmdbId,
-                            tvdbSeasonId = seasonTvdbIds[episode.seasonId ?: ""],
-                            tvdbSeriesId = seriesTvdbId,
-                            aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null,
-                            season = episode.parentIndexNumber,
-                            episode = episode.indexNumber
+                    val episodesDeferred = async {
+                        mediaRepository.getEpisodes(
+                            seriesId = series.id,
+                            userId = userId,
+                            fields = listOf("ProviderIds", "ParentIndexNumber", "IndexNumber")
                         )
-                    )
+                    }
+                    val seasonsDeferred = async {
+                        mediaRepository.getSeasons(series.id, userId, fields = listOf("ProviderIds"))
+                    }
+                    val episodesResponse = episodesDeferred.await()
+                    if (!episodesResponse.isSuccessful) return@async emptyList()
+
+                    val seasonTvdbIds = seasonsDeferred.await().body()?.items
+                        ?.associate { it.id to it.providerIds?.get("Tvdb")?.toIntOrNull() } ?: emptyMap()
+
+                    (episodesResponse.body()?.items ?: emptyList())
+                        .filter { (it.parentIndexNumber ?: 0) != 0 }
+                        .map { episode ->
+                            SkipMeBackfillRequest(
+                                tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull(),
+                                tmdbId = seriesTmdbId,
+                                tvdbSeasonId = seasonTvdbIds[episode.seasonId ?: ""],
+                                tvdbSeriesId = seriesTvdbId,
+                                aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null,
+                                season = episode.parentIndexNumber,
+                                episode = episode.indexNumber
+                            )
+                        }
                 }
+            }.awaitAll().flatten()
         }
 
         if (requests.isEmpty()) {
@@ -347,6 +335,41 @@ class LibraryViewModel @Inject constructor(
             _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.backfill_success, updated)))
         } else {
             _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_http, response.code())))
+        }
+    }
+
+    /**
+     * Shared scaffolding for library-level SkipMe.db operations.
+     * Handles userId resolution, collectionType dispatch, isSharingLibraryId lifecycle,
+     * and uniform error reporting so that both segment and metadata flows stay consistent.
+     */
+    private fun launchLibraryOperation(
+        libraryId: String,
+        collectionType: String?,
+        errorRes: Int,
+        onTvShows: suspend (userId: String) -> Unit,
+        onMovies: suspend (userId: String) -> Unit
+    ) {
+        val currentState = _uiState.value as? LibraryUiState.Success ?: return
+        _uiState.update { currentState.copy(isSharingLibraryId = libraryId) }
+
+        viewModelScope.launch {
+            try {
+                val userId = securePreferences.getUserId() ?: run {
+                    _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.auth_error_not_authenticated)))
+                    return@launch
+                }
+                when (collectionType) {
+                    "tvshows" -> onTvShows(userId)
+                    "movies"  -> onMovies(userId)
+                    else -> _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.share_unsupported_type)))
+                }
+            } catch (e: Exception) {
+                Log.e("LibraryViewModel", "Error in library operation ($collectionType)", e)
+                _events.emit(LibraryEvent.ShowToast(UiText.StringResource(errorRes, e.message ?: "")))
+            } finally {
+                _uiState.update { (it as? LibraryUiState.Success)?.copy(isSharingLibraryId = null) ?: it }
+            }
         }
     }
 
