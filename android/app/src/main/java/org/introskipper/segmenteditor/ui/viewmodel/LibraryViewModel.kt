@@ -224,12 +224,7 @@ class LibraryViewModel @Inject constructor(
             }.awaitAll().flatten()
         }
 
-        var submitted = 0
-        var firstFailCode: Int? = null
-        for (request in allRequests) {
-            val response = skipMeApiService.submitSegment(request)
-            if (response.isSuccessful) submitted++ else if (firstFailCode == null) firstFailCode = response.code()
-        }
+        val (submitted, firstFailCode) = submitRequestsSequentially(allRequests)
 
         when {
             submitted > 0 -> _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.share_success_collection, submitted)))
@@ -373,6 +368,23 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Submits each [SkipMeSubmitRequest] sequentially, counting successes and recording
+     * the first HTTP failure code. Sequential submission is intentional to avoid
+     * hammering the SkipMe.db API.
+     */
+    private suspend fun submitRequestsSequentially(
+        requests: List<SkipMeSubmitRequest>
+    ): Pair<Int, Int?> {
+        var submitted = 0
+        var firstFailCode: Int? = null
+        for (request in requests) {
+            val response = skipMeApiService.submitSegment(request)
+            if (response.isSuccessful) submitted++ else if (firstFailCode == null) firstFailCode = response.code()
+        }
+        return Pair(submitted, firstFailCode)
+    }
+
     private suspend fun buildSeasonRequests(
         episodes: List<MediaItem>,
         tvdbSeriesId: Int?,
@@ -383,33 +395,41 @@ class LibraryViewModel @Inject constructor(
         if (tvdbSeriesId == null && tmdbId == null && aniListId == null) return emptyList()
 
         data class SeasonKey(val seasonNumber: Int?, val tvdbSeasonId: Int?)
-        val itemsBySeason = mutableMapOf<SeasonKey, MutableSet<SkipMeSeasonItem>>()
 
-        for (episode in episodes) {
-            val segmentResult = segmentRepository.getSegmentsResult(episode.id)
-            val segments = segmentResult.getOrNull() ?: continue
-            val tvdbEpisodeId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
-            val durationMs = episode.runTimeTicks?.div(10_000) ?: continue
-            if (durationMs <= 0) continue
+        // Fetch segments for all episodes in parallel, then group by season
+        val pairs: List<Pair<SeasonKey, SkipMeSeasonItem>> = coroutineScope {
+            episodes.map { episode ->
+                async {
+                    val segments = segmentRepository.getSegmentsResult(episode.id).getOrNull()
+                        ?: return@async emptyList<Pair<SeasonKey, SkipMeSeasonItem>>()
+                    val tvdbEpisodeId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+                    val durationMs = episode.runTimeTicks?.div(10_000) ?: return@async emptyList()
+                    if (durationMs <= 0) return@async emptyList()
 
-            segments.forEach { segment ->
-                val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType() ?: return@forEach
-                val startMs = segment.startTicks / 10_000
-                val endMs = segment.endTicks / 10_000
-                if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
                     val key = SeasonKey(episode.parentIndexNumber, tvdbSeasonIdFor(episode))
-                    itemsBySeason.getOrPut(key) { mutableSetOf() }.add(
-                        SkipMeSeasonItem(
-                            tvdbId = tvdbEpisodeId,
-                            episode = episode.indexNumber,
-                            segment = skipMeType,
-                            durationMs = durationMs,
-                            startMs = startMs,
-                            endMs = endMs
-                        )
-                    )
+                    segments.mapNotNull { segment ->
+                        val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType()
+                            ?: return@mapNotNull null
+                        val startMs = segment.startTicks / 10_000
+                        val endMs = segment.endTicks / 10_000
+                        if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
+                            key to SkipMeSeasonItem(
+                                tvdbId = tvdbEpisodeId,
+                                episode = episode.indexNumber,
+                                segment = skipMeType,
+                                durationMs = durationMs,
+                                startMs = startMs,
+                                endMs = endMs
+                            )
+                        } else null
+                    }
                 }
-            }
+            }.awaitAll().flatten()
+        }
+
+        val itemsBySeason = mutableMapOf<SeasonKey, MutableSet<SkipMeSeasonItem>>()
+        for ((key, item) in pairs) {
+            itemsBySeason.getOrPut(key) { mutableSetOf() }.add(item)
         }
 
         return itemsBySeason.map { (key, items) ->
