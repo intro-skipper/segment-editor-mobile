@@ -33,6 +33,10 @@ class SkipMeApiService(baseUrl: String, httpClient: OkHttpClient) {
         return api.submitSeason(requests)
     }
 
+    suspend fun submitCollection(requests: List<SkipMeSubmitRequest>): Response<SkipMeSeasonSubmitResponse> {
+        return api.submitCollection(requests)
+    }
+
     suspend fun backfill(requests: List<SkipMeBackfillRequest>): Response<SkipMeBackfillResponse> {
         return api.backfill(requests)
     }
