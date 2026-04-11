@@ -77,7 +77,8 @@ fun SeriesScreen(
     seriesId: String,
     navController: NavController,
     viewModel: SeriesViewModel = hiltViewModel(),
-    securePreferences: SecurePreferences
+    securePreferences: SecurePreferences,
+    initialSeason: Int? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val serverUrl = securePreferences.getServerUrl() ?: ""
@@ -116,7 +117,35 @@ fun SeriesScreen(
         var selectedSeasonIndex by remember { 
             mutableStateOf(0)
         }
-        
+
+        // Observe season communicated back from the player via savedStateHandle (e.g. after
+        // auto-play crosses a season boundary and the user navigates back).
+        val targetSeason by navController.currentBackStackEntry!!
+            .savedStateHandle
+            .getStateFlow("targetSeason", -1)
+            .collectAsState()
+
+        // When the series data is loaded, jump to the correct season tab.
+        // Priority: targetSeason (from player back-navigation) > initialSeason (route param).
+        LaunchedEffect(uiState, targetSeason, initialSeason) {
+            val state = uiState as? SeriesUiState.Success ?: return@LaunchedEffect
+            val season = when {
+                targetSeason != -1 -> targetSeason
+                initialSeason != null -> initialSeason
+                else -> return@LaunchedEffect
+            }
+            val sortedSeasons = state.episodesBySeason.keys.toList()
+            val index = sortedSeasons.indexOf(season)
+            if (index >= 0) {
+                selectedSeasonIndex = index
+            }
+            // Clear the savedStateHandle value so it is not re-applied on subsequent
+            // recompositions (e.g. after a pull-to-refresh).
+            if (targetSeason != -1) {
+                navController.currentBackStackEntry!!.savedStateHandle["targetSeason"] = -1
+            }
+        }
+
         var showShareMenu by remember { mutableStateOf(false) }
 
         Scaffold(

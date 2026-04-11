@@ -698,11 +698,20 @@ private fun navigateBack(navController: NavController, mediaItem: MediaItem?) {
         // We use popBackStack with the route template to find any existing SeriesScreen in the backstack
         val seriesRouteTemplate = "${Screen.Series.route}/{seriesId}"
         val popped = navController.popBackStack(seriesRouteTemplate, false)
-        
+
         if (!popped) {
-            // If the series screen wasn't in the backstack, navigate to it explicitly
-            navController.navigate("${Screen.Series.route}/${mediaItem.seriesId}") {
+            // If the series screen wasn't in the backstack, navigate to it explicitly,
+            // passing the episode's season number so the correct tab is selected
+            val seasonParam = mediaItem.parentIndexNumber?.let { "?season=$it" } ?: ""
+            navController.navigate("${Screen.Series.route}/${mediaItem.seriesId}$seasonParam") {
                 popUpTo(Screen.Player.route) { inclusive = true }
+            }
+        } else {
+            // Series screen was in the backstack; communicate the target season via
+            // savedStateHandle so the correct tab is selected even when auto-play has
+            // moved to a different season
+            mediaItem.parentIndexNumber?.let { season ->
+                navController.currentBackStackEntry?.savedStateHandle?.set("targetSeason", season)
             }
         }
     } else {
