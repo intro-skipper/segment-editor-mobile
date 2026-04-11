@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.api.JellyfinApiService
@@ -61,6 +62,11 @@ class HomeViewModel @Inject constructor(
     private val _events = MutableSharedFlow<HomeEvent>()
     val events: SharedFlow<HomeEvent> = _events.asSharedFlow()
 
+    private val _libraryName = MutableStateFlow<String?>(null)
+    val libraryName: StateFlow<String?> = _libraryName
+
+    private var libraryNameJob: Job? = null
+
     private var currentLibraryId: String? = null
     private var currentCollectionType: String? = null
 
@@ -97,7 +103,20 @@ class HomeViewModel @Inject constructor(
             currentCollectionType = collectionType
             currentPage = 1
             _showAllItems.value = false
+            loadLibraryName(libraryId)
             loadMediaItems()
+        }
+    }
+
+    private fun loadLibraryName(libraryId: String) {
+        libraryNameJob?.cancel()
+        libraryNameJob = viewModelScope.launch {
+            try {
+                val item = jellyfinRepository.getMediaItem(libraryId)
+                _libraryName.value = item.name
+            } catch (e: Exception) {
+                // Library name is best-effort; leave current value on failure
+            }
         }
     }
 

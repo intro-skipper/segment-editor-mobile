@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -29,7 +28,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -184,6 +182,7 @@ fun LibraryScreen(
                             LibraryCard(
                                 library = library,
                                 isSharing = isSharing,
+                                sharingProgress = if (isSharing) state.sharingProgress else null,
                                 onClick = { 
                                     onLibraryClick(library.id, library.collectionType) 
                                 },
@@ -231,6 +230,7 @@ fun LibraryScreen(
 private fun LibraryCard(
     library: Library,
     isSharing: Boolean,
+    sharingProgress: Float?,
     onClick: () -> Unit,
     onShareSegments: () -> Unit,
     onShareMetadata: () -> Unit,
@@ -318,11 +318,23 @@ private fun LibraryCard(
                     }
                 }
                 if (isSharing) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp,
-                        color = if (primaryImageUrl != null) Color.White else MaterialTheme.colorScheme.primary
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        WavyCircularProgressIndicator(
+                            size = 24.dp,
+                            strokeWidth = 2.dp,
+                            color = if (primaryImageUrl != null) Color.White else MaterialTheme.colorScheme.primary
+                        )
+                        sharingProgress?.let { progress ->
+                            Text(
+                                text = "${(progress * 100).toInt()}%",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (primaryImageUrl != null) Color.White else MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                 }
             }
         }
