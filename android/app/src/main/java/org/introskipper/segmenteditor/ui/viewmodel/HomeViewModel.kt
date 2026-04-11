@@ -64,6 +64,8 @@ class HomeViewModel @Inject constructor(
     private val _libraryName = MutableStateFlow<String?>(null)
     val libraryName: StateFlow<String?> = _libraryName
 
+    private var libraryNameJob: Job? = null
+
     private var currentLibraryId: String? = null
     private var currentCollectionType: String? = null
 
@@ -106,7 +108,8 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun loadLibraryName(libraryId: String) {
-        viewModelScope.launch {
+        libraryNameJob?.cancel()
+        libraryNameJob = viewModelScope.launch {
             try {
                 val item = jellyfinRepository.getMediaItem(libraryId)
                 _libraryName.value = item.name
