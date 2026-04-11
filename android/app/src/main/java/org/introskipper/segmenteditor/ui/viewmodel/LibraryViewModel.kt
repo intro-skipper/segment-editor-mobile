@@ -37,9 +37,9 @@ import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.util.UiText
 import javax.inject.Inject
 
-private const val BATCH_SIZE = 100
-private const val MAX_CONCURRENT_SERIES = 3
-private const val MAX_CONCURRENT_EPISODE_SEGMENTS = 12
+private const val BATCH_SIZE = 250
+private const val MAX_CONCURRENT_SERIES = 2
+private const val MAX_CONCURRENT_EPISODE_SEGMENTS = 48
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
@@ -433,7 +433,7 @@ class LibraryViewModel @Inject constructor(
                         val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType() ?: return@mapNotNull null
                         val startMs = segment.startTicks / 10_000
                         val endMs = segment.endTicks / 10_000
-                        if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
+                        if (startMs in 0..<endMs && endMs <= durationMs) {
                             SkipMeSeasonItem(
                                 tvdbId = tvdbEpisodeId,
                                 episode = episode.indexNumber,
