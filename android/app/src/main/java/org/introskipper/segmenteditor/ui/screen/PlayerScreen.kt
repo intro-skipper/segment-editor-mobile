@@ -10,6 +10,7 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -128,7 +129,7 @@ fun PlayerScreen(
                 viewModel.clearEvent()
                 navController.navigate(Screen.Player.createRoute(event.itemId)) {
                     // Pop current player from backstack to avoid loops
-                    popUpTo(Screen.Player.route) { inclusive = true }
+                    popUpTo("${Screen.Player.route}/{itemId}") { inclusive = true }
                 }
             }
             is PlayerEvent.PlaybackEnded -> {
@@ -295,7 +296,12 @@ fun PlayerScreen(
     LaunchedEffect(uiState.playbackSpeed) {
         player?.setPlaybackSpeed(uiState.playbackSpeed)
     }
-    
+
+    // Mirror the back-icon behavior for the device back button.
+    BackHandler {
+        navigateBack(navController, uiState.mediaItem)
+    }
+
     Scaffold(
         topBar = {
             if (!uiState.isFullscreen && !uiState.isUserLandscape) {
@@ -697,13 +703,30 @@ private fun navigateBack(navController: NavController, mediaItem: MediaItem?) {
         // If it's an episode, go back to the series screen
         // We use popBackStack with the route template to find any existing SeriesScreen in the backstack
         val seriesRouteTemplate = "${Screen.Series.route}/{seriesId}"
-        val popped = navController.popBackStack(seriesRouteTemplate, false)
-        
-        if (!popped) {
-            // If the series screen wasn't in the backstack, navigate to it explicitly
-            navController.navigate("${Screen.Series.route}/${mediaItem.seriesId}") {
-                popUpTo(Screen.Player.route) { inclusive = true }
+
+        // Locate the series entry before popping so we can set the target season on it.
+        // getBackStackEntry throws if the entry is not found, so we catch it.
+        val seriesEntry = try {
+            navController.getBackStackEntry(seriesRouteTemplate)
+        } catch (e: IllegalArgumentException) {
+            null
+        }
+
+        if (seriesEntry == null) {
+            // If the series screen wasn't in the backstack, navigate to it explicitly,
+            // passing the episode's season number so the correct tab is selected
+            val seasonParam = mediaItem.parentIndexNumber?.let { "?season=$it" } ?: ""
+            navController.navigate("${Screen.Series.route}/${mediaItem.seriesId}$seasonParam") {
+                popUpTo("${Screen.Player.route}/{itemId}") { inclusive = true }
             }
+        } else {
+            // Series screen was in the backstack; communicate the target season via
+            // savedStateHandle before popping so the correct tab is selected even when
+            // auto-play has moved to a different season
+            mediaItem.parentIndexNumber?.let { season ->
+                seriesEntry.savedStateHandle["targetSeason"] = season
+            }
+            navController.popBackStack(seriesRouteTemplate, false)
         }
     } else {
         navController.popBackStack()

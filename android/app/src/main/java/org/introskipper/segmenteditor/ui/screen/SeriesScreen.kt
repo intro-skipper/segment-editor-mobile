@@ -6,6 +6,7 @@
 package org.introskipper.segmenteditor.ui.screen
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -68,6 +69,7 @@ import org.introskipper.segmenteditor.ui.state.SeriesEvent
 import org.introskipper.segmenteditor.ui.state.SeriesUiState
 import org.introskipper.segmenteditor.ui.theme.DynamicColorsOptions
 import org.introskipper.segmenteditor.ui.theme.SegmentEditorTheme
+import org.introskipper.segmenteditor.ui.util.SeasonSortUtil
 import org.introskipper.segmenteditor.ui.util.getDominantColor
 import org.introskipper.segmenteditor.ui.viewmodel.SeriesViewModel
 
@@ -77,7 +79,8 @@ fun SeriesScreen(
     seriesId: String,
     navController: NavController,
     viewModel: SeriesViewModel = hiltViewModel(),
-    securePreferences: SecurePreferences
+    securePreferences: SecurePreferences,
+    initialSeason: Int? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val serverUrl = securePreferences.getServerUrl() ?: ""
@@ -116,15 +119,61 @@ fun SeriesScreen(
         var selectedSeasonIndex by remember { 
             mutableStateOf(0)
         }
-        
+
+        // Observe season communicated back from the player via savedStateHandle (e.g. after
+        // auto-play crosses a season boundary and the user navigates back).
+        val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
+        val targetSeason by remember(savedStateHandle) {
+            savedStateHandle?.getStateFlow("targetSeason", -1)
+                ?: kotlinx.coroutines.flow.MutableStateFlow(-1)
+        }.collectAsState()
+
+        // initialSeason (route param) is consumed at most once; once a targetSeason is
+        // applied it is nulled out so that a subsequent targetSeason clearing cannot
+        // accidentally re-apply the stale route param.
+        var pendingInitialSeason by remember { mutableStateOf(initialSeason) }
+
+        // When the series data is loaded, jump to the correct season tab.
+        // Priority: targetSeason (from player back-navigation) > pendingInitialSeason (route param).
+        // Both values are consumed on use to prevent them from being re-applied on
+        // subsequent LaunchedEffect re-runs triggered by unrelated state changes.
+        LaunchedEffect(uiState, targetSeason) {
+            val state = uiState as? SeriesUiState.Success ?: return@LaunchedEffect
+            val season = when {
+                targetSeason != -1 -> {
+                    // Consume targetSeason and nullify pendingInitialSeason so the route-param
+                    // value cannot re-apply after this targetSeason is cleared.
+                    savedStateHandle?.set("targetSeason", -1)
+                    pendingInitialSeason = null
+                    targetSeason
+                }
+                pendingInitialSeason != null -> {
+                    val s = pendingInitialSeason ?: return@LaunchedEffect
+                    pendingInitialSeason = null
+                    s
+                }
+                else -> return@LaunchedEffect
+            }
+            val sortedSeasons = state.episodesBySeason.keys.sortedWith(SeasonSortUtil.seasonComparator)
+            val index = sortedSeasons.indexOf(season)
+            if (index >= 0) {
+                selectedSeasonIndex = index
+            }
+        }
+
         var showShareMenu by remember { mutableStateOf(false) }
+
+        // Mirror the back-icon behavior for the device back button.
+        BackHandler {
+            navigateBackFromSeries(navController)
+        }
 
         Scaffold(
             topBar = {
                 TopAppBar(
                     title = { Text(translatedString(R.string.series_title)) },
                     navigationIcon = {
-                        IconButton(onClick = { navController.navigateUp() }) {
+                        IconButton(onClick = { navigateBackFromSeries(navController) }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = translatedString(R.string.back),
@@ -535,6 +584,17 @@ fun SeriesScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+private fun navigateBackFromSeries(navController: NavController) {
+    // Navigate back to the library items screen, skipping any video player entries that may
+    // have been left in the backstack. Falls back to the library list screen if needed.
+    val homeRouteTemplate = "${Screen.Home.route}/{libraryId}?type={collectionType}"
+    if (!navController.popBackStack(homeRouteTemplate, false)) {
+        if (!navController.popBackStack(Screen.Library.route, false)) {
+            navController.popBackStack(Screen.Main.route, false)
         }
     }
 }

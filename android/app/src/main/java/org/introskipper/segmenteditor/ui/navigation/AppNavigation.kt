@@ -156,14 +156,22 @@ fun AppNavigation(
         }
         
         composable(
-            route = "${Screen.Series.route}/{seriesId}",
-            arguments = listOf(navArgument("seriesId") { type = NavType.StringType })
+            route = "${Screen.Series.route}/{seriesId}?season={season}",
+            arguments = listOf(
+                navArgument("seriesId") { type = NavType.StringType },
+                navArgument("season") {
+                    type = NavType.IntType
+                    defaultValue = -1
+                }
+            )
         ) { backStackEntry ->
             val seriesId = backStackEntry.arguments?.getString("seriesId") ?: ""
+            val initialSeason = backStackEntry.arguments?.getInt("season").takeIf { it != -1 }
             SeriesScreen(
                 seriesId = seriesId,
                 navController = navController,
-                securePreferences = securePreferences
+                securePreferences = securePreferences,
+                initialSeason = initialSeason
             )
         }
         
