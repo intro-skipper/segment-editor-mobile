@@ -6,6 +6,7 @@
 package org.introskipper.segmenteditor.ui.screen
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -162,12 +163,17 @@ fun SeriesScreen(
 
         var showShareMenu by remember { mutableStateOf(false) }
 
+        // Mirror the back-icon behavior for the device back button.
+        BackHandler {
+            navigateBackFromSeries(navController)
+        }
+
         Scaffold(
             topBar = {
                 TopAppBar(
                     title = { Text(translatedString(R.string.series_title)) },
                     navigationIcon = {
-                        IconButton(onClick = { navController.navigateUp() }) {
+                        IconButton(onClick = { navigateBackFromSeries(navController) }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = translatedString(R.string.back),
@@ -578,6 +584,17 @@ fun SeriesScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+private fun navigateBackFromSeries(navController: NavController) {
+    // Navigate back to the library items screen, skipping any video player entries that may
+    // have been left in the backstack. Falls back to the library list screen if needed.
+    val homeRouteTemplate = "${Screen.Home.route}/{libraryId}?type={collectionType}"
+    if (!navController.popBackStack(homeRouteTemplate, false)) {
+        if (!navController.popBackStack(Screen.Library.route, false)) {
+            navController.popBackStack(Screen.Main.route, false)
         }
     }
 }

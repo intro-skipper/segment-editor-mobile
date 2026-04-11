@@ -129,7 +129,7 @@ fun PlayerScreen(
                 viewModel.clearEvent()
                 navController.navigate(Screen.Player.createRoute(event.itemId)) {
                     // Pop current player from backstack to avoid loops
-                    popUpTo(Screen.Player.route) { inclusive = true }
+                    popUpTo("${Screen.Player.route}/{itemId}") { inclusive = true }
                 }
             }
             is PlayerEvent.PlaybackEnded -> {
@@ -717,7 +717,7 @@ private fun navigateBack(navController: NavController, mediaItem: MediaItem?) {
             // passing the episode's season number so the correct tab is selected
             val seasonParam = mediaItem.parentIndexNumber?.let { "?season=$it" } ?: ""
             navController.navigate("${Screen.Series.route}/${mediaItem.seriesId}$seasonParam") {
-                popUpTo(Screen.Player.route) { inclusive = true }
+                popUpTo("${Screen.Player.route}/{itemId}") { inclusive = true }
             }
         } else {
             // Series screen was in the backstack; communicate the target season via
