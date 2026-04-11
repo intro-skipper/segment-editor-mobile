@@ -147,7 +147,7 @@ fun SeriesScreen(
                     targetSeason
                 }
                 pendingInitialSeason != null -> {
-                    val s = pendingInitialSeason!!
+                    val s = pendingInitialSeason ?: return@LaunchedEffect
                     pendingInitialSeason = null
                     s
                 }
