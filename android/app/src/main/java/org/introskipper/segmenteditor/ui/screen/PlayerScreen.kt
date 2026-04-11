@@ -297,7 +297,7 @@ fun PlayerScreen(
         player?.setPlaybackSpeed(uiState.playbackSpeed)
     }
 
-    // Mirror the back-icon behaviour for the device back button.
+    // Mirror the back-icon behavior for the device back button.
     BackHandler {
         navigateBack(navController, uiState.mediaItem)
     }
