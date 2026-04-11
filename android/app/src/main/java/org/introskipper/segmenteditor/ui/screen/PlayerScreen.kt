@@ -10,6 +10,7 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -295,7 +296,12 @@ fun PlayerScreen(
     LaunchedEffect(uiState.playbackSpeed) {
         player?.setPlaybackSpeed(uiState.playbackSpeed)
     }
-    
+
+    // Mirror the back-icon behaviour for the device back button.
+    BackHandler {
+        navigateBack(navController, uiState.mediaItem)
+    }
+
     Scaffold(
         topBar = {
             if (!uiState.isFullscreen && !uiState.isUserLandscape) {
