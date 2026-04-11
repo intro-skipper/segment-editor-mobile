@@ -68,6 +68,7 @@ import org.introskipper.segmenteditor.ui.state.SeriesEvent
 import org.introskipper.segmenteditor.ui.state.SeriesUiState
 import org.introskipper.segmenteditor.ui.theme.DynamicColorsOptions
 import org.introskipper.segmenteditor.ui.theme.SegmentEditorTheme
+import org.introskipper.segmenteditor.ui.util.SeasonSortUtil
 import org.introskipper.segmenteditor.ui.util.getDominantColor
 import org.introskipper.segmenteditor.ui.viewmodel.SeriesViewModel
 
@@ -120,10 +121,11 @@ fun SeriesScreen(
 
         // Observe season communicated back from the player via savedStateHandle (e.g. after
         // auto-play crosses a season boundary and the user navigates back).
-        val targetSeason by navController.currentBackStackEntry!!
-            .savedStateHandle
-            .getStateFlow("targetSeason", -1)
-            .collectAsState()
+        val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
+        val targetSeason by remember(savedStateHandle) {
+            savedStateHandle?.getStateFlow("targetSeason", -1)
+                ?: kotlinx.coroutines.flow.MutableStateFlow(-1)
+        }.collectAsState()
 
         // When the series data is loaded, jump to the correct season tab.
         // Priority: targetSeason (from player back-navigation) > initialSeason (route param).
@@ -134,7 +136,7 @@ fun SeriesScreen(
                 initialSeason != null -> initialSeason
                 else -> return@LaunchedEffect
             }
-            val sortedSeasons = state.episodesBySeason.keys.toList()
+            val sortedSeasons = state.episodesBySeason.keys.sortedWith(SeasonSortUtil.seasonComparator)
             val index = sortedSeasons.indexOf(season)
             if (index >= 0) {
                 selectedSeasonIndex = index
@@ -142,7 +144,7 @@ fun SeriesScreen(
             // Clear the savedStateHandle value so it is not re-applied on subsequent
             // recompositions (e.g. after a pull-to-refresh).
             if (targetSeason != -1) {
-                navController.currentBackStackEntry!!.savedStateHandle["targetSeason"] = -1
+                savedStateHandle?.set("targetSeason", -1)
             }
         }
 
