@@ -393,8 +393,8 @@ fun SeriesScreen(
                                                         )
                                                         if (state.submittingSeasonNumber == seasonNumber) {
                                                             Spacer(modifier = Modifier.size(8.dp))
-                                                            CircularProgressIndicator(
-                                                                modifier = Modifier.size(12.dp),
+                                                            WavyCircularProgressIndicator(
+                                                                size = 12.dp,
                                                                 strokeWidth = 2.dp,
                                                                 color = MaterialTheme.colorScheme.primary
                                                             )
@@ -507,8 +507,8 @@ fun SeriesScreen(
                                                         modifier = Modifier.weight(1f)
                                                     )
                                                     if (state.submittingSeasonNumber == seasonNumber) {
-                                                        CircularProgressIndicator(
-                                                            modifier = Modifier.size(16.dp),
+                                                        WavyCircularProgressIndicator(
+                                                            size = 16.dp,
                                                             strokeWidth = 2.dp,
                                                             color = MaterialTheme.colorScheme.onSecondaryContainer
                                                         )
