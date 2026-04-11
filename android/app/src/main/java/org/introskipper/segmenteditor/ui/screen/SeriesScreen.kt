@@ -127,24 +127,36 @@ fun SeriesScreen(
                 ?: kotlinx.coroutines.flow.MutableStateFlow(-1)
         }.collectAsState()
 
+        // initialSeason (route param) is consumed at most once; once a targetSeason is
+        // applied it is nulled out so that a subsequent targetSeason clearing cannot
+        // accidentally re-apply the stale route param.
+        var pendingInitialSeason by remember { mutableStateOf(initialSeason) }
+
         // When the series data is loaded, jump to the correct season tab.
-        // Priority: targetSeason (from player back-navigation) > initialSeason (route param).
-        LaunchedEffect(uiState, targetSeason, initialSeason) {
+        // Priority: targetSeason (from player back-navigation) > pendingInitialSeason (route param).
+        // Both values are consumed on use to prevent them from being re-applied on
+        // subsequent LaunchedEffect re-runs triggered by unrelated state changes.
+        LaunchedEffect(uiState, targetSeason) {
             val state = uiState as? SeriesUiState.Success ?: return@LaunchedEffect
             val season = when {
-                targetSeason != -1 -> targetSeason
-                initialSeason != null -> initialSeason
+                targetSeason != -1 -> {
+                    // Consume targetSeason and nullify pendingInitialSeason so the route-param
+                    // value cannot re-apply after this targetSeason is cleared.
+                    savedStateHandle?.set("targetSeason", -1)
+                    pendingInitialSeason = null
+                    targetSeason
+                }
+                pendingInitialSeason != null -> {
+                    val s = pendingInitialSeason!!
+                    pendingInitialSeason = null
+                    s
+                }
                 else -> return@LaunchedEffect
             }
             val sortedSeasons = state.episodesBySeason.keys.sortedWith(SeasonSortUtil.seasonComparator)
             val index = sortedSeasons.indexOf(season)
             if (index >= 0) {
                 selectedSeasonIndex = index
-            }
-            // Clear the savedStateHandle value so it is not re-applied on subsequent
-            // recompositions (e.g. after a pull-to-refresh).
-            if (targetSeason != -1) {
-                savedStateHandle?.set("targetSeason", -1)
             }
         }
 
