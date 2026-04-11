@@ -142,7 +142,7 @@ class LibraryViewModel @Inject constructor(
         
         val semaphore = Semaphore(MAX_CONCURRENT_SERIES)
 
-        for (series in allSeries) {
+        allSeries.forEachIndexed { seriesIndex, series ->
             val seriesRequests = semaphore.withPermit {
                 val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
                 val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
@@ -179,6 +179,7 @@ class LibraryViewModel @Inject constructor(
                     firstFailCode = response.code()
                 }
             }
+            updateSharingProgress((seriesIndex + 1f) / allSeries.size.coerceAtLeast(1))
         }
 
         reportResult(totalSubmitted, firstFailCode, R.string.share_success_collection, R.string.share_no_segments_found)
@@ -202,7 +203,7 @@ class LibraryViewModel @Inject constructor(
         
         val currentBatch = mutableListOf<SkipMeSubmitRequest>()
 
-        for (movie in allMovies) {
+        allMovies.forEachIndexed { movieIndex, movie ->
             val segments = semaphore.withPermit {
                 val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull() ?: return@withPermit emptyList<SkipMeSubmitRequest>()
                 val durationMs = movie.runTimeTicks?.div(10_000) ?: return@withPermit emptyList()
@@ -236,6 +237,7 @@ class LibraryViewModel @Inject constructor(
                 }
                 currentBatch.clear()
             }
+            updateSharingProgress((movieIndex + 1f) / allMovies.size.coerceAtLeast(1))
         }
 
         if (currentBatch.isNotEmpty()) {
@@ -275,7 +277,7 @@ class LibraryViewModel @Inject constructor(
         var firstFailCode: Int? = null
         val semaphore = Semaphore(MAX_CONCURRENT_SERIES)
 
-        for (series in allSeries) {
+        allSeries.forEachIndexed { seriesIndex, series ->
             val requests = semaphore.withPermit {
                 val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
                 val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
@@ -317,6 +319,7 @@ class LibraryViewModel @Inject constructor(
                     }
                 }
             }
+            updateSharingProgress((seriesIndex + 1f) / allSeries.size.coerceAtLeast(1))
         }
 
         reportResult(totalUpdated, firstFailCode, R.string.backfill_success, R.string.backfill_no_identifiers)
@@ -340,13 +343,15 @@ class LibraryViewModel @Inject constructor(
 
         var totalUpdated = 0
         var firstFailCode: Int? = null
-        for (chunk in requests.chunked(BATCH_SIZE)) {
+        val chunks = requests.chunked(BATCH_SIZE)
+        chunks.forEachIndexed { chunkIndex, chunk ->
             val response = skipMeApiService.backfill(chunk)
             if (response.isSuccessful) {
                 totalUpdated += response.body()?.updated ?: 0
             } else if (firstFailCode == null) {
                 firstFailCode = response.code()
             }
+            updateSharingProgress((chunkIndex + 1f) / chunks.size.coerceAtLeast(1))
         }
 
         reportResult(totalUpdated, firstFailCode, R.string.backfill_success, R.string.backfill_no_identifiers)
@@ -360,6 +365,7 @@ class LibraryViewModel @Inject constructor(
         onMovies: suspend (userId: String) -> Unit
     ) {
         val currentState = _uiState.value as? LibraryUiState.Success ?: return
+        if (currentState.isSharingLibraryId != null) return
         _uiState.update { currentState.copy(isSharingLibraryId = libraryId) }
 
         viewModelScope.launch {
@@ -377,7 +383,7 @@ class LibraryViewModel @Inject constructor(
                 Log.e("LibraryViewModel", "Error in library operation ($collectionType)", e)
                 _events.emit(LibraryEvent.ShowToast(UiText.StringResource(errorRes, e.message ?: "")))
             } finally {
-                _uiState.update { (it as? LibraryUiState.Success)?.copy(isSharingLibraryId = null) ?: it }
+                _uiState.update { (it as? LibraryUiState.Success)?.copy(isSharingLibraryId = null, sharingProgress = null) ?: it }
             }
         }
     }
@@ -404,6 +410,12 @@ class LibraryViewModel @Inject constructor(
             }
         }
         return Pair(submitted, firstFailCode)
+    }
+
+    private fun updateSharingProgress(progress: Float) {
+        _uiState.update { state ->
+            (state as? LibraryUiState.Success)?.copy(sharingProgress = progress) ?: state
+        }
     }
 
     private suspend fun buildSeasonRequests(
@@ -471,7 +483,8 @@ sealed class LibraryUiState {
     object Empty : LibraryUiState()
     data class Success(
         val libraries: List<Library>,
-        val isSharingLibraryId: String? = null
+        val isSharingLibraryId: String? = null,
+        val sharingProgress: Float? = null
     ) : LibraryUiState()
     data class Error(val message: String) : LibraryUiState()
 }
