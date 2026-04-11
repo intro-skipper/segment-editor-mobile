@@ -307,4 +307,5 @@
     <string name="share_failed_collection_generic">Error sharing collection: %1$s</string>
     <string name="share_segments">Segments</string>
     <string name="share_metadata">Metadata</string>
+    <string name="share_already_in_progress">Another upload is already in progress. Please wait for it to finish.</string>
 </resources>

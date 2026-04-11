@@ -365,7 +365,12 @@ class LibraryViewModel @Inject constructor(
         onMovies: suspend (userId: String) -> Unit
     ) {
         val currentState = _uiState.value as? LibraryUiState.Success ?: return
-        if (currentState.isSharingLibraryId != null) return
+        if (currentState.isSharingLibraryId != null) {
+            viewModelScope.launch {
+                _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.share_already_in_progress)))
+            }
+            return
+        }
         _uiState.update { currentState.copy(isSharingLibraryId = libraryId) }
 
         viewModelScope.launch {
