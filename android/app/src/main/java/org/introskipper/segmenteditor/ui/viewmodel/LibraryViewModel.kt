@@ -37,8 +37,9 @@ import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.util.UiText
 import javax.inject.Inject
 
-private const val BATCH_SIZE = 50
-private const val MAX_CONCURRENT_TASKS = 4
+private const val BATCH_SIZE = 100
+private const val MAX_CONCURRENT_SERIES = 3
+private const val MAX_CONCURRENT_EPISODE_SEGMENTS = 12
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
@@ -125,7 +126,11 @@ class LibraryViewModel @Inject constructor(
         )
 
     private suspend fun shareLibraryTvShows(libraryId: String, userId: String) {
-        val seriesResponse = mediaRepository.getSeries(userId = userId, parentId = libraryId)
+        val seriesResponse = mediaRepository.getSeries(
+            userId = userId, 
+            parentId = libraryId,
+            fields = listOf("ProviderIds")
+        )
         if (!seriesResponse.isSuccessful) {
             _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
             return
@@ -135,8 +140,7 @@ class LibraryViewModel @Inject constructor(
         var totalSubmitted = 0
         var firstFailCode: Int? = null
         
-        // Use a semaphore to limit concurrent network requests to Jellyfin
-        val semaphore = Semaphore(MAX_CONCURRENT_TASKS)
+        val semaphore = Semaphore(MAX_CONCURRENT_SERIES)
 
         for (series in allSeries) {
             val seriesRequests = semaphore.withPermit {
@@ -147,7 +151,7 @@ class LibraryViewModel @Inject constructor(
                 val episodesResponse = mediaRepository.getEpisodes(
                     seriesId = series.id,
                     userId = userId,
-                    fields = JellyfinApiService.EPISODE_FIELDS
+                    fields = JellyfinApiService.SHARING_FIELDS
                 )
                 if (!episodesResponse.isSuccessful) return@withPermit emptyList()
 
@@ -181,7 +185,11 @@ class LibraryViewModel @Inject constructor(
     }
 
     private suspend fun shareLibraryMovies(libraryId: String, userId: String) {
-        val moviesResponse = mediaRepository.getMovies(userId = userId, parentId = libraryId)
+        val moviesResponse = mediaRepository.getMovies(
+            userId = userId, 
+            parentId = libraryId,
+            fields = listOf("ProviderIds", "RunTimeTicks")
+        )
         if (!moviesResponse.isSuccessful) {
             _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
             return
@@ -190,16 +198,18 @@ class LibraryViewModel @Inject constructor(
         val allMovies = moviesResponse.body()?.items ?: emptyList()
         var totalSubmitted = 0
         var firstFailCode: Int? = null
-        val semaphore = Semaphore(MAX_CONCURRENT_TASKS)
+        val semaphore = Semaphore(MAX_CONCURRENT_EPISODE_SEGMENTS)
+        
+        val currentBatch = mutableListOf<SkipMeSubmitRequest>()
 
         for (movie in allMovies) {
-            val movieRequests = semaphore.withPermit {
-                val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull() ?: return@withPermit emptyList()
+            val segments = semaphore.withPermit {
+                val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull() ?: return@withPermit emptyList<SkipMeSubmitRequest>()
                 val durationMs = movie.runTimeTicks?.div(10_000) ?: return@withPermit emptyList()
                 if (durationMs <= 0) return@withPermit emptyList()
 
-                val segments = segmentRepository.getSegmentsResult(movie.id).getOrNull() ?: return@withPermit emptyList()
-                segments.mapNotNull { segment ->
+                val segmentResult = segmentRepository.getSegmentsResult(movie.id)
+                segmentResult.getOrNull()?.mapNotNull { segment ->
                     val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType() ?: return@mapNotNull null
                     val startMs = segment.startTicks / 10_000
                     val endMs = segment.endTicks / 10_000
@@ -212,13 +222,28 @@ class LibraryViewModel @Inject constructor(
                             endMs = endMs
                         )
                     } else null
-                }
+                } ?: emptyList()
             }
+            
+            currentBatch.addAll(segments)
+            
+            if (currentBatch.size >= BATCH_SIZE) {
+                val response = skipMeApiService.submitCollection(currentBatch.toList())
+                if (response.isSuccessful) {
+                    totalSubmitted += response.body()?.submitted ?: 0
+                } else if (firstFailCode == null) {
+                    firstFailCode = response.code()
+                }
+                currentBatch.clear()
+            }
+        }
 
-            if (movieRequests.isNotEmpty()) {
-                val (count, code) = submitRequestsSequentially(movieRequests)
-                totalSubmitted += count
-                if (firstFailCode == null) firstFailCode = code
+        if (currentBatch.isNotEmpty()) {
+            val response = skipMeApiService.submitCollection(currentBatch)
+            if (response.isSuccessful) {
+                totalSubmitted += response.body()?.submitted ?: 0
+            } else if (firstFailCode == null) {
+                firstFailCode = response.code()
             }
         }
 
@@ -235,7 +260,11 @@ class LibraryViewModel @Inject constructor(
         )
 
     private suspend fun submitLibraryTvShowsMetadata(libraryId: String, userId: String) {
-        val seriesResponse = mediaRepository.getSeries(userId = userId, parentId = libraryId)
+        val seriesResponse = mediaRepository.getSeries(
+            userId = userId, 
+            parentId = libraryId,
+            fields = listOf("ProviderIds")
+        )
         if (!seriesResponse.isSuccessful) {
             _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.backfill_no_identifiers)))
             return
@@ -244,7 +273,7 @@ class LibraryViewModel @Inject constructor(
         val allSeries = seriesResponse.body()?.items ?: emptyList()
         var totalUpdated = 0
         var firstFailCode: Int? = null
-        val semaphore = Semaphore(MAX_CONCURRENT_TASKS)
+        val semaphore = Semaphore(MAX_CONCURRENT_SERIES)
 
         for (series in allSeries) {
             val requests = semaphore.withPermit {
@@ -294,7 +323,11 @@ class LibraryViewModel @Inject constructor(
     }
 
     private suspend fun submitLibraryMoviesMetadata(libraryId: String, userId: String) {
-        val moviesResponse = mediaRepository.getMovies(userId = userId, parentId = libraryId)
+        val moviesResponse = mediaRepository.getMovies(
+            userId = userId, 
+            parentId = libraryId,
+            fields = listOf("ProviderIds")
+        )
         if (!moviesResponse.isSuccessful) {
             _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.backfill_no_identifiers)))
             return
@@ -379,39 +412,48 @@ class LibraryViewModel @Inject constructor(
         tmdbId: Int?,
         aniListId: Int?,
         tvdbSeasonIdFor: (MediaItem) -> Int?
-    ): List<SkipMeSeasonSubmitRequest> {
-        if (tvdbSeriesId == null && tmdbId == null && aniListId == null) return emptyList()
+    ): List<SkipMeSeasonSubmitRequest> = coroutineScope {
+        if (tvdbSeriesId == null && tmdbId == null && aniListId == null) return@coroutineScope emptyList()
 
         data class SeasonKey(val seasonNumber: Int?, val tvdbSeasonId: Int?)
         val itemsBySeason = mutableMapOf<SeasonKey, MutableSet<SkipMeSeasonItem>>()
 
-        for (episode in episodes) {
-            val segments = segmentRepository.getSegmentsResult(episode.id).getOrNull() ?: continue
-            val tvdbEpisodeId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
-            val durationMs = episode.runTimeTicks?.div(10_000) ?: continue
-            if (durationMs <= 0) continue
+        val semaphore = Semaphore(MAX_CONCURRENT_EPISODE_SEGMENTS)
 
-            val key = SeasonKey(episode.parentIndexNumber, tvdbSeasonIdFor(episode))
-            segments.forEach { segment ->
-                val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType() ?: return@forEach
-                val startMs = segment.startTicks / 10_000
-                val endMs = segment.endTicks / 10_000
-                if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
-                    itemsBySeason.getOrPut(key) { mutableSetOf() }.add(
-                        SkipMeSeasonItem(
-                            tvdbId = tvdbEpisodeId,
-                            episode = episode.indexNumber,
-                            segment = skipMeType,
-                            durationMs = durationMs,
-                            startMs = startMs,
-                            endMs = endMs
-                        )
-                    )
+        val deferredResults = episodes.map { episode ->
+            async {
+                semaphore.withPermit {
+                    val segments = segmentRepository.getSegmentsResult(episode.id).getOrNull() ?: return@withPermit null
+                    val tvdbEpisodeId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+                    val durationMs = episode.runTimeTicks?.div(10_000) ?: return@withPermit null
+                    if (durationMs <= 0) return@withPermit null
+
+                    val key = SeasonKey(episode.parentIndexNumber, tvdbSeasonIdFor(episode))
+                    val items = segments.mapNotNull { segment ->
+                        val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType() ?: return@mapNotNull null
+                        val startMs = segment.startTicks / 10_000
+                        val endMs = segment.endTicks / 10_000
+                        if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
+                            SkipMeSeasonItem(
+                                tvdbId = tvdbEpisodeId,
+                                episode = episode.indexNumber,
+                                segment = skipMeType,
+                                durationMs = durationMs,
+                                startMs = startMs,
+                                endMs = endMs
+                            )
+                        } else null
+                    }
+                    if (items.isEmpty()) null else key to items
                 }
             }
         }
 
-        return itemsBySeason.map { (key, items) ->
+        deferredResults.awaitAll().filterNotNull().forEach { (key, items) ->
+            itemsBySeason.getOrPut(key) { mutableSetOf() }.addAll(items)
+        }
+
+        itemsBySeason.map { (key, items) ->
             SkipMeSeasonSubmitRequest(
                 tvdbSeriesId = tvdbSeriesId,
                 tvdbSeasonId = key.tvdbSeasonId,

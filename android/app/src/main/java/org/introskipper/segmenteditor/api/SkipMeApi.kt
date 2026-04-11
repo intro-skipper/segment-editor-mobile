@@ -27,6 +27,11 @@ interface SkipMeApi {
         @Body requests: List<SkipMeSeasonSubmitRequest>
     ): Response<SkipMeSeasonSubmitResponse>
 
+    @POST("v1/submit/collection")
+    suspend fun submitCollection(
+        @Body requests: List<SkipMeSubmitRequest>
+    ): Response<SkipMeSeasonSubmitResponse>
+
     @POST("v1/backfill")
     suspend fun backfill(
         @Body requests: List<SkipMeBackfillRequest>
