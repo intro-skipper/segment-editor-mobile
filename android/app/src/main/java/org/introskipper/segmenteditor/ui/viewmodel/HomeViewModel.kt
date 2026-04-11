@@ -61,6 +61,9 @@ class HomeViewModel @Inject constructor(
     private val _events = MutableSharedFlow<HomeEvent>()
     val events: SharedFlow<HomeEvent> = _events.asSharedFlow()
 
+    private val _libraryName = MutableStateFlow<String?>(null)
+    val libraryName: StateFlow<String?> = _libraryName
+
     private var currentLibraryId: String? = null
     private var currentCollectionType: String? = null
 
@@ -97,7 +100,19 @@ class HomeViewModel @Inject constructor(
             currentCollectionType = collectionType
             currentPage = 1
             _showAllItems.value = false
+            loadLibraryName(libraryId)
             loadMediaItems()
+        }
+    }
+
+    private fun loadLibraryName(libraryId: String) {
+        viewModelScope.launch {
+            try {
+                val item = jellyfinRepository.getMediaItem(libraryId)
+                _libraryName.value = item.name
+            } catch (e: Exception) {
+                // Library name is best-effort; leave current value on failure
+            }
         }
     }
 

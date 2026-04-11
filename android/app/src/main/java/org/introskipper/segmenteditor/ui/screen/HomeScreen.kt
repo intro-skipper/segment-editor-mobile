@@ -70,6 +70,7 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val showAllItems by viewModel.showAllItems.collectAsState()
+    val libraryName by viewModel.libraryName.collectAsState()
     val context = LocalContext.current
     
     // Refresh data when screen resumes if settings might have changed
@@ -122,12 +123,7 @@ fun HomeScreen(
         topBar = {
             TopAppBar(
                 title = { 
-                    val title = when (collectionType) {
-                        "movies" -> translatedString(R.string.home_movies)
-                        "tvshows" -> translatedString(R.string.home_tv_shows)
-                        else -> translatedString(R.string.home_media)
-                    }
-                    Text(title)
+                    Text(libraryName ?: translatedString(R.string.home_media))
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {

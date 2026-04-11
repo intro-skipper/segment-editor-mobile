@@ -171,7 +171,10 @@ fun SeriesScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(translatedString(R.string.series_title)) },
+                    title = {
+                        val seriesName = (uiState as? SeriesUiState.Success)?.series?.name
+                        Text(seriesName ?: translatedString(R.string.series_title))
+                    },
                     navigationIcon = {
                         IconButton(onClick = { navigateBackFromSeries(navController) }) {
                             Icon(
@@ -210,8 +213,8 @@ fun SeriesScreen(
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ) {
                             if (state.isSharing) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
+                                WavyCircularProgressIndicator(
+                                    size = 24.dp,
                                     strokeWidth = 2.dp,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
