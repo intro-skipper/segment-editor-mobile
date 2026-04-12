@@ -239,7 +239,7 @@ class LibraryViewModel @Inject constructor(
                             } else null
                         } ?: emptyList()
                     }.also {
-                        val count = ++completed
+                        val count = completed.incrementAndGet()
                         updateSharingProgress(count.toFloat() / allMovies.size.coerceAtLeast(1) * 0.5f)
                     }
                 }
