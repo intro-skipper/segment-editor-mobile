@@ -38,8 +38,10 @@ import org.introskipper.segmenteditor.ui.util.UiText
 import javax.inject.Inject
 
 private const val BATCH_SIZE = 250
+private const val SEASON_BATCH_SIZE = 25
 private const val MAX_CONCURRENT_SERIES = 2
-private const val MAX_CONCURRENT_EPISODE_SEGMENTS = 48
+private const val MAX_CONCURRENT_MOVIE_SEGMENTS = 8
+private const val MAX_CONCURRENT_EPISODE_SEGMENTS = 6
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
@@ -137,49 +139,59 @@ class LibraryViewModel @Inject constructor(
         }
 
         val allSeries = seriesResponse.body()?.items ?: emptyList()
-        var totalSubmitted = 0
         var firstFailCode: Int? = null
-        
+
+        // Phase 1: collect all season requests from all series in parallel, capped by semaphore
         val semaphore = Semaphore(MAX_CONCURRENT_SERIES)
+        val completed = java.util.concurrent.atomic.AtomicInteger(0)
+        val allSeasonRequests = coroutineScope {
+            allSeries.map { series ->
+                async {
+                    semaphore.withPermit {
+                        val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
+                        val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
+                        val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
 
-        allSeries.forEachIndexed { seriesIndex, series ->
-            val seriesRequests = semaphore.withPermit {
-                val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
-                val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
-                val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
+                        val episodesResponse = mediaRepository.getEpisodes(
+                            seriesId = series.id,
+                            userId = userId,
+                            fields = JellyfinApiService.SHARING_FIELDS
+                        )
+                        if (!episodesResponse.isSuccessful) return@withPermit emptyList()
 
-                val episodesResponse = mediaRepository.getEpisodes(
-                    seriesId = series.id,
-                    userId = userId,
-                    fields = JellyfinApiService.SHARING_FIELDS
-                )
-                if (!episodesResponse.isSuccessful) return@withPermit emptyList()
+                        val seasonsResponse = mediaRepository.getSeasons(series.id, userId, fields = listOf("ProviderIds"))
+                        val seasonTvdbIds = seasonsResponse.body()?.items
+                            ?.associate { it.id to it.providerIds?.get("Tvdb")?.toIntOrNull() } ?: emptyMap()
 
-                val seasonsResponse = mediaRepository.getSeasons(series.id, userId, fields = listOf("ProviderIds"))
-                val seasonTvdbIds = seasonsResponse.body()?.items
-                    ?.associate { it.id to it.providerIds?.get("Tvdb")?.toIntOrNull() } ?: emptyMap()
-                
-                val episodes = (episodesResponse.body()?.items ?: emptyList())
-                    .filter { (it.parentIndexNumber ?: 0) != 0 }
+                        val episodes = (episodesResponse.body()?.items ?: emptyList())
+                            .filter { (it.parentIndexNumber ?: 0) != 0 }
 
-                buildSeasonRequests(
-                    episodes = episodes,
-                    tvdbSeriesId = seriesTvdbId,
-                    tmdbId = seriesTmdbId,
-                    aniListId = seriesAniListId,
-                    tvdbSeasonIdFor = { episode -> seasonTvdbIds[episode.seasonId ?: ""] }
-                )
-            }
-
-            if (seriesRequests.isNotEmpty()) {
-                val response = skipMeApiService.submitSeason(seriesRequests)
-                if (response.isSuccessful) {
-                    totalSubmitted += response.body()?.submitted ?: 0
-                } else if (firstFailCode == null) {
-                    firstFailCode = response.code()
+                        buildSeasonRequests(
+                            episodes = episodes,
+                            tvdbSeriesId = seriesTvdbId,
+                            tmdbId = seriesTmdbId,
+                            aniListId = seriesAniListId,
+                            tvdbSeasonIdFor = { episode -> seasonTvdbIds[episode.seasonId ?: ""] }
+                        )
+                    }.also {
+                        val count = completed.incrementAndGet()
+                        updateSharingProgress(count.toFloat() / allSeries.size.coerceAtLeast(1) * 0.5f)
+                    }
                 }
+            }.awaitAll().flatten()
+        }
+
+        // Phase 2: submit batches of SEASON_BATCH_SIZE seasons sequentially to avoid 429s
+        var totalSubmitted = 0
+        val chunks = allSeasonRequests.chunked(SEASON_BATCH_SIZE)
+        chunks.forEachIndexed { chunkIndex, chunk ->
+            val response = skipMeApiService.submitSeason(chunk)
+            if (response.isSuccessful) {
+                totalSubmitted += response.body()?.submitted ?: 0
+            } else if (firstFailCode == null) {
+                firstFailCode = response.code()
             }
-            updateSharingProgress((seriesIndex + 1f) / allSeries.size.coerceAtLeast(1))
+            updateSharingProgress(0.5f + (chunkIndex + 1f) / chunks.size.coerceAtLeast(1) * 0.5f)
         }
 
         reportResult(totalSubmitted, firstFailCode, R.string.share_success_collection, R.string.share_no_segments_found)
@@ -199,54 +211,54 @@ class LibraryViewModel @Inject constructor(
         val allMovies = moviesResponse.body()?.items ?: emptyList()
         var totalSubmitted = 0
         var firstFailCode: Int? = null
-        val semaphore = Semaphore(MAX_CONCURRENT_EPISODE_SEGMENTS)
-        
-        val currentBatch = mutableListOf<SkipMeSubmitRequest>()
 
-        allMovies.forEachIndexed { movieIndex, movie ->
-            val segments = semaphore.withPermit {
-                val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull() ?: return@withPermit emptyList<SkipMeSubmitRequest>()
-                val durationMs = movie.runTimeTicks?.div(10_000) ?: return@withPermit emptyList()
-                if (durationMs <= 0) return@withPermit emptyList()
+        // Phase 1: collect segments for all movies in parallel, capped by semaphore
+        val semaphore = Semaphore(MAX_CONCURRENT_MOVIE_SEGMENTS)
+        val completed = java.util.concurrent.atomic.AtomicInteger(0)
+        val allMovieSegments: List<List<SkipMeSubmitRequest>> = coroutineScope {
+            allMovies.map { movie ->
+                async {
+                    semaphore.withPermit {
+                        val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull() ?: return@withPermit emptyList()
+                        val durationMs = movie.runTimeTicks?.div(10_000) ?: return@withPermit emptyList()
+                        if (durationMs <= 0) return@withPermit emptyList()
 
-                val segmentResult = segmentRepository.getSegmentsResult(movie.id)
-                segmentResult.getOrNull()?.mapNotNull { segment ->
-                    val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType() ?: return@mapNotNull null
-                    val startMs = segment.startTicks / 10_000
-                    val endMs = segment.endTicks / 10_000
-                    if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
-                        SkipMeSubmitRequest(
-                            tmdbId = tmdbId,
-                            segment = skipMeType,
-                            durationMs = durationMs,
-                            startMs = startMs,
-                            endMs = endMs
-                        )
-                    } else null
-                } ?: emptyList()
-            }
-            
-            currentBatch.addAll(segments)
-            
-            if (currentBatch.size >= BATCH_SIZE) {
-                val response = skipMeApiService.submitCollection(currentBatch.toList())
+                        val segmentResult = segmentRepository.getSegmentsResult(movie.id)
+                        segmentResult.getOrNull()?.mapNotNull { segment ->
+                            val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType() ?: return@mapNotNull null
+                            val startMs = segment.startTicks / 10_000
+                            val endMs = segment.endTicks / 10_000
+                            if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
+                                SkipMeSubmitRequest(
+                                    tmdbId = tmdbId,
+                                    segment = skipMeType,
+                                    durationMs = durationMs,
+                                    startMs = startMs,
+                                    endMs = endMs
+                                )
+                            } else null
+                        } ?: emptyList()
+                    }.also {
+                        val count = completed.incrementAndGet()
+                        updateSharingProgress(count.toFloat() / allMovies.size.coerceAtLeast(1) * 0.5f)
+                    }
+                }
+            }.awaitAll()
+        }
+
+        // Phase 2: submit batches of BATCH_SIZE movies sequentially to avoid 429s
+        val submissionBatches = allMovieSegments.chunked(BATCH_SIZE)
+        submissionBatches.forEachIndexed { batchIndex, movieBatch ->
+            val batchRequests = movieBatch.flatten()
+            if (batchRequests.isNotEmpty()) {
+                val response = skipMeApiService.submitCollection(batchRequests)
                 if (response.isSuccessful) {
                     totalSubmitted += response.body()?.submitted ?: 0
                 } else if (firstFailCode == null) {
                     firstFailCode = response.code()
                 }
-                currentBatch.clear()
             }
-            updateSharingProgress((movieIndex + 1f) / allMovies.size.coerceAtLeast(1))
-        }
-
-        if (currentBatch.isNotEmpty()) {
-            val response = skipMeApiService.submitCollection(currentBatch)
-            if (response.isSuccessful) {
-                totalSubmitted += response.body()?.submitted ?: 0
-            } else if (firstFailCode == null) {
-                firstFailCode = response.code()
-            }
+            updateSharingProgress(0.5f + (batchIndex + 1f) / submissionBatches.size.coerceAtLeast(1) * 0.5f)
         }
 
         reportResult(totalSubmitted, firstFailCode, R.string.share_success_collection, R.string.share_no_segments_found)
@@ -275,10 +287,9 @@ class LibraryViewModel @Inject constructor(
         val allSeries = seriesResponse.body()?.items ?: emptyList()
         var totalUpdated = 0
         var firstFailCode: Int? = null
-        val semaphore = Semaphore(MAX_CONCURRENT_SERIES)
 
         allSeries.forEachIndexed { seriesIndex, series ->
-            val requests = semaphore.withPermit {
+            val requests = run {
                 val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
                 val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
                 val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
@@ -288,7 +299,7 @@ class LibraryViewModel @Inject constructor(
                     userId = userId,
                     fields = listOf("ProviderIds", "ParentIndexNumber", "IndexNumber")
                 )
-                if (!episodesResponse.isSuccessful) return@withPermit emptyList()
+                if (!episodesResponse.isSuccessful) return@run emptyList()
 
                 val seasonsResponse = mediaRepository.getSeasons(series.id, userId, fields = listOf("ProviderIds"))
                 val seasonTvdbIds = seasonsResponse.body()?.items
@@ -399,22 +410,6 @@ class LibraryViewModel @Inject constructor(
             failCode != null -> _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.share_failed_http, failCode)))
             else -> _events.emit(LibraryEvent.ShowToast(UiText.StringResource(emptyRes)))
         }
-    }
-
-    private suspend fun submitRequestsSequentially(
-        requests: List<SkipMeSubmitRequest>
-    ): Pair<Int, Int?> {
-        var submitted = 0
-        var firstFailCode: Int? = null
-        for (request in requests) {
-            val response = skipMeApiService.submitSegment(request)
-            if (response.isSuccessful) {
-                submitted++
-            } else if (firstFailCode == null) {
-                firstFailCode = response.code()
-            }
-        }
-        return Pair(submitted, firstFailCode)
     }
 
     private fun updateSharingProgress(progress: Float) {
