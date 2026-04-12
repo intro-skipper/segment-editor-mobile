@@ -214,7 +214,7 @@ class LibraryViewModel @Inject constructor(
 
         // Phase 1: collect segments for all movies in parallel, capped by semaphore
         val semaphore = Semaphore(MAX_CONCURRENT_MOVIE_SEGMENTS)
-        var completed = 0
+        val completed = java.util.concurrent.atomic.AtomicInteger(0)
         val allMovieSegments: List<List<SkipMeSubmitRequest>> = coroutineScope {
             allMovies.map { movie ->
                 async {
