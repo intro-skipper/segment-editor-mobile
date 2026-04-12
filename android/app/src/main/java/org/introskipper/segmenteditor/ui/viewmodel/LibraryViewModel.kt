@@ -35,7 +35,6 @@ import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.util.UiText
-import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 
 private const val BATCH_SIZE = 250
@@ -144,7 +143,7 @@ class LibraryViewModel @Inject constructor(
 
         // Phase 1: collect all season requests from all series in parallel, capped by semaphore
         val semaphore = Semaphore(MAX_CONCURRENT_SERIES)
-        val completed = AtomicInteger(0)
+        var completed = 0
         val allSeasonRequests = coroutineScope {
             allSeries.map { series ->
                 async {
@@ -175,7 +174,7 @@ class LibraryViewModel @Inject constructor(
                             tvdbSeasonIdFor = { episode -> seasonTvdbIds[episode.seasonId ?: ""] }
                         )
                     }.also {
-                        val count = completed.incrementAndGet()
+                        val count = ++completed
                         updateSharingProgress(count.toFloat() / allSeries.size.coerceAtLeast(1) * 0.5f)
                     }
                 }
@@ -215,7 +214,7 @@ class LibraryViewModel @Inject constructor(
 
         // Phase 1: collect segments for all movies in parallel, capped by semaphore
         val semaphore = Semaphore(MAX_CONCURRENT_MOVIE_SEGMENTS)
-        val completed = AtomicInteger(0)
+        var completed = 0
         val allMovieSegments: List<List<SkipMeSubmitRequest>> = coroutineScope {
             allMovies.map { movie ->
                 async {
@@ -240,7 +239,7 @@ class LibraryViewModel @Inject constructor(
                             } else null
                         } ?: emptyList()
                     }.also {
-                        val count = completed.incrementAndGet()
+                        val count = ++completed
                         updateSharingProgress(count.toFloat() / allMovies.size.coerceAtLeast(1) * 0.5f)
                     }
                 }
@@ -288,10 +287,9 @@ class LibraryViewModel @Inject constructor(
         val allSeries = seriesResponse.body()?.items ?: emptyList()
         var totalUpdated = 0
         var firstFailCode: Int? = null
-        val semaphore = Semaphore(MAX_CONCURRENT_SERIES)
 
         allSeries.forEachIndexed { seriesIndex, series ->
-            val requests = semaphore.withPermit {
+            val requests = run {
                 val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
                 val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
                 val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
@@ -301,7 +299,7 @@ class LibraryViewModel @Inject constructor(
                     userId = userId,
                     fields = listOf("ProviderIds", "ParentIndexNumber", "IndexNumber")
                 )
-                if (!episodesResponse.isSuccessful) return@withPermit emptyList()
+                if (!episodesResponse.isSuccessful) return@run emptyList()
 
                 val seasonsResponse = mediaRepository.getSeasons(series.id, userId, fields = listOf("ProviderIds"))
                 val seasonTvdbIds = seasonsResponse.body()?.items
