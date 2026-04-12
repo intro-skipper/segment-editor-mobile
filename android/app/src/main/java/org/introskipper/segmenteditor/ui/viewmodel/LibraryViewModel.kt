@@ -38,6 +38,7 @@ import org.introskipper.segmenteditor.ui.util.UiText
 import javax.inject.Inject
 
 private const val BATCH_SIZE = 250
+private const val SEASON_BATCH_SIZE = 25
 private const val MAX_CONCURRENT_SERIES = 2
 private const val MAX_CONCURRENT_EPISODE_SEGMENTS = 48
 
@@ -137,10 +138,10 @@ class LibraryViewModel @Inject constructor(
         }
 
         val allSeries = seriesResponse.body()?.items ?: emptyList()
-        var totalSubmitted = 0
         var firstFailCode: Int? = null
         
         val semaphore = Semaphore(MAX_CONCURRENT_SERIES)
+        val allSeasonRequests = mutableListOf<SkipMeSeasonSubmitRequest>()
 
         allSeries.forEachIndexed { seriesIndex, series ->
             val seriesRequests = semaphore.withPermit {
@@ -171,15 +172,20 @@ class LibraryViewModel @Inject constructor(
                 )
             }
 
-            if (seriesRequests.isNotEmpty()) {
-                val response = skipMeApiService.submitSeason(seriesRequests)
-                if (response.isSuccessful) {
-                    totalSubmitted += response.body()?.submitted ?: 0
-                } else if (firstFailCode == null) {
-                    firstFailCode = response.code()
-                }
+            allSeasonRequests.addAll(seriesRequests)
+            updateSharingProgress((seriesIndex + 1f) / allSeries.size.coerceAtLeast(1) * 0.5f)
+        }
+
+        var totalSubmitted = 0
+        val chunks = allSeasonRequests.chunked(SEASON_BATCH_SIZE)
+        chunks.forEachIndexed { chunkIndex, chunk ->
+            val response = skipMeApiService.submitSeason(chunk)
+            if (response.isSuccessful) {
+                totalSubmitted += response.body()?.submitted ?: 0
+            } else if (firstFailCode == null) {
+                firstFailCode = response.code()
             }
-            updateSharingProgress((seriesIndex + 1f) / allSeries.size.coerceAtLeast(1))
+            updateSharingProgress(0.5f + (chunkIndex + 1f) / chunks.size.coerceAtLeast(1) * 0.5f)
         }
 
         reportResult(totalSubmitted, firstFailCode, R.string.share_success_collection, R.string.share_no_segments_found)
@@ -228,14 +234,16 @@ class LibraryViewModel @Inject constructor(
             
             currentBatch.addAll(segments)
             
-            if (currentBatch.size >= BATCH_SIZE) {
-                val response = skipMeApiService.submitCollection(currentBatch.toList())
-                if (response.isSuccessful) {
-                    totalSubmitted += response.body()?.submitted ?: 0
-                } else if (firstFailCode == null) {
-                    firstFailCode = response.code()
+            if ((movieIndex + 1) % BATCH_SIZE == 0) {
+                if (currentBatch.isNotEmpty()) {
+                    val response = skipMeApiService.submitCollection(currentBatch.toList())
+                    if (response.isSuccessful) {
+                        totalSubmitted += response.body()?.submitted ?: 0
+                    } else if (firstFailCode == null) {
+                        firstFailCode = response.code()
+                    }
+                    currentBatch.clear()
                 }
-                currentBatch.clear()
             }
             updateSharingProgress((movieIndex + 1f) / allMovies.size.coerceAtLeast(1))
         }
