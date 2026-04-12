@@ -40,9 +40,9 @@ import javax.inject.Inject
 
 private const val BATCH_SIZE = 250
 private const val SEASON_BATCH_SIZE = 25
-private const val MAX_CONCURRENT_SERIES = 3
-private const val MAX_CONCURRENT_MOVIE_SEGMENTS = 32
-private const val MAX_CONCURRENT_EPISODE_SEGMENTS = 48
+private const val MAX_CONCURRENT_SERIES = 2
+private const val MAX_CONCURRENT_MOVIE_SEGMENTS = 8
+private const val MAX_CONCURRENT_EPISODE_SEGMENTS = 6
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
