@@ -174,7 +174,7 @@ class LibraryViewModel @Inject constructor(
                             tvdbSeasonIdFor = { episode -> seasonTvdbIds[episode.seasonId ?: ""] }
                         )
                     }.also {
-                        val count = ++completed
+                        val count = completed.incrementAndGet()
                         updateSharingProgress(count.toFloat() / allSeries.size.coerceAtLeast(1) * 0.5f)
                     }
                 }
