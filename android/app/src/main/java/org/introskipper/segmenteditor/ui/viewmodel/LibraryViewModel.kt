@@ -143,7 +143,7 @@ class LibraryViewModel @Inject constructor(
 
         // Phase 1: collect all season requests from all series in parallel, capped by semaphore
         val semaphore = Semaphore(MAX_CONCURRENT_SERIES)
-        var completed = 0
+        val completed = java.util.concurrent.atomic.AtomicInteger(0)
         val allSeasonRequests = coroutineScope {
             allSeries.map { series ->
                 async {
