@@ -89,6 +89,7 @@ class AuthViewModel(
             try {
                 // Save API key first so it's available for the request
                 securePreferences.saveApiKey(apiKey)
+                securePreferences.saveIsApiKeyLogin(true)
                 
                 val result = authRepository.validateApiKeyResult()
                 result.fold(
@@ -204,6 +205,7 @@ class AuthViewModel(
                         securePreferences.saveApiKey(authResult.accessToken)
                         securePreferences.saveUserId(authResult.user.id)
                         securePreferences.saveUsername(authResult.user.name)
+                        securePreferences.saveIsApiKeyLogin(false)
                         
                         _state.value = _state.value.copy(
                             isLoading = false,
