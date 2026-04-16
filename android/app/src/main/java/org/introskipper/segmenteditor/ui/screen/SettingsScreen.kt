@@ -26,6 +26,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -408,15 +410,28 @@ fun SettingsScreen(
         )
     }
 
+    var switchRequested by remember { mutableStateOf(false) }
+
     if (showSwitchAccountSheet) {
         SwitchAccountSheet(
             isSwitching = uiState.isSwitchingUser,
-            onDismiss = { showSwitchAccountSheet = false },
-            onSwitch = { username, password ->
-                viewModel.switchUserWithCredentials(username, password)
+            onDismiss = {
                 showSwitchAccountSheet = false
+                switchRequested = false
+            },
+            onSwitch = { username, password ->
+                switchRequested = true
+                viewModel.switchUserWithCredentials(username, password)
             }
         )
+
+        // Auto-dismiss once switching completes (only after it was actually started)
+        LaunchedEffect(uiState.isSwitchingUser, switchRequested) {
+            if (switchRequested && !uiState.isSwitchingUser) {
+                showSwitchAccountSheet = false
+                switchRequested = false
+            }
+        }
     }
 }
 
@@ -567,7 +582,7 @@ private fun SwitchAccountSheet(
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
-                            imageVector = if (passwordVisible) androidx.compose.material.icons.filled.Visibility else androidx.compose.material.icons.filled.VisibilityOff,
+                            imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                             contentDescription = null
                         )
                     }
