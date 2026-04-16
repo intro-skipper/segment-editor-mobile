@@ -60,6 +60,7 @@ class LibraryViewModel @Inject constructor(
     val events: SharedFlow<LibraryEvent> = _events.asSharedFlow()
 
     private var lastHiddenLibraryIds: Set<String> = emptySet()
+    private var lastUserId: String? = null
 
     private val hiddenLibraryIds: Set<String>
         get() = securePreferences.getHiddenLibraryIds()
@@ -168,9 +169,11 @@ class LibraryViewModel @Inject constructor(
 
     fun refreshIfLibrariesChanged() {
         val currentLibraries = hiddenLibraryIds
-        if (lastHiddenLibraryIds != currentLibraries) {
+        val currentUserId = securePreferences.getUserId()
+        if (lastHiddenLibraryIds != currentLibraries || lastUserId != currentUserId) {
             loadLibraries()
             lastHiddenLibraryIds = currentLibraries
+            lastUserId = currentUserId
         }
     }
 

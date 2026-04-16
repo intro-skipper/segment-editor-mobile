@@ -95,6 +95,7 @@ fun SettingsScreen(
     var showAboutDialog by remember { mutableStateOf(false) }
     var showChangeServerDialog by remember { mutableStateOf(false) }
     var showCodecSheet by remember { mutableStateOf(false) }
+    var showSwitchAccountSheet by remember { mutableStateOf(false) }
     
     // Handle events from ViewModel
     LaunchedEffect(viewModel.events) {
@@ -163,8 +164,14 @@ fun SettingsScreen(
                         UserSelectionSettingItem(
                             users = uiState.availableUsers,
                             selectedUserId = uiState.selectedUserId,
+                            hasExplicitUserSelection = uiState.hasExplicitUserSelection,
                             isLoading = uiState.isLoadingUsers,
                             onUserSelected = { user -> viewModel.selectUser(user.id, user.name) }
+                        )
+                    } else {
+                        SwitchAccountSettingItem(
+                            currentUsername = uiState.selectedUsername,
+                            onClick = { showSwitchAccountSheet = true }
                         )
                     }
 
@@ -400,6 +407,17 @@ fun SettingsScreen(
             }
         )
     }
+
+    if (showSwitchAccountSheet) {
+        SwitchAccountSheet(
+            isSwitching = uiState.isSwitchingUser,
+            onDismiss = { showSwitchAccountSheet = false },
+            onSwitch = { username, password ->
+                viewModel.switchUserWithCredentials(username, password)
+                showSwitchAccountSheet = false
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -407,12 +425,13 @@ fun SettingsScreen(
 private fun UserSelectionSettingItem(
     users: List<UserInfo>,
     selectedUserId: String,
+    hasExplicitUserSelection: Boolean,
     isLoading: Boolean,
     onUserSelected: (UserInfo) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val selectedUser = users.firstOrNull { it.id == selectedUserId }
+    val selectedUser = if (hasExplicitUserSelection) users.firstOrNull { it.id == selectedUserId } else null
 
     Column(modifier = modifier.fillMaxWidth()) {
         SettingItem(
@@ -443,6 +462,7 @@ private fun UserSelectionSettingItem(
                     value = selectedUser?.name ?: "",
                     onValueChange = {},
                     readOnly = true,
+                    placeholder = { Text(translatedString(R.string.settings_select_user)) },
                     leadingIcon = {
                         UserAvatar(
                             avatarUrl = selectedUser?.avatarUrl,
@@ -481,6 +501,88 @@ private fun UserSelectionSettingItem(
                             contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SwitchAccountSettingItem(
+    currentUsername: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        SettingItem(
+            title = translatedString(R.string.settings_active_user),
+            subtitle = null
+        )
+        ClickableSettingItem(
+            title = currentUsername.ifEmpty { translatedString(R.string.settings_switch_account) },
+            subtitle = translatedString(R.string.settings_switch_account_subtitle),
+            onClick = onClick
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwitchAccountSheet(
+    isSwitching: Boolean,
+    onDismiss: () -> Unit,
+    onSwitch: (username: String, password: String) -> Unit
+) {
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = translatedString(R.string.settings_switch_account),
+                style = MaterialTheme.typography.headlineSmall
+            )
+            OutlinedTextField(
+                value = username,
+                onValueChange = { username = it },
+                label = { Text(translatedString(R.string.auth_username)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text(translatedString(R.string.auth_password)) },
+                singleLine = true,
+                visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                trailingIcon = {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            imageVector = if (passwordVisible) androidx.compose.material.icons.filled.Visibility else androidx.compose.material.icons.filled.VisibilityOff,
+                            contentDescription = null
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (isSwitching) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+            } else {
+                Button(
+                    onClick = { onSwitch(username, password) },
+                    enabled = username.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(translatedString(R.string.auth_sign_in_button))
                 }
             }
         }

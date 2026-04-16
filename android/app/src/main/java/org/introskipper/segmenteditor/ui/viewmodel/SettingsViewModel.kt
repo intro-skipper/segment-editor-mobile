@@ -97,9 +97,7 @@ class SettingsViewModel @Inject constructor(
         loadAvailableLibraries()
         loadServerInfo()
         loadSupportedCodecs()
-        if (securePreferences.getIsApiKeyLogin()) {
-            loadAvailableUsers()
-        }
+        loadAvailableUsers()
 
         // Keep UI state in sync with translation service
         viewModelScope.launch {
