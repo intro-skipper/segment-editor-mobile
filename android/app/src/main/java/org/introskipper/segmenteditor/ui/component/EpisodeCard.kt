@@ -5,7 +5,9 @@
 
 package org.introskipper.segmenteditor.ui.component
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,17 +30,22 @@ import coil.compose.AsyncImage
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.state.EpisodeWithSegments
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EpisodeCard(
     episode: EpisodeWithSegments,
     serverUrl: String,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,

@@ -15,11 +15,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import org.introskipper.segmenteditor.ui.navigation.Screen
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -247,6 +250,18 @@ fun HomeScreen(
                                             modifier = Modifier.fillMaxWidth()
                                         ) {
                                             Text(translatedString(R.string.share_metadata))
+                                        }
+                                        if (!selectedItem!!.isContainerType()) {
+                                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                            Button(
+                                                onClick = {
+                                                    onMediaItemClick(Screen.Player.createRoute(selectedItem!!.id, trackProgress = true))
+                                                    showShareDialog = false
+                                                },
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Text(translatedString(R.string.open_with_progress))
+                                            }
                                         }
                                     }
                                 },

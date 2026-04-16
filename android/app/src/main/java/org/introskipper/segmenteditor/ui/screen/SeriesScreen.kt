@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
@@ -32,6 +33,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -460,14 +462,63 @@ fun SeriesScreen(
                                         .weight(1f)
                                 ) {
                                     items(selectedEpisodes) { episode ->
+                                        var showEpisodeOpenDialog by remember { mutableStateOf(false) }
+
                                         EpisodeCard(
                                             episode = episode,
                                             serverUrl = serverUrl,
                                             onClick = {
                                                 navController.navigate("player/${episode.episode.id}")
                                             },
+                                            onLongClick = { showEpisodeOpenDialog = true },
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                         )
+
+                                        if (showEpisodeOpenDialog) {
+                                            AlertDialog(
+                                                onDismissRequest = { showEpisodeOpenDialog = false },
+                                                icon = {
+                                                    Icon(
+                                                        imageVector = Icons.Default.PlayArrow,
+                                                        contentDescription = null,
+                                                        tint = MaterialTheme.colorScheme.primary
+                                                    )
+                                                },
+                                                title = {
+                                                    Text(
+                                                        text = episode.episode.name ?: "",
+                                                        style = MaterialTheme.typography.headlineSmall
+                                                    )
+                                                },
+                                                text = {
+                                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                        Button(
+                                                            onClick = {
+                                                                navController.navigate(Screen.Player.createRoute(episode.episode.id, trackProgress = true))
+                                                                showEpisodeOpenDialog = false
+                                                            },
+                                                            modifier = Modifier.fillMaxWidth()
+                                                        ) {
+                                                            Text(translatedString(R.string.open_with_progress))
+                                                        }
+                                                        Button(
+                                                            onClick = {
+                                                                navController.navigate("player/${episode.episode.id}")
+                                                                showEpisodeOpenDialog = false
+                                                            },
+                                                            modifier = Modifier.fillMaxWidth()
+                                                        ) {
+                                                            Text(translatedString(R.string.open_without_progress))
+                                                        }
+                                                    }
+                                                },
+                                                confirmButton = {
+                                                    TextButton(onClick = { showEpisodeOpenDialog = false }) {
+                                                        Text(translatedString(R.string.cancel))
+                                                    }
+                                                }
+                                            )
+                                        }
                                     }
                                     
                                     // Bottom padding
@@ -567,14 +618,63 @@ fun SeriesScreen(
                                     }
                                     
                                     items(selectedEpisodes) { episode ->
+                                        var showEpisodeOpenDialog by remember { mutableStateOf(false) }
+
                                         EpisodeCard(
                                             episode = episode,
                                             serverUrl = serverUrl,
                                             onClick = {
                                                 navController.navigate("player/${episode.episode.id}")
                                             },
+                                            onLongClick = { showEpisodeOpenDialog = true },
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                         )
+
+                                        if (showEpisodeOpenDialog) {
+                                            AlertDialog(
+                                                onDismissRequest = { showEpisodeOpenDialog = false },
+                                                icon = {
+                                                    Icon(
+                                                        imageVector = Icons.Default.PlayArrow,
+                                                        contentDescription = null,
+                                                        tint = MaterialTheme.colorScheme.primary
+                                                    )
+                                                },
+                                                title = {
+                                                    Text(
+                                                        text = episode.episode.name ?: "",
+                                                        style = MaterialTheme.typography.headlineSmall
+                                                    )
+                                                },
+                                                text = {
+                                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                        Button(
+                                                            onClick = {
+                                                                navController.navigate(Screen.Player.createRoute(episode.episode.id, trackProgress = true))
+                                                                showEpisodeOpenDialog = false
+                                                            },
+                                                            modifier = Modifier.fillMaxWidth()
+                                                        ) {
+                                                            Text(translatedString(R.string.open_with_progress))
+                                                        }
+                                                        Button(
+                                                            onClick = {
+                                                                navController.navigate("player/${episode.episode.id}")
+                                                                showEpisodeOpenDialog = false
+                                                            },
+                                                            modifier = Modifier.fillMaxWidth()
+                                                        ) {
+                                                            Text(translatedString(R.string.open_without_progress))
+                                                        }
+                                                    }
+                                                },
+                                                confirmButton = {
+                                                    TextButton(onClick = { showEpisodeOpenDialog = false }) {
+                                                        Text(translatedString(R.string.cancel))
+                                                    }
+                                                }
+                                            )
+                                        }
                                     }
                                     
                                     // Bottom padding
