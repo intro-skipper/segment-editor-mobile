@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.introskipper.segmenteditor.R
+import org.introskipper.segmenteditor.api.JellyfinApiService
+import org.introskipper.segmenteditor.data.model.User
 import org.introskipper.segmenteditor.data.repository.AuthRepository
 import org.introskipper.segmenteditor.data.repository.JellyfinRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
@@ -48,7 +50,19 @@ data class SettingsUiState(
     val serverVersion: String = "",
     val serverName: String = "",
     val supportedVideoCodecs: List<String> = emptyList(),
-    val supportedAudioCodecs: List<String> = emptyList()
+    val supportedAudioCodecs: List<String> = emptyList(),
+    // API-key user selection
+    val isApiKeyLogin: Boolean = false,
+    val availableUsers: List<UserInfo> = emptyList(),
+    val isLoadingUsers: Boolean = false,
+    val selectedUserId: String = "",
+    val selectedUsername: String = ""
+)
+
+data class UserInfo(
+    val id: String,
+    val name: String,
+    val avatarUrl: String?
 )
 
 data class LibraryInfo(
@@ -66,6 +80,7 @@ class SettingsViewModel @Inject constructor(
     private val securePreferences: SecurePreferences,
     private val jellyfinRepository: JellyfinRepository,
     private val authRepository: AuthRepository,
+    private val apiService: JellyfinApiService,
     private val translationService: TranslationService
 ) : ViewModel() {
 
@@ -80,8 +95,10 @@ class SettingsViewModel @Inject constructor(
         loadAvailableLibraries()
         loadServerInfo()
         loadSupportedCodecs()
-        
-        // Keep UI state in sync with translation service
+        if (securePreferences.getIsApiKeyLogin()) {
+            loadAvailableUsers()
+        }
+                // Keep UI state in sync with translation service
         viewModelScope.launch {
             translationService.isDynamicTranslationEnabled.collectLatest { enabled ->
                 _uiState.value = _uiState.value.copy(dynamicTranslationEnabled = enabled)
@@ -97,6 +114,7 @@ class SettingsViewModel @Inject constructor(
 
     fun loadPreferences() {
         viewModelScope.launch {
+            val isApiKeyLogin = securePreferences.getIsApiKeyLogin()
             _uiState.value = _uiState.value.copy(
                 theme = securePreferences.getTheme(),
                 dynamicTranslationEnabled = securePreferences.isDynamicTranslationEnabled(),
@@ -109,9 +127,48 @@ class SettingsViewModel @Inject constructor(
                 itemsPerPage = securePreferences.getItemsPerPage(),
                 hiddenLibraryIds = securePreferences.getHiddenLibraryIds(),
                 currentLocaleName = translationService.getCurrentLocaleName(),
-                serverUrl = securePreferences.getServerUrl() ?: ""
+                serverUrl = securePreferences.getServerUrl() ?: "",
+                isApiKeyLogin = isApiKeyLogin,
+                selectedUserId = securePreferences.getUserId() ?: "",
+                selectedUsername = securePreferences.getUsername() ?: ""
             )
         }
+    }
+
+    fun loadAvailableUsers() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoadingUsers = true)
+            try {
+                val response = authRepository.getUsers()
+                if (response.isSuccessful) {
+                    val users = response.body() ?: emptyList()
+                    val userInfos = users.map { user ->
+                        UserInfo(
+                            id = user.id,
+                            name = user.name,
+                            avatarUrl = apiService.getUserImageUrl(user.id, user.primaryImageTag)
+                        )
+                    }
+                    _uiState.value = _uiState.value.copy(
+                        availableUsers = userInfos,
+                        isLoadingUsers = false
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(isLoadingUsers = false)
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isLoadingUsers = false)
+            }
+        }
+    }
+
+    fun selectUser(userId: String, username: String) {
+        securePreferences.saveUserId(userId)
+        securePreferences.saveUsername(username)
+        _uiState.value = _uiState.value.copy(
+            selectedUserId = userId,
+            selectedUsername = username
+        )
     }
 
     private fun loadServerInfo() {

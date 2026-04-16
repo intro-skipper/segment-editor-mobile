@@ -225,7 +225,25 @@ class JellyfinApiService(private val securePreferences: SecurePreferences) {
     }
     
     // ========== Image URL Builders ==========
-    
+
+    /**
+     * Gets the primary image URL for a user avatar.
+     * Returns null when the user has no image tag.
+     */
+    fun getUserImageUrl(userId: String, imageTag: String?): String? {
+        if (imageTag.isNullOrBlank()) return null
+        val baseUrl = currentBaseUrl ?: return null
+        val uri = baseUrl.toUri()
+            .buildUpon()
+            .appendPath("Users")
+            .appendPath(userId)
+            .appendPath("Images")
+            .appendPath("Primary")
+            .appendQueryParameter("tag", imageTag)
+            .build()
+        return uri.toString()
+    }
+
     /**
      * Gets the primary image URL for an item
      */

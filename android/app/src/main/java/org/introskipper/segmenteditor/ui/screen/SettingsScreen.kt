@@ -22,17 +22,25 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -47,6 +55,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -54,6 +64,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import coil3.compose.AsyncImage
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.component.settings.ClickableSettingItem
 import org.introskipper.segmenteditor.ui.component.settings.DropdownSettingsItem
@@ -63,6 +74,7 @@ import org.introskipper.segmenteditor.ui.component.settings.SwitchSettingItem
 import org.introskipper.segmenteditor.ui.state.AppTheme
 import org.introskipper.segmenteditor.ui.state.ExportFormat
 import org.introskipper.segmenteditor.ui.viewmodel.SettingsViewModel
+import org.introskipper.segmenteditor.ui.viewmodel.UserInfo
 import org.introskipper.segmenteditor.ui.component.translatedString
 import org.introskipper.segmenteditor.ui.viewmodel.SettingsEvent
 
@@ -149,6 +161,15 @@ fun SettingsScreen(
                         subtitle = translatedString(R.string.settings_change_server_subtitle),
                         onClick = { showChangeServerDialog = true }
                     )
+
+                    if (uiState.isApiKeyLogin) {
+                        UserSelectionSettingItem(
+                            users = uiState.availableUsers,
+                            selectedUserId = uiState.selectedUserId,
+                            isLoading = uiState.isLoadingUsers,
+                            onUserSelected = { user -> viewModel.selectUser(user.id, user.name) }
+                        )
+                    }
                 }
             }
 
@@ -375,6 +396,125 @@ fun SettingsScreen(
                 }
             }
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun UserSelectionSettingItem(
+    users: List<UserInfo>,
+    selectedUserId: String,
+    isLoading: Boolean,
+    onUserSelected: (UserInfo) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedUser = users.firstOrNull { it.id == selectedUserId }
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        SettingItem(
+            title = translatedString(R.string.settings_active_user),
+            subtitle = translatedString(R.string.settings_active_user_subtitle)
+        )
+
+        when {
+            isLoading -> CircularProgressIndicator(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .size(24.dp)
+            )
+            users.isEmpty() -> Text(
+                text = translatedString(R.string.settings_active_user_none),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            else -> ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                OutlinedTextField(
+                    value = selectedUser?.name ?: "",
+                    onValueChange = {},
+                    readOnly = true,
+                    leadingIcon = {
+                        UserAvatar(
+                            avatarUrl = selectedUser?.avatarUrl,
+                            size = 28
+                        )
+                    },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier
+                        .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                        .fillMaxWidth()
+                )
+
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    users.forEach { user ->
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    UserAvatar(avatarUrl = user.avatarUrl, size = 32)
+                                    Text(
+                                        text = user.name,
+                                        modifier = Modifier.padding(start = 12.dp),
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                }
+                            },
+                            onClick = {
+                                onUserSelected(user)
+                                expanded = false
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun UserAvatar(
+    avatarUrl: String?,
+    size: Int,
+    modifier: Modifier = Modifier
+) {
+    val sizeDp = size.dp
+    if (avatarUrl != null) {
+        AsyncImage(
+            model = avatarUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = modifier
+                .size(sizeDp)
+                .clip(CircleShape)
+        )
+    } else {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = modifier
+                .size(sizeDp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.secondaryContainer)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Person,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.size((sizeDp * 0.65f))
+            )
+        }
     }
 }
 
