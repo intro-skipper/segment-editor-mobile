@@ -179,27 +179,6 @@ fun LibraryScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        if (state.continueWatching.isNotEmpty()) {
-                            item {
-                                Text(
-                                    text = translatedString(R.string.library_continue_watching),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(bottom = 4.dp)
-                                )
-                            }
-                            items(state.continueWatching.count()) { item ->
-                                val mediaItem = state.continueWatching[item]
-                                ContinueWatchingCard(
-                                    item = mediaItem,
-                                    getPrimaryImageUrl = { itemId, imageTag -> viewModel.getPrimaryImageUrl(itemId, imageTag) },
-                                    onClick = { onContinueWatchingClick(mediaItem.id) }
-                                )
-                            }
-                            item { Spacer(modifier = Modifier.height(12.dp)) }
-                        }
-
                         item {
                             Text(
                                 text = translatedString(R.string.library_select),
@@ -230,6 +209,27 @@ fun LibraryScreen(
                                     themeState.globalSeedColor = color
                                 }
                             )
+                        }
+
+                        if (state.continueWatching.isNotEmpty()) {
+                            item { Spacer(modifier = Modifier.height(12.dp)) }
+                            item {
+                                Text(
+                                    text = translatedString(R.string.library_continue_watching),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 4.dp)
+                                )
+                            }
+                            items(state.continueWatching.count()) { item ->
+                                val mediaItem = state.continueWatching[item]
+                                ContinueWatchingCard(
+                                    item = mediaItem,
+                                    getPrimaryImageUrl = { itemId, imageTag -> viewModel.getPrimaryImageUrl(itemId, imageTag) },
+                                    onClick = { onContinueWatchingClick(mediaItem.id) }
+                                )
+                            }
                         }
                     }
                 }
