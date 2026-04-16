@@ -99,6 +99,7 @@ import kotlin.time.toDuration
 fun PlayerScreen(
     itemId: String,
     navController: NavController,
+    trackProgressEnabled: Boolean = false,
     viewModel: PlayerViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -127,14 +128,19 @@ fun PlayerScreen(
         when (val event = events) {
             is PlayerEvent.NavigateToPlayer -> {
                 viewModel.clearEvent()
-                navController.navigate(Screen.Player.createRoute(event.itemId)) {
+                navController.navigate(
+                    Screen.Player.createRoute(
+                        itemId = event.itemId,
+                        trackProgress = event.trackProgressToServer
+                    )
+                ) {
                     // Pop current player from backstack to avoid loops
                     popUpTo("${Screen.Player.route}/{itemId}") { inclusive = true }
                 }
             }
             is PlayerEvent.PlaybackEnded -> {
                 viewModel.clearEvent()
-                navigateBack(navController, uiState.mediaItem)
+                navigateBack(navController, uiState.mediaItem, viewModel, player?.currentPosition)
             }
             is PlayerEvent.ShowToast -> {
                 viewModel.clearEvent()
@@ -223,7 +229,20 @@ fun PlayerScreen(
     
     // Load media item when itemId changes
     LaunchedEffect(itemId) {
-        viewModel.loadMediaItem(itemId)
+        viewModel.loadMediaItem(itemId, trackProgressToServer = trackProgressEnabled)
+    }
+
+    var resumeAppliedForItemId by remember(itemId) { mutableStateOf<String?>(null) }
+    LaunchedEffect(player, uiState.mediaItem?.id, uiState.resumePositionMs, uiState.trackProgressToServer) {
+        val currentPlayer = player ?: return@LaunchedEffect
+        val mediaItemId = uiState.mediaItem?.id ?: return@LaunchedEffect
+        if (!uiState.trackProgressToServer) return@LaunchedEffect
+        if (resumeAppliedForItemId == mediaItemId) return@LaunchedEffect
+        val resumePosition = uiState.resumePositionMs
+        if (resumePosition > 0L && resumePosition < uiState.duration) {
+            currentPlayer.seekTo(resumePosition)
+        }
+        resumeAppliedForItemId = mediaItemId
     }
     
     // Update playback state periodically
@@ -299,7 +318,7 @@ fun PlayerScreen(
 
     // Mirror the back-icon behavior for the device back button.
     BackHandler {
-        navigateBack(navController, uiState.mediaItem)
+        navigateBack(navController, uiState.mediaItem, viewModel, player?.currentPosition)
     }
 
     Scaffold(
@@ -309,7 +328,7 @@ fun PlayerScreen(
                     title = { Text(uiState.mediaItem?.name ?: translatedString(R.string.player_title)) },
                     navigationIcon = {
                         IconButton(onClick = { 
-                            navigateBack(navController, uiState.mediaItem)
+                            navigateBack(navController, uiState.mediaItem, viewModel, player?.currentPosition)
                         }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, translatedString(R.string.back))
                         }
@@ -394,7 +413,7 @@ fun PlayerScreen(
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.error
                     )
-                    Button(onClick = { viewModel.loadMediaItem(itemId) }) {
+                    Button(onClick = { viewModel.loadMediaItem(itemId, trackProgressToServer = trackProgressEnabled) }) {
                         Text(translatedString(R.string.retry))
                     }
                 }
@@ -698,7 +717,13 @@ fun PlayerScreen(
     }
 }
 
-private fun navigateBack(navController: NavController, mediaItem: MediaItem?) {
+private fun navigateBack(
+    navController: NavController,
+    mediaItem: MediaItem?,
+    viewModel: PlayerViewModel,
+    positionMs: Long? = null
+) {
+    viewModel.flushWatchProgress(positionMs)
     if (mediaItem?.seriesId != null) {
         // If it's an episode, go back to the series screen
         // We use popBackStack with the route template to find any existing SeriesScreen in the backstack

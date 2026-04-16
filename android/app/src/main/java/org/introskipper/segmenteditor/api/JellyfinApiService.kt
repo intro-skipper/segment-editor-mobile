@@ -18,6 +18,7 @@ import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.SegmentCreateRequest
 import org.introskipper.segmenteditor.data.model.SegmentResponse
 import org.introskipper.segmenteditor.data.model.ServerInfo
+import org.introskipper.segmenteditor.data.model.UpdateUserItemDataDto
 import org.introskipper.segmenteditor.data.model.User
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import retrofit2.Response
@@ -207,6 +208,20 @@ class JellyfinApiService(private val securePreferences: SecurePreferences) {
     suspend fun getLibraries(userId: String): Response<ItemsResponse> {
         ensureInitialized()
         return api!!.getLibraries(userId, getApiKey())
+    }
+
+    suspend fun updateUserItemData(
+        itemId: String,
+        data: UpdateUserItemDataDto,
+        userId: String? = null
+    ): Response<Unit> {
+        ensureInitialized()
+        return api!!.updateUserItemData(itemId = itemId, userId = userId, data = data, authHeader = getApiKey())
+    }
+
+    suspend fun markItemPlayed(itemId: String, userId: String? = null): Response<Unit> {
+        ensureInitialized()
+        return api!!.markItemPlayed(itemId = itemId, userId = userId, authHeader = getApiKey())
     }
     
     // ========== Image URL Builders ==========

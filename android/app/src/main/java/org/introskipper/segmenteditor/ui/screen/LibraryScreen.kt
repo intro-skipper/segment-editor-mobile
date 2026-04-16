@@ -31,6 +31,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -65,6 +66,7 @@ import org.introskipper.segmenteditor.ui.component.translatedString
 import org.introskipper.segmenteditor.ui.component.WavyCircularProgressIndicator
 import org.introskipper.segmenteditor.ui.state.ThemeState
 import org.introskipper.segmenteditor.ui.util.getDominantColor
+import org.introskipper.segmenteditor.ui.viewmodel.ContinueWatchingItem
 import org.introskipper.segmenteditor.ui.viewmodel.Library
 import org.introskipper.segmenteditor.ui.viewmodel.LibraryEvent
 import org.introskipper.segmenteditor.ui.viewmodel.LibraryUiState
@@ -74,6 +76,7 @@ import org.introskipper.segmenteditor.ui.viewmodel.LibraryViewModel
 @Composable
 fun LibraryScreen(
     onLibraryClick: (String, String?) -> Unit,
+    onContinueWatchingClick: (String) -> Unit = {},
     onSettingsClick: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
     themeState: ThemeState
@@ -176,6 +179,36 @@ fun LibraryScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        if (state.continueWatching.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = translatedString(R.string.library_continue_watching),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 4.dp)
+                                )
+                            }
+                            items(state.continueWatching.count()) { item ->
+                                val mediaItem = state.continueWatching[item]
+                                ContinueWatchingCard(
+                                    item = mediaItem,
+                                    getPrimaryImageUrl = { itemId, imageTag -> viewModel.getPrimaryImageUrl(itemId, imageTag) },
+                                    onClick = { onContinueWatchingClick(mediaItem.id) }
+                                )
+                            }
+                            item { Spacer(modifier = Modifier.height(12.dp)) }
+                        }
+
+                        item {
+                            Text(
+                                text = translatedString(R.string.library_select),
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 4.dp)
+                            )
+                        }
                         items(state.libraries.count()) { item ->
                             val library = state.libraries[item]
                             val isSharing = state.isSharingLibraryId == library.id
@@ -221,6 +254,68 @@ fun LibraryScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ContinueWatchingCard(
+    item: ContinueWatchingItem,
+    getPrimaryImageUrl: (String, String) -> String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val imageUrl = item.primaryImageTag?.let { getPrimaryImageUrl(item.id, it) }
+    val subtitle = if (item.seasonNumber != null && item.episodeNumber != null) {
+        "${item.seriesName ?: item.name} • S${item.seasonNumber}E${item.episodeNumber}"
+    } else {
+        item.seriesName ?: item.type ?: ""
+    }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .combinedClickable(onClick = onClick),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (imageUrl != null) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .width(96.dp)
+                        .height(56.dp),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = item.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (subtitle.isNotBlank()) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                LinearProgressIndicator(
+                    progress = { item.progress },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }

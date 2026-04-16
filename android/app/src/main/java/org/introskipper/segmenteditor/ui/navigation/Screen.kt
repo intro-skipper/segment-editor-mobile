@@ -15,7 +15,8 @@ sealed class Screen(val route: String) {
     object Main : Screen("main")
     object Home : Screen("home")
     object Player : Screen("player") {
-        fun createRoute(itemId: String) = "player/$itemId"
+        fun createRoute(itemId: String, trackProgress: Boolean = false) =
+            if (trackProgress) "player/$itemId?trackProgress=true" else "player/$itemId"
     }
     object Series : Screen("series")
     object Album : Screen("album")

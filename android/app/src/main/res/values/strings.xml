@@ -183,6 +183,7 @@
 
     <!-- Library Screen -->
     <string name="library_select">Select Library</string>
+    <string name="library_continue_watching">Continue Watching</string>
     <string name="library_no_libraries">No libraries found</string>
     <string name="library_type_format">(%1$s)</string>
     <string name="library_unknown">Unknown Library</string>

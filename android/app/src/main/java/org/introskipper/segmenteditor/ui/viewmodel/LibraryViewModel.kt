@@ -98,11 +98,38 @@ class LibraryViewModel @Inject constructor(
                             primaryImageTag = mediaItem.imageTags?.get("Primary")
                         )
                     }
+
+                val continueWatching = securePreferences.getUserId()?.let { userId ->
+                    runCatching { mediaRepository.getContinueWatching(userId = userId, limit = 20) }
+                        .getOrNull()
+                        ?.takeIf { it.isSuccessful }
+                        ?.body()
+                        ?.items
+                        ?.mapNotNull { item ->
+                            val playbackPositionTicks = item.userData?.playbackPositionTicks ?: 0L
+                            val runTimeTicks = item.runTimeTicks ?: 0L
+                            if (playbackPositionTicks <= 0L || runTimeTicks <= 0L) return@mapNotNull null
+                            ContinueWatchingItem(
+                                id = item.id,
+                                name = item.name ?: "Unknown",
+                                type = item.type,
+                                seriesName = item.seriesName,
+                                seasonNumber = item.parentIndexNumber,
+                                episodeNumber = item.indexNumber,
+                                primaryImageTag = item.imageTags?.get("Primary"),
+                                playbackPositionTicks = playbackPositionTicks,
+                                runTimeTicks = runTimeTicks
+                            )
+                        } ?: emptyList()
+                } ?: emptyList()
                 
                 _uiState.value = if (libraryList.isEmpty()) {
                     LibraryUiState.Empty
                 } else {
-                    LibraryUiState.Success(libraryList)
+                    LibraryUiState.Success(
+                        libraries = libraryList,
+                        continueWatching = continueWatching
+                    )
                 }
             } catch (e: Exception) {
                 _uiState.value = LibraryUiState.Error(e.message ?: "Unknown error")
@@ -483,6 +510,7 @@ sealed class LibraryUiState {
     object Empty : LibraryUiState()
     data class Success(
         val libraries: List<Library>,
+        val continueWatching: List<ContinueWatchingItem> = emptyList(),
         val isSharingLibraryId: String? = null,
         val sharingProgress: Float? = null
     ) : LibraryUiState()
@@ -499,3 +527,20 @@ data class Library(
     val collectionType: String?,
     val primaryImageTag: String? = null
 )
+
+data class ContinueWatchingItem(
+    val id: String,
+    val name: String,
+    val type: String?,
+    val seriesName: String?,
+    val seasonNumber: Int?,
+    val episodeNumber: Int?,
+    val primaryImageTag: String?,
+    val playbackPositionTicks: Long,
+    val runTimeTicks: Long
+) {
+    val progress: Float
+        get() = (playbackPositionTicks.toDouble() / runTimeTicks.toDouble())
+            .coerceIn(0.0, 1.0)
+            .toFloat()
+}
