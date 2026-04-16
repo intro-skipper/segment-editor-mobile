@@ -232,17 +232,17 @@ fun PlayerScreen(
         viewModel.loadMediaItem(itemId, trackProgressToServer = trackProgressEnabled)
     }
 
-    var resumeAppliedForItemId by remember(itemId) { mutableStateOf<String?>(null) }
+    var lastResumedItemId by remember(itemId) { mutableStateOf<String?>(null) }
     LaunchedEffect(player, uiState.mediaItem?.id, uiState.resumePositionMs, uiState.trackProgressToServer) {
         val currentPlayer = player ?: return@LaunchedEffect
         val mediaItemId = uiState.mediaItem?.id ?: return@LaunchedEffect
         if (!uiState.trackProgressToServer) return@LaunchedEffect
-        if (resumeAppliedForItemId == mediaItemId) return@LaunchedEffect
+        if (lastResumedItemId == mediaItemId) return@LaunchedEffect
         val resumePosition = uiState.resumePositionMs
         if (resumePosition > 0L && resumePosition < uiState.duration) {
             currentPlayer.seekTo(resumePosition)
         }
-        resumeAppliedForItemId = mediaItemId
+        lastResumedItemId = mediaItemId
     }
     
     // Update playback state periodically

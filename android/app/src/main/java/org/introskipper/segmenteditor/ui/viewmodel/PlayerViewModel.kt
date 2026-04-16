@@ -677,8 +677,7 @@ class PlayerViewModel @Inject constructor(
                     userId = userId,
                     data = UpdateUserItemDataDto(
                         playbackPositionTicks = safePositionMs * 10_000L,
-                        playedPercentage = playedPercentage,
-                        played = if (markPlayedIfComplete) isComplete else null
+                        playedPercentage = playedPercentage
                     )
                 )
                 if (markPlayedIfComplete && isComplete && !hasMarkedPlayedForCurrentItem) {
