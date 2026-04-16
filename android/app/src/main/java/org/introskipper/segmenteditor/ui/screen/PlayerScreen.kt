@@ -59,6 +59,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -612,6 +613,9 @@ fun PlayerScreen(
                 onPlayNextUp = {
                     viewModel.handlePlaybackEnded()
                 },
+                onTrackProgressChanged = { enabled ->
+                    viewModel.setTrackProgress(enabled)
+                },
                 modifier = Modifier.padding(paddingValues)
             )
         }
@@ -897,6 +901,7 @@ private fun PlayerContent(
     onSetEndFromPlayer: (Int) -> Unit,
     onPlaybackError: (PlaybackException) -> Unit,
     onPlayNextUp: () -> Unit,
+    onTrackProgressChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Use rememberUpdatedState to capture the current useDirectPlay value
@@ -994,6 +999,24 @@ private fun PlayerContent(
                         onAudioTracksClick = onAudioTracksClick,
                         onSubtitleTracksClick = onSubtitleTracksClick
                     )
+                }
+
+                // Save watch progress toggle
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = translatedString(R.string.save_watch_progress),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Switch(
+                            checked = uiState.trackProgressToServer,
+                            onCheckedChange = onTrackProgressChanged
+                        )
+                    }
                 }
                 
                 // Segments list or empty message

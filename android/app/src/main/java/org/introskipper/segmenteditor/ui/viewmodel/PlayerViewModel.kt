@@ -76,6 +76,10 @@ class PlayerViewModel @Inject constructor(
         return securePreferences.getPreferDirectPlay()
     }
 
+    fun setTrackProgress(enabled: Boolean) {
+        _uiState.update { it.copy(trackProgressToServer = enabled) }
+    }
+
     private val _events = MutableStateFlow<PlayerEvent?>(null)
     val events: StateFlow<PlayerEvent?> = _events.asStateFlow()
 
