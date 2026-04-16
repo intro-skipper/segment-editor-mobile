@@ -28,6 +28,7 @@
     <string name="done">Done</string>
     <string name="apply">Apply</string>
     <string name="delete">Delete</string>
+    <string name="dismiss">Dismiss</string>
     <string name="save">Save</string>
     <string name="create">Create</string>
     <string name="success">Success</string>
@@ -91,6 +92,9 @@
     <string name="settings_change_server">Change Server</string>
     <string name="settings_change_server_subtitle">Connect to a different Jellyfin server</string>
     <string name="settings_change_server_dialog_message">This will disconnect from the current server and return to the connection wizard. Are you sure?</string>
+    <string name="settings_active_user">Active User</string>
+    <string name="settings_active_user_subtitle">Source for continue watching and target for progress updates</string>
+    <string name="settings_active_user_none">No users found</string>
     
     <string name="settings_section_admin">SkipMe.db</string>
 
@@ -159,6 +163,7 @@
 
     <!-- Player Screen -->
     <string name="player_title">Player</string>
+    <string name="player_next_up">Next Up</string>
     <string name="player_create_segment">Create Segment</string>
     <string name="player_audio">Audio</string>
     <string name="player_subtitles">Subs</string>

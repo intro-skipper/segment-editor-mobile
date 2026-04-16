@@ -742,7 +742,9 @@ class PlayerViewModel @Inject constructor(
         val mediaItem = currentState.mediaItem ?: return
         if (!currentState.trackProgressToServer) return
         val userId = securePreferences.getUserId() ?: return
-        if (!force && System.currentTimeMillis() - lastProgressReportAtMs < WATCH_PROGRESS_REPORT_INTERVAL_MS) return
+        if (!force &&
+            System.currentTimeMillis() - lastProgressReportAtMs < WATCH_PROGRESS_REPORT_INTERVAL_MS
+        ) return
 
         val safePositionMs = positionMs.coerceAtLeast(0L)
         val durationMs = currentState.duration.coerceAtLeast(0L)

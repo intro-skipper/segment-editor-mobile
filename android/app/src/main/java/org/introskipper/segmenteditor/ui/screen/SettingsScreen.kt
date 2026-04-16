@@ -64,7 +64,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import coil3.compose.AsyncImage
+import coil.compose.AsyncImage
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.component.settings.ClickableSettingItem
 import org.introskipper.segmenteditor.ui.component.settings.DropdownSettingsItem

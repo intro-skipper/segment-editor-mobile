@@ -99,28 +99,34 @@ class LibraryViewModel @Inject constructor(
                         )
                     }
 
-                val continueWatching = securePreferences.getUserId()?.let { userId ->
-                    runCatching { mediaRepository.getContinueWatching(userId = userId, limit = 20) }
-                        .getOrNull()
-                        ?.takeIf { it.isSuccessful }
-                        ?.body()
-                        ?.items
-                        ?.mapNotNull { item ->
-                            val playbackPositionTicks = item.userData?.playbackPositionTicks ?: 0L
-                            if (playbackPositionTicks <= 0L) return@mapNotNull null
-                            ContinueWatchingItem(
-                                id = item.id,
-                                name = item.name ?: "Unknown",
-                                type = item.type,
-                                seriesName = item.seriesName,
-                                seasonNumber = item.parentIndexNumber,
-                                episodeNumber = item.indexNumber,
-                                primaryImageTag = item.imageTags?.get("Primary"),
-                                playbackPositionTicks = playbackPositionTicks,
-                                runTimeTicks = item.runTimeTicks ?: 0L
-                            )
-                        } ?: emptyList()
-                } ?: emptyList()
+                val continueWatching = if (
+                    !securePreferences.getIsApiKeyLogin() || securePreferences.getHasExplicitUserSelection()
+                ) {
+                    securePreferences.getUserId()?.let { userId ->
+                        runCatching { mediaRepository.getContinueWatching(userId = userId, limit = 20) }
+                            .getOrNull()
+                            ?.takeIf { it.isSuccessful }
+                            ?.body()
+                            ?.items
+                            ?.mapNotNull { item ->
+                                val playbackPositionTicks = item.userData?.playbackPositionTicks ?: 0L
+                                if (playbackPositionTicks <= 0L) return@mapNotNull null
+                                ContinueWatchingItem(
+                                    id = item.id,
+                                    name = item.name ?: "Unknown",
+                                    type = item.type,
+                                    seriesName = item.seriesName,
+                                    seasonNumber = item.parentIndexNumber,
+                                    episodeNumber = item.indexNumber,
+                                    primaryImageTag = item.imageTags?.get("Primary"),
+                                    playbackPositionTicks = playbackPositionTicks,
+                                    runTimeTicks = item.runTimeTicks ?: 0L
+                                )
+                            } ?: emptyList()
+                    } ?: emptyList()
+                } else {
+                    emptyList()
+                }
                 
                 _uiState.value = if (libraryList.isEmpty()) {
                     LibraryUiState.Empty

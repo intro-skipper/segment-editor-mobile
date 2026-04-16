@@ -98,7 +98,8 @@ class SettingsViewModel @Inject constructor(
         if (securePreferences.getIsApiKeyLogin()) {
             loadAvailableUsers()
         }
-                // Keep UI state in sync with translation service
+
+        // Keep UI state in sync with translation service
         viewModelScope.launch {
             translationService.isDynamicTranslationEnabled.collectLatest { enabled ->
                 _uiState.value = _uiState.value.copy(dynamicTranslationEnabled = enabled)
@@ -165,6 +166,7 @@ class SettingsViewModel @Inject constructor(
     fun selectUser(userId: String, username: String) {
         securePreferences.saveUserId(userId)
         securePreferences.saveUsername(username)
+        securePreferences.saveHasExplicitUserSelection(true)
         _uiState.value = _uiState.value.copy(
             selectedUserId = userId,
             selectedUsername = username

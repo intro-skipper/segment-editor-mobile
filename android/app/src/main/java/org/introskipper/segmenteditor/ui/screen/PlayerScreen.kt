@@ -86,7 +86,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.PlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
-import coil3.compose.AsyncImage
+import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.MediaItem
@@ -765,7 +765,7 @@ private fun NextUpCard(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(112.dp) // 16:9 of 200 dp width
+                            .height(113.dp) // ~16:9 for a 200 dp wide card (200 * 9 / 16 = 112.5)
                             .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
                     ) {
                         if (thumbnailUrl != null) {
