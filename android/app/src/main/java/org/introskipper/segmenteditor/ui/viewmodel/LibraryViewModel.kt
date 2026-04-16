@@ -102,13 +102,35 @@ class LibraryViewModel @Inject constructor(
                 val continueWatching = if (
                     !securePreferences.getIsApiKeyLogin() || securePreferences.getHasExplicitUserSelection()
                 ) {
-                    securePreferences.getUserId()?.let { userId ->
-                        runCatching { mediaRepository.getContinueWatching(userId = userId, limit = 20) }
-                            .getOrNull()
-                            ?.takeIf { it.isSuccessful }
-                            ?.body()
-                            ?.items
-                            ?.mapNotNull { item ->
+                    val userId = securePreferences.getUserId()
+                    if (userId != null && libraryList.isNotEmpty()) {
+                        // Fetch resume items per visible library in parallel so that items from
+                        // hidden libraries are never included.
+                        coroutineScope {
+                            libraryList
+                                .map { library ->
+                                    async {
+                                        runCatching {
+                                            mediaRepository.getContinueWatching(
+                                                userId = userId,
+                                                limit = 20,
+                                                parentId = library.id
+                                            )
+                                        }.getOrNull()
+                                            ?.takeIf { it.isSuccessful }
+                                            ?.body()
+                                            ?.items
+                                            ?: emptyList()
+                                    }
+                                }
+                                .awaitAll()
+                        }
+                            .flatten()
+                            // Deduplicate by item ID (an item can only belong to one library)
+                            .distinctBy { it.id }
+                            // Sort by last played descending
+                            .sortedByDescending { it.userData?.lastPlayedDate }
+                            .mapNotNull { item ->
                                 val playbackPositionTicks = item.userData?.playbackPositionTicks ?: 0L
                                 if (playbackPositionTicks <= 0L) return@mapNotNull null
                                 ContinueWatchingItem(
@@ -122,8 +144,10 @@ class LibraryViewModel @Inject constructor(
                                     playbackPositionTicks = playbackPositionTicks,
                                     runTimeTicks = item.runTimeTicks ?: 0L
                                 )
-                            } ?: emptyList()
-                    } ?: emptyList()
+                            }
+                    } else {
+                        emptyList()
+                    }
                 } else {
                     emptyList()
                 }

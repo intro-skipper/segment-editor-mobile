@@ -172,9 +172,14 @@ class MediaRepository(
     /**
      * Gets continue watching items
      */
-    suspend fun getContinueWatching(userId: String, limit: Int = 20): Response<ItemsResponse> {
+    suspend fun getContinueWatching(
+        userId: String,
+        limit: Int = 20,
+        parentId: String? = null
+    ): Response<ItemsResponse> {
         return getItems(
             userId = userId,
+            parentId = parentId,
             filters = listOf("IsResumable"),
             recursive = true,
             limit = limit,

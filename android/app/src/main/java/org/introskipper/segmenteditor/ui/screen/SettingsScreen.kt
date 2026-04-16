@@ -156,12 +156,6 @@ fun SettingsScreen(
                         )
                     }
 
-                    ClickableSettingItem(
-                        title = translatedString(R.string.settings_change_server),
-                        subtitle = translatedString(R.string.settings_change_server_subtitle),
-                        onClick = { showChangeServerDialog = true }
-                    )
-
                     if (uiState.isApiKeyLogin) {
                         UserSelectionSettingItem(
                             users = uiState.availableUsers,
@@ -170,6 +164,12 @@ fun SettingsScreen(
                             onUserSelected = { user -> viewModel.selectUser(user.id, user.name) }
                         )
                     }
+
+                    ClickableSettingItem(
+                        title = translatedString(R.string.settings_change_server),
+                        subtitle = translatedString(R.string.settings_change_server_subtitle),
+                        onClick = { showChangeServerDialog = true }
+                    )
                 }
             }
 
