@@ -107,8 +107,7 @@ class LibraryViewModel @Inject constructor(
                         ?.items
                         ?.mapNotNull { item ->
                             val playbackPositionTicks = item.userData?.playbackPositionTicks ?: 0L
-                            val runTimeTicks = item.runTimeTicks ?: 0L
-                            if (playbackPositionTicks <= 0L || runTimeTicks <= 0L) return@mapNotNull null
+                            if (playbackPositionTicks <= 0L) return@mapNotNull null
                             ContinueWatchingItem(
                                 id = item.id,
                                 name = item.name ?: "Unknown",
@@ -118,7 +117,7 @@ class LibraryViewModel @Inject constructor(
                                 episodeNumber = item.indexNumber,
                                 primaryImageTag = item.imageTags?.get("Primary"),
                                 playbackPositionTicks = playbackPositionTicks,
-                                runTimeTicks = runTimeTicks
+                                runTimeTicks = item.runTimeTicks ?: 0L
                             )
                         } ?: emptyList()
                 } ?: emptyList()
@@ -540,7 +539,11 @@ data class ContinueWatchingItem(
     val runTimeTicks: Long
 ) {
     val progress: Float
-        get() = (playbackPositionTicks.toDouble() / runTimeTicks.toDouble())
-            .coerceIn(0.0, 1.0)
-            .toFloat()
+        get() = if (runTimeTicks <= 0L) {
+            0f
+        } else {
+            (playbackPositionTicks.toDouble() / runTimeTicks.toDouble())
+                .coerceIn(0.0, 1.0)
+                .toFloat()
+        }
 }
