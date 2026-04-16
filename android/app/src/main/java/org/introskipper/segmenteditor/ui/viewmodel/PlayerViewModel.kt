@@ -643,8 +643,6 @@ class PlayerViewModel @Inject constructor(
     private fun maybeReportWatchProgress(isPlaying: Boolean, positionMs: Long) {
         val currentState = _uiState.value
         if (!currentState.trackProgressToServer || !isPlaying) return
-        val now = System.currentTimeMillis()
-        if (now - lastProgressReportAtMs < WATCH_PROGRESS_REPORT_INTERVAL_MS) return
         reportWatchProgress(positionMs = positionMs, isPaused = false, force = false, markPlayedIfComplete = false)
     }
 
