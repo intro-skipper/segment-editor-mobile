@@ -93,8 +93,11 @@
     <string name="settings_change_server_subtitle">Connect to a different Jellyfin server</string>
     <string name="settings_change_server_dialog_message">This will disconnect from the current server and return to the connection wizard. Are you sure?</string>
     <string name="settings_active_user">Active User</string>
-    <string name="settings_active_user_subtitle">Source for continue watching and target for progress updates</string>
     <string name="settings_active_user_none">No users found</string>
+    <string name="settings_select_user">Select a user…</string>
+    <string name="settings_switch_account">Switch Account</string>
+    <string name="settings_switch_account_subtitle">Sign in as a different user</string>
+    <string name="settings_switch_account_success">Switched to %1$s</string>
     
     <string name="settings_section_admin">SkipMe.db</string>
 
