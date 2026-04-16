@@ -57,6 +57,7 @@ class PlayerViewModel @Inject constructor(
     private val segmentRepository: SegmentRepository,
     private val securePreferences: SecurePreferences,
     private val httpClient: OkHttpClient,
+    private val jellyfinApiService: JellyfinApiService,
     private val skipMeApiService: SkipMeApiService,
     private val translationService: TranslationService,
     @ApplicationContext private val context: Context
@@ -221,7 +222,7 @@ class PlayerViewModel @Inject constructor(
                 val response = mediaRepository.getEpisodes(
                     seriesId = mediaItem.seriesId,
                     userId = userId,
-                    fields = listOf("IndexNumber", "ParentIndexNumber")
+                    fields = listOf("IndexNumber", "ParentIndexNumber", "ImageTags")
                 )
 
                 if (response.isSuccessful && response.body() != null) {
@@ -233,16 +234,34 @@ class PlayerViewModel @Inject constructor(
                     
                     if (currentIndex != -1 && currentIndex < episodes.size - 1) {
                         val nextEpisode = episodes[currentIndex + 1]
+                        val imageTag = nextEpisode.imageTags?.get("Primary")
+                        val imageUrl = if (imageTag != null) {
+                            jellyfinApiService.getPrimaryImageUrl(
+                                itemId = nextEpisode.id,
+                                imageTag = imageTag,
+                                maxWidth = 320
+                            )
+                        } else {
+                            null
+                        }
                         Log.d(TAG, "Found next episode: ${nextEpisode.name} (ID: ${nextEpisode.id})")
-                        _uiState.update { it.copy(nextItemId = nextEpisode.id) }
+                        _uiState.update {
+                            it.copy(
+                                nextItemId = nextEpisode.id,
+                                nextItemName = nextEpisode.name,
+                                nextItemImageUrl = imageUrl
+                            )
+                        }
                     } else {
                         Log.d(TAG, "No more episodes in this series.")
-                        _uiState.update { it.copy(nextItemId = null) }
+                        _uiState.update { it.copy(nextItemId = null, nextItemName = null, nextItemImageUrl = null) }
                     }
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to find next episode", e)
             }
+            // Recompute trigger time now that next-episode info is settled
+            computeNextUpTriggerMs()
         }
     }
 
@@ -263,6 +282,8 @@ class PlayerViewModel @Inject constructor(
                         }
                         _uiState.update { it.copy(segments = filtered) }
                         _events.value = PlayerEvent.SegmentLoaded(filtered)
+                        // Recompute Next-Up trigger time whenever segments change
+                        computeNextUpTriggerMs()
                     },
                     onFailure = { error ->
                         Log.w(TAG, "Failed to load segments for $itemId (non-critical): ${error.message}", error)
@@ -273,6 +294,66 @@ class PlayerViewModel @Inject constructor(
                 Log.w(TAG, "Exception loading segments for $itemId (non-critical): ${e.message}", e)
             }
         }
+    }
+
+    /**
+     * Computes the playback position (ms) at which the Next Up card should appear.
+     *
+     * Priority:
+     * 1. Start of an Outro/credits segment whose end is within 5 s of the episode end.
+     * 2. Start of a Preview segment that follows the credits (i.e., begins after the credits end).
+     * 3. 10 seconds before the end of the episode.
+     *
+     * Sets [PlayerUiState.nextUpShowAtMs] to null when there is no next episode or
+     * auto-play is disabled.
+     */
+    private fun computeNextUpTriggerMs() {
+        val state = _uiState.value
+        val autoPlayEnabled = securePreferences.getAutoPlayNextEpisode()
+        if (!autoPlayEnabled || state.nextItemId == null || state.duration <= 0L) {
+            _uiState.update { it.copy(nextUpShowAtMs = null) }
+            return
+        }
+
+        val segments = state.segments
+        val durationMs = state.duration
+        val nearEndThresholdMs = 5_000L   // within 5 s of episode end → credits "reach the end"
+        val fallbackOffsetMs = 10_000L    // 10 s before end
+
+        // Find the Outro segment closest to the end of the episode
+        val outro = segments
+            .filter { SegmentType.fromString(it.type) == SegmentType.OUTRO }
+            .maxByOrNull { it.endTicks }
+
+        val outroEndMs = outro?.let { it.endTicks / 10_000L }
+        val outroStartMs = outro?.let { it.startTicks / 10_000L }
+
+        val triggerMs: Long = when {
+            // Case 1 – credits run to the end: show card at start of credits
+            outroEndMs != null && outroStartMs != null && (durationMs - outroEndMs) <= nearEndThresholdMs -> {
+                outroStartMs
+            }
+            // Case 2 – preview segment exists after credits: show card at start of preview
+            outroEndMs != null -> {
+                val preview = segments
+                    .filter { SegmentType.fromString(it.type) == SegmentType.PREVIEW }
+                    .firstOrNull { it.startTicks / 10_000L >= outroEndMs }
+                preview?.let { it.startTicks / 10_000L } ?: (durationMs - fallbackOffsetMs).coerceAtLeast(0L)
+            }
+            // Case 3 – fallback: 10 s before end
+            else -> (durationMs - fallbackOffsetMs).coerceAtLeast(0L)
+        }
+
+        Log.d(TAG, "Next-Up card trigger at ${triggerMs}ms (duration=${durationMs}ms)")
+        _uiState.update { it.copy(nextUpShowAtMs = triggerMs, showNextUpCard = false) }
+    }
+
+    fun dismissNextUpCard() {
+        _uiState.update { it.copy(showNextUpCard = false, nextUpShowAtMs = null) }
+    }
+
+    fun showNextUpCardNow() {
+        _uiState.update { it.copy(showNextUpCard = true) }
     }
 
     private fun buildTrackTitle(@StringRes typeResId: Int, language: String?, codec: String?): String {
@@ -594,10 +675,15 @@ class PlayerViewModel @Inject constructor(
 
     fun updatePlaybackState(isPlaying: Boolean, currentPosition: Long, bufferedPosition: Long) {
         _uiState.update {
+            val shouldShowCard = !it.showNextUpCard &&
+                it.nextUpShowAtMs != null &&
+                it.nextItemId != null &&
+                currentPosition >= it.nextUpShowAtMs
             it.copy(
                 isPlaying = isPlaying,
                 currentPosition = currentPosition,
-                bufferedPosition = bufferedPosition
+                bufferedPosition = bufferedPosition,
+                showNextUpCard = if (shouldShowCard) true else it.showNextUpCard
             )
         }
         maybeReportWatchProgress(isPlaying = isPlaying, positionMs = currentPosition)

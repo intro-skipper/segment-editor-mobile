@@ -11,7 +11,13 @@ import android.content.res.Configuration
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,15 +27,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Audiotrack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
@@ -37,6 +47,8 @@ import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -62,7 +74,9 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -72,12 +86,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.PlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
-import org.introskipper.segmenteditor.framecapture.FramePreview.onReleasePreviews
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.MediaItem
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.SegmentType
+import org.introskipper.segmenteditor.framecapture.FramePreview.onReleasePreviews
 import org.introskipper.segmenteditor.ui.component.PlaybackSpeedDialog
 import org.introskipper.segmenteditor.ui.component.SegmentSlider
 import org.introskipper.segmenteditor.ui.component.SegmentTimeline
@@ -594,6 +609,9 @@ fun PlayerScreen(
                         showDirectPlayFailedDialog = true
                     }
                 },
+                onPlayNextUp = {
+                    viewModel.handlePlaybackEnded()
+                },
                 modifier = Modifier.padding(paddingValues)
             )
         }
@@ -717,6 +735,102 @@ fun PlayerScreen(
     }
 }
 
+@Composable
+private fun NextUpCard(
+    visible: Boolean,
+    nextEpisodeName: String?,
+    thumbnailUrl: String?,
+    onPlayNow: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn() + slideInHorizontally(initialOffsetX = { it }),
+        exit = fadeOut() + slideOutHorizontally(targetOffsetX = { it }),
+        modifier = modifier
+    ) {
+        Card(
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.Black.copy(alpha = 0.85f)
+            ),
+            modifier = Modifier
+                .width(200.dp)
+                .clickable { onPlayNow() }
+        ) {
+            Box {
+                Column {
+                    // Thumbnail
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(112.dp) // 16:9 of 200 dp width
+                            .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                    ) {
+                        if (thumbnailUrl != null) {
+                            AsyncImage(
+                                model = thumbnailUrl,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.PlayArrow,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(40.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // Label + episode name
+                    Column(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = translatedString(R.string.player_next_up),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                        if (nextEpisodeName != null) {
+                            Text(
+                                text = nextEpisodeName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White,
+                                maxLines = 2
+                            )
+                        }
+                    }
+                }
+
+                // Dismiss button in top-right of card
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = translatedString(R.string.dismiss),
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
 private fun navigateBack(
     navController: NavController,
     mediaItem: MediaItem?,
@@ -782,6 +896,7 @@ private fun PlayerContent(
     onSetStartFromPlayer: (Int) -> Unit,
     onSetEndFromPlayer: (Int) -> Unit,
     onPlaybackError: (PlaybackException) -> Unit,
+    onPlayNextUp: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Use rememberUpdatedState to capture the current useDirectPlay value
@@ -827,6 +942,17 @@ private fun PlayerContent(
                         viewModel.updateTracksFromPlayer(tracks, currentUseDirectPlay)
                     },
                     onPlaybackError = onPlaybackError
+                )
+                // Next Up card overlay in the top-right corner
+                NextUpCard(
+                    visible = uiState.showNextUpCard,
+                    nextEpisodeName = uiState.nextItemName,
+                    thumbnailUrl = uiState.nextItemImageUrl,
+                    onPlayNow = onPlayNextUp,
+                    onDismiss = { viewModel.dismissNextUpCard() },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(12.dp)
                 )
             } else {
                 Box(

@@ -51,6 +51,11 @@ data class PlayerUiState(
 
     // Auto Play
     val nextItemId: String? = null,
+    val nextItemName: String? = null,
+    val nextItemImageUrl: String? = null,
+    // Position (ms) at which the Next Up card should become visible; null = never show
+    val nextUpShowAtMs: Long? = null,
+    val showNextUpCard: Boolean = false,
 
     // Server watch tracking (enabled only for continue-watching launch)
     val trackProgressToServer: Boolean = false,
