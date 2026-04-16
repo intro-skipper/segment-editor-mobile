@@ -414,7 +414,7 @@ private fun UserSelectionSettingItem(
     Column(modifier = modifier.fillMaxWidth()) {
         SettingItem(
             title = translatedString(R.string.settings_active_user),
-            subtitle = translatedString(R.string.settings_active_user_subtitle)
+            subtitle = null
         )
 
         when {
