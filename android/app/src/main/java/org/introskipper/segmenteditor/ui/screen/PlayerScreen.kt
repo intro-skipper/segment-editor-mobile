@@ -782,7 +782,7 @@ private fun NextUpCard(
                 containerColor = Color.Black.copy(alpha = 0.85f)
             ),
             modifier = Modifier
-                .width(200.dp)
+                .width(170.dp)
                 .clickable { onPlayNow() }
         ) {
             Box {
@@ -791,7 +791,7 @@ private fun NextUpCard(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(113.dp) // ~16:9 for a 200 dp wide card (200 * 9 / 16 = 112.5)
+                            .height(96.dp) // ~16:9 for a 170 dp wide card (170 * 9 / 16 = 95.625)
                             .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
                     ) {
                         if (thumbnailUrl != null) {
@@ -812,7 +812,7 @@ private fun NextUpCard(
                                     imageVector = Icons.Filled.PlayArrow,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(40.dp)
+                                    modifier = Modifier.size(32.dp)
                                 )
                             }
                         }
@@ -832,7 +832,7 @@ private fun NextUpCard(
 
                     // Label + episode name
                     Column(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
                     ) {
                         Text(
                             text = translatedString(R.string.player_next_up),
@@ -842,7 +842,7 @@ private fun NextUpCard(
                         if (nextEpisodeName != null) {
                             Text(
                                 text = nextEpisodeName,
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = Color.White,
                                 maxLines = 2
                             )
@@ -855,13 +855,13 @@ private fun NextUpCard(
                     onClick = onDismiss,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .size(32.dp)
+                        .size(28.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Close,
                         contentDescription = translatedString(R.string.dismiss),
                         tint = Color.White,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
