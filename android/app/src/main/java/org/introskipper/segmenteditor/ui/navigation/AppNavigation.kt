@@ -169,22 +169,28 @@ fun AppNavigation(
         }
         
         composable(
-            route = "${Screen.Series.route}/{seriesId}?season={season}",
+            route = "${Screen.Series.route}/{seriesId}?season={season}&trackProgress={trackProgress}",
             arguments = listOf(
                 navArgument("seriesId") { type = NavType.StringType },
                 navArgument("season") {
                     type = NavType.IntType
                     defaultValue = -1
+                },
+                navArgument("trackProgress") {
+                    type = NavType.BoolType
+                    defaultValue = false
                 }
             )
         ) { backStackEntry ->
             val seriesId = backStackEntry.arguments?.getString("seriesId") ?: ""
             val initialSeason = backStackEntry.arguments?.getInt("season").takeIf { it != -1 }
+            val initialTrackProgress = backStackEntry.arguments?.getBoolean("trackProgress") ?: false
             SeriesScreen(
                 seriesId = seriesId,
                 navController = navController,
                 securePreferences = securePreferences,
-                initialSeason = initialSeason
+                initialSeason = initialSeason,
+                initialTrackProgress = initialTrackProgress
             )
         }
         

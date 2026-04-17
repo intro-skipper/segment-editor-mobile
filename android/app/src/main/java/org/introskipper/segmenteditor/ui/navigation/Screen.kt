@@ -18,7 +18,15 @@ sealed class Screen(val route: String) {
         fun createRoute(itemId: String, trackProgress: Boolean = false) =
             if (trackProgress) "player/$itemId?trackProgress=true" else "player/$itemId"
     }
-    object Series : Screen("series")
+    object Series : Screen("series") {
+        fun createRoute(seriesId: String, season: Int? = null, trackProgress: Boolean = false): String {
+            val params = buildList {
+                season?.let { add("season=$it") }
+                if (trackProgress) add("trackProgress=true")
+            }
+            return if (params.isEmpty()) "series/$seriesId" else "series/$seriesId?${params.joinToString("&")}"
+        }
+    }
     object Album : Screen("album")
     object Artist : Screen("artist")
     object Settings : Screen("settings")
