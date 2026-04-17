@@ -846,7 +846,6 @@ private fun navigateBack(
         // If it's an episode, go back to the series screen
         // We use popBackStack with the route template to find any existing SeriesScreen in the backstack
         val seriesRouteTemplate = "${Screen.Series.route}/{seriesId}"
-        val trackProgress = viewModel.uiState.value.trackProgressToServer
 
         // Locate the series entry before popping so we can set the target season on it.
         // getBackStackEntry throws if the entry is not found, so we catch it.
@@ -858,24 +857,26 @@ private fun navigateBack(
 
         if (seriesEntry == null) {
             // If the series screen wasn't in the backstack, navigate to it explicitly,
-            // passing the episode's season number so the correct tab is selected
+            // passing the episode's season number so the correct tab is selected.
+            // Tracking is always reset when manually navigating back to the series screen.
             navController.navigate(
                 Screen.Series.createRoute(
                     seriesId = mediaItem.seriesId,
-                    season = mediaItem.parentIndexNumber,
-                    trackProgress = trackProgress
+                    season = mediaItem.parentIndexNumber
                 )
             ) {
                 popUpTo("${Screen.Player.route}/{itemId}") { inclusive = true }
             }
         } else {
-            // Series screen was in the backstack; communicate the target season and
-            // track-progress flag via savedStateHandle before popping so the correct tab is
-            // selected and the next episode inherits the current tracking preference.
+            // Series screen was in the backstack; communicate the target season via
+            // savedStateHandle before popping so the correct tab is selected even when
+            // auto-play has moved to a different season.
+            // Tracking is always reset when manually navigating back (it only carries
+            // through automatic next-episode transitions, not manual back-navigation).
             mediaItem.parentIndexNumber?.let { season ->
                 seriesEntry.savedStateHandle["targetSeason"] = season
             }
-            seriesEntry.savedStateHandle["trackProgress"] = trackProgress
+            seriesEntry.savedStateHandle["trackProgress"] = false
             navController.popBackStack(seriesRouteTemplate, false)
         }
     } else {

@@ -762,17 +762,23 @@ class PlayerViewModel @Inject constructor(
         lastProgressReportAtMs = System.currentTimeMillis()
         viewModelScope.launch {
             try {
-                mediaRepository.updateUserItemData(
-                    itemId = mediaItem.id,
-                    userId = userId,
-                    data = UpdateUserItemDataDto(
-                        playbackPositionTicks = safePositionMs * 10_000L,
-                        playedPercentage = playedPercentage
+                if (markPlayedIfComplete && isComplete) {
+                    // Content is complete: register completion with the server.
+                    // Do not save the end-position; markItemPlayed handles completion.
+                    if (!hasMarkedPlayedForCurrentItem) {
+                        mediaRepository.markItemPlayed(itemId = mediaItem.id, userId = userId)
+                        hasMarkedPlayedForCurrentItem = true
+                    }
+                } else {
+                    // Content is still in progress: save current position for resumption.
+                    mediaRepository.updateUserItemData(
+                        itemId = mediaItem.id,
+                        userId = userId,
+                        data = UpdateUserItemDataDto(
+                            playbackPositionTicks = safePositionMs * 10_000L,
+                            playedPercentage = playedPercentage
+                        )
                     )
-                )
-                if (markPlayedIfComplete && isComplete && !hasMarkedPlayedForCurrentItem) {
-                    mediaRepository.markItemPlayed(itemId = mediaItem.id, userId = userId)
-                    hasMarkedPlayedForCurrentItem = true
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to report watch progress for ${mediaItem.id}", e)
