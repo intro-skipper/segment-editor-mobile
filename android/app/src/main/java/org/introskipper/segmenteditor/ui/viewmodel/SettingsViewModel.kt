@@ -175,6 +175,9 @@ class SettingsViewModel @Inject constructor(
             selectedUsername = username,
             hasExplicitUserSelection = true
         )
+        // Refresh preferences (especially hidden libraries) and available libraries for the new user
+        loadPreferences()
+        loadAvailableLibraries()
     }
 
     fun switchUserWithCredentials(username: String, password: String) {
@@ -198,6 +201,7 @@ class SettingsViewModel @Inject constructor(
                         securePreferences.saveUsername(authResult.user.name)
                         securePreferences.saveIsApiKeyLogin(false)
                         securePreferences.saveHasExplicitUserSelection(true)
+                        
                         _uiState.value = _uiState.value.copy(
                             isSwitchingUser = false,
                             isApiKeyLogin = false,
@@ -205,6 +209,11 @@ class SettingsViewModel @Inject constructor(
                             selectedUserId = authResult.user.id,
                             selectedUsername = authResult.user.name
                         )
+                        
+                        // Refresh preferences (especially hidden libraries) and available libraries for the new user
+                        loadPreferences()
+                        loadAvailableLibraries()
+                        
                         _events.emit(SettingsEvent.ShowToast(
                             UiText.StringResource(R.string.settings_switch_account_success, authResult.user.name)
                         ))
@@ -278,7 +287,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private fun loadAvailableLibraries() {
+    fun loadAvailableLibraries() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoadingLibraries = true)
             try {

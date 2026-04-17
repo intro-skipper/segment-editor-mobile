@@ -449,11 +449,6 @@ private fun UserSelectionSettingItem(
     val selectedUser = if (hasExplicitUserSelection) users.firstOrNull { it.id == selectedUserId } else null
 
     Column(modifier = modifier.fillMaxWidth()) {
-        SettingItem(
-            title = translatedString(R.string.settings_active_user),
-            subtitle = null
-        )
-
         when {
             isLoading -> CircularProgressIndicator(
                 modifier = Modifier
@@ -529,10 +524,6 @@ private fun SwitchAccountSettingItem(
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        SettingItem(
-            title = translatedString(R.string.settings_active_user),
-            subtitle = null
-        )
         ClickableSettingItem(
             title = currentUsername.ifEmpty { translatedString(R.string.settings_switch_account) },
             subtitle = translatedString(R.string.settings_switch_account_subtitle),

@@ -159,10 +159,22 @@ class SecurePreferences(context: Context) {
     }
     
     fun setHiddenLibraryIds(libraryIds: Set<String>) {
-        sharedPreferences.edit { putStringSet(KEY_HIDDEN_LIBRARY_IDS, libraryIds) }
+        val userId = getUserId()
+        if (userId != null) {
+            sharedPreferences.edit { putStringSet("${KEY_HIDDEN_LIBRARY_IDS}_$userId", libraryIds) }
+        } else {
+            sharedPreferences.edit { putStringSet(KEY_HIDDEN_LIBRARY_IDS, libraryIds) }
+        }
     }
     
     fun getHiddenLibraryIds(): Set<String> {
+        val userId = getUserId()
+        if (userId != null) {
+            val userKey = "${KEY_HIDDEN_LIBRARY_IDS}_$userId"
+            if (sharedPreferences.contains(userKey)) {
+                return sharedPreferences.getStringSet(userKey, emptySet()) ?: emptySet()
+            }
+        }
         return sharedPreferences.getStringSet(KEY_HIDDEN_LIBRARY_IDS, emptySet()) ?: emptySet()
     }
     
