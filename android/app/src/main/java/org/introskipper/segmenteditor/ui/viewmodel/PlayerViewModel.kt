@@ -37,6 +37,7 @@ import org.introskipper.segmenteditor.data.model.MediaStream
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.SegmentType
 import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
+import org.introskipper.segmenteditor.data.model.UpdateUserItemDataDto
 import org.introskipper.segmenteditor.data.model.filterSkipMe
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
@@ -56,6 +57,7 @@ class PlayerViewModel @Inject constructor(
     private val segmentRepository: SegmentRepository,
     private val securePreferences: SecurePreferences,
     private val httpClient: OkHttpClient,
+    private val jellyfinApiService: JellyfinApiService,
     private val skipMeApiService: SkipMeApiService,
     private val translationService: TranslationService,
     @ApplicationContext private val context: Context
@@ -66,17 +68,25 @@ class PlayerViewModel @Inject constructor(
 
     // Tracks an in-flight batch save so it can be cancelled before starting a new one
     private var saveJob: Job? = null
+    private var lastProgressReportAtMs: Long = 0L
+    private var hasMarkedPlayedForCurrentItem: Boolean = false
 
     // Get the preferDirectPlay setting (when true, use direct play instead of HLS)
     fun shouldUseDirectPlay(): Boolean {
         return securePreferences.getPreferDirectPlay()
     }
 
+    fun setTrackProgress(enabled: Boolean) {
+        _uiState.update { it.copy(trackProgressToServer = enabled) }
+    }
+
     private val _events = MutableStateFlow<PlayerEvent?>(null)
     val events: StateFlow<PlayerEvent?> = _events.asStateFlow()
 
-    fun loadMediaItem(itemId: String) {
+    fun loadMediaItem(itemId: String, trackProgressToServer: Boolean = false) {
         viewModelScope.launch {
+            lastProgressReportAtMs = 0L
+            hasMarkedPlayedForCurrentItem = false
             // Clear old state when loading new item to prevent state pollution
             _uiState.update {
                 it.copy(
@@ -91,7 +101,9 @@ class PlayerViewModel @Inject constructor(
                     selectedAudioTrack = null,
                     selectedSubtitleTrack = null,
                     nextItemId = null,
-                    showControls = true
+                    showControls = true,
+                    trackProgressToServer = trackProgressToServer,
+                    resumePositionMs = 0L
                 )
             }
 
@@ -106,7 +118,7 @@ class PlayerViewModel @Inject constructor(
                 val mediaResult = mediaRepository.getItemResult(
                     userId = userId,
                     itemId = itemId,
-                    fields = listOf("MediaSources", "MediaStreams", "Path", "Container", "SeriesId", "SeasonId", "IndexNumber", "ParentIndexNumber", "ProviderIds")
+                    fields = listOf("MediaSources", "MediaStreams", "Path", "Container", "SeriesId", "SeasonId", "IndexNumber", "ParentIndexNumber", "ProviderIds", "RunTimeTicks", "UserData")
                 )
 
                 mediaResult.fold(
@@ -115,6 +127,11 @@ class PlayerViewModel @Inject constructor(
                             it.copy(
                                 mediaItem = mediaItem,
                                 duration = mediaItem.runTimeTicks?.div(10_000) ?: 0L,
+                                resumePositionMs = if (trackProgressToServer) {
+                                    mediaItem.userData?.playbackPositionTicks?.div(10_000) ?: 0L
+                                } else {
+                                    0L
+                                },
                                 isLoading = false
                             )
                         }
@@ -196,8 +213,8 @@ class PlayerViewModel @Inject constructor(
     }
 
     private fun findNextEpisode(mediaItem: MediaItem) {
-        // Only look for next episode if it's an episode and has season/series info
-        if (mediaItem.itemType != MediaItemType.EPISODE || mediaItem.seriesId == null || mediaItem.seasonId == null) {
+        // Only look for next episode if it's an episode and has series info
+        if (mediaItem.itemType != MediaItemType.EPISODE || mediaItem.seriesId == null) {
             return
         }
 
@@ -205,30 +222,50 @@ class PlayerViewModel @Inject constructor(
             try {
                 val userId = securePreferences.getUserId() ?: return@launch
                 
-                // Fetch episodes for the same season
+                // Fetch all episodes in the series so auto-play remains inside the same show
                 val response = mediaRepository.getEpisodes(
                     seriesId = mediaItem.seriesId,
                     userId = userId,
-                    seasonId = mediaItem.seasonId,
-                    fields = listOf("IndexNumber")
+                    fields = listOf("IndexNumber", "ParentIndexNumber", "ImageTags")
                 )
 
                 if (response.isSuccessful && response.body() != null) {
-                    val episodes = response.body()!!.items.sortedBy { it.indexNumber }
+                    val episodes = response.body()!!.items.sortedWith(
+                        compareBy<MediaItem> { it.parentIndexNumber ?: Int.MAX_VALUE }
+                            .thenBy { it.indexNumber ?: Int.MAX_VALUE }
+                    )
                     val currentIndex = episodes.indexOfFirst { it.id == mediaItem.id }
                     
                     if (currentIndex != -1 && currentIndex < episodes.size - 1) {
                         val nextEpisode = episodes[currentIndex + 1]
+                        val imageTag = nextEpisode.imageTags?.get("Primary")
+                        val imageUrl = if (imageTag != null) {
+                            jellyfinApiService.getPrimaryImageUrl(
+                                itemId = nextEpisode.id,
+                                imageTag = imageTag,
+                                maxWidth = 320
+                            )
+                        } else {
+                            null
+                        }
                         Log.d(TAG, "Found next episode: ${nextEpisode.name} (ID: ${nextEpisode.id})")
-                        _uiState.update { it.copy(nextItemId = nextEpisode.id) }
+                        _uiState.update {
+                            it.copy(
+                                nextItemId = nextEpisode.id,
+                                nextItemName = nextEpisode.name,
+                                nextItemImageUrl = imageUrl
+                            )
+                        }
                     } else {
-                        Log.d(TAG, "No more episodes in this season.")
-                        _uiState.update { it.copy(nextItemId = null) }
+                        Log.d(TAG, "No more episodes in this series.")
+                        _uiState.update { it.copy(nextItemId = null, nextItemName = null, nextItemImageUrl = null) }
                     }
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to find next episode", e)
             }
+            // Recompute trigger time now that next-episode info is settled
+            computeNextUpTriggerMs()
         }
     }
 
@@ -249,6 +286,8 @@ class PlayerViewModel @Inject constructor(
                         }
                         _uiState.update { it.copy(segments = filtered) }
                         _events.value = PlayerEvent.SegmentLoaded(filtered)
+                        // Recompute Next-Up trigger time whenever segments change
+                        computeNextUpTriggerMs()
                     },
                     onFailure = { error ->
                         Log.w(TAG, "Failed to load segments for $itemId (non-critical): ${error.message}", error)
@@ -259,6 +298,66 @@ class PlayerViewModel @Inject constructor(
                 Log.w(TAG, "Exception loading segments for $itemId (non-critical): ${e.message}", e)
             }
         }
+    }
+
+    /**
+     * Computes the playback position (ms) at which the Next Up card should appear.
+     *
+     * Priority:
+     * 1. Start of an Outro/credits segment whose end is within 5 s of the episode end.
+     * 2. Start of a Preview segment that follows the credits (i.e., begins after the credits end).
+     * 3. 10 seconds before the end of the episode.
+     *
+     * Sets [PlayerUiState.nextUpShowAtMs] to null when there is no next episode or
+     * auto-play is disabled.
+     */
+    private fun computeNextUpTriggerMs() {
+        val state = _uiState.value
+        val autoPlayEnabled = securePreferences.getAutoPlayNextEpisode()
+        if (!autoPlayEnabled || state.nextItemId == null || state.duration <= 0L) {
+            _uiState.update { it.copy(nextUpShowAtMs = null) }
+            return
+        }
+
+        val segments = state.segments
+        val durationMs = state.duration
+        val nearEndThresholdMs = 5_000L   // within 5 s of episode end → credits "reach the end"
+        val fallbackOffsetMs = 10_000L    // 10 s before end
+
+        // Find the Outro segment closest to the end of the episode
+        val outro = segments
+            .filter { SegmentType.fromString(it.type) == SegmentType.OUTRO }
+            .maxByOrNull { it.endTicks }
+
+        val outroEndMs = outro?.let { it.endTicks / 10_000L }
+        val outroStartMs = outro?.let { it.startTicks / 10_000L }
+
+        val triggerMs: Long = when {
+            // Case 1 – credits run to the end: show card at start of credits
+            outroEndMs != null && outroStartMs != null && (durationMs - outroEndMs) <= nearEndThresholdMs -> {
+                outroStartMs
+            }
+            // Case 2 – preview segment exists after credits: show card at start of preview
+            outroEndMs != null -> {
+                val preview = segments
+                    .filter { SegmentType.fromString(it.type) == SegmentType.PREVIEW }
+                    .firstOrNull { it.startTicks / 10_000L >= outroEndMs }
+                preview?.let { it.startTicks / 10_000L } ?: (durationMs - fallbackOffsetMs).coerceAtLeast(0L)
+            }
+            // Case 3 – fallback: 10 s before end
+            else -> (durationMs - fallbackOffsetMs).coerceAtLeast(0L)
+        }
+
+        Log.d(TAG, "Next-Up card trigger at ${triggerMs}ms (duration=${durationMs}ms)")
+        _uiState.update { it.copy(nextUpShowAtMs = triggerMs, showNextUpCard = false) }
+    }
+
+    fun dismissNextUpCard() {
+        _uiState.update { it.copy(showNextUpCard = false, nextUpShowAtMs = null) }
+    }
+
+    fun showNextUpCardNow() {
+        _uiState.update { it.copy(showNextUpCard = true) }
     }
 
     private fun buildTrackTitle(@StringRes typeResId: Int, language: String?, codec: String?): String {
@@ -580,28 +679,110 @@ class PlayerViewModel @Inject constructor(
 
     fun updatePlaybackState(isPlaying: Boolean, currentPosition: Long, bufferedPosition: Long) {
         _uiState.update {
+            val shouldShowCard = !it.showNextUpCard &&
+                it.nextUpShowAtMs != null &&
+                it.nextItemId != null &&
+                currentPosition >= it.nextUpShowAtMs
             it.copy(
                 isPlaying = isPlaying,
                 currentPosition = currentPosition,
-                bufferedPosition = bufferedPosition
+                bufferedPosition = bufferedPosition,
+                showNextUpCard = if (shouldShowCard) true else it.showNextUpCard
             )
         }
+        maybeReportWatchProgress(isPlaying = isPlaying, positionMs = currentPosition)
     }
 
     fun handlePlaybackEnded() {
         val uiState = _uiState.value
         val nextId = uiState.nextItemId
         val autoPlayEnabled = securePreferences.getAutoPlayNextEpisode()
+        reportWatchProgress(
+            positionMs = uiState.duration,
+            isPaused = true,
+            force = true,
+            markPlayedIfComplete = true
+        )
         
         Log.d(TAG, "Playback ended. nextItemId=$nextId, autoPlayEnabled=$autoPlayEnabled")
         
         if (autoPlayEnabled && nextId != null) {
-            _events.value = PlayerEvent.NavigateToPlayer(nextId)
+            _events.value = PlayerEvent.NavigateToPlayer(
+                itemId = nextId,
+                trackProgressToServer = uiState.trackProgressToServer
+            )
         } else if (uiState.mediaItem?.itemType == MediaItemType.MOVIE) {
             // For movies, stay on the player screen instead of returning to menu
             _uiState.update { it.copy(showControls = true, isPlaying = false) }
         } else {
             _events.value = PlayerEvent.PlaybackEnded
+        }
+    }
+
+    fun flushWatchProgress(positionMs: Long? = null) {
+        val currentState = _uiState.value
+        if (!currentState.trackProgressToServer) return
+        reportWatchProgress(
+            positionMs = positionMs ?: currentState.currentPosition,
+            isPaused = true,
+            force = true,
+            markPlayedIfComplete = true
+        )
+    }
+
+    private fun maybeReportWatchProgress(isPlaying: Boolean, positionMs: Long) {
+        val currentState = _uiState.value
+        if (!currentState.trackProgressToServer || !isPlaying) return
+        reportWatchProgress(positionMs = positionMs, isPaused = false, force = false, markPlayedIfComplete = false)
+    }
+
+    private fun reportWatchProgress(
+        positionMs: Long,
+        isPaused: Boolean,
+        force: Boolean,
+        markPlayedIfComplete: Boolean
+    ) {
+        val currentState = _uiState.value
+        val mediaItem = currentState.mediaItem ?: return
+        if (!currentState.trackProgressToServer) return
+        val userId = securePreferences.getUserId() ?: return
+        if (!force &&
+            System.currentTimeMillis() - lastProgressReportAtMs < WATCH_PROGRESS_REPORT_INTERVAL_MS
+        ) return
+
+        val safePositionMs = positionMs.coerceAtLeast(0L)
+        val durationMs = currentState.duration.coerceAtLeast(0L)
+        val playedPercentage = if (durationMs > 0L) {
+            (safePositionMs.toDouble() / durationMs.toDouble() * 100.0).coerceIn(0.0, 100.0)
+        } else {
+            0.0
+        }
+        val isComplete = durationMs > 0L && playedPercentage >= WATCH_COMPLETION_PERCENT
+
+        lastProgressReportAtMs = System.currentTimeMillis()
+        viewModelScope.launch {
+            try {
+                if (markPlayedIfComplete && isComplete) {
+                    // Content is complete: register completion with the server.
+                    // Do not save the end-position; markItemPlayed handles completion.
+                    if (!hasMarkedPlayedForCurrentItem) {
+                        mediaRepository.markItemPlayed(itemId = mediaItem.id, userId = userId)
+                        hasMarkedPlayedForCurrentItem = true
+                    }
+                } else {
+                    // Content is still in progress: save current position for resumption.
+                    mediaRepository.updateUserItemData(
+                        itemId = mediaItem.id,
+                        userId = userId,
+                        data = UpdateUserItemDataDto(
+                            playbackPositionTicks = safePositionMs * 10_000L,
+                            playedPercentage = playedPercentage
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to report watch progress for ${mediaItem.id}", e)
+            }
         }
     }
 
@@ -984,5 +1165,7 @@ class PlayerViewModel @Inject constructor(
 
     companion object {
         private const val TAG = "PlayerViewModel"
+        private const val WATCH_PROGRESS_REPORT_INTERVAL_MS = 15_000L
+        private const val WATCH_COMPLETION_PERCENT = 95.0
     }
 }

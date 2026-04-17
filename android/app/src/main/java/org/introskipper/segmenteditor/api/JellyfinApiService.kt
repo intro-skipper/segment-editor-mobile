@@ -18,6 +18,7 @@ import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.SegmentCreateRequest
 import org.introskipper.segmenteditor.data.model.SegmentResponse
 import org.introskipper.segmenteditor.data.model.ServerInfo
+import org.introskipper.segmenteditor.data.model.UpdateUserItemDataDto
 import org.introskipper.segmenteditor.data.model.User
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import retrofit2.Response
@@ -208,9 +209,41 @@ class JellyfinApiService(private val securePreferences: SecurePreferences) {
         ensureInitialized()
         return api!!.getLibraries(userId, getApiKey())
     }
+
+    suspend fun updateUserItemData(
+        itemId: String,
+        data: UpdateUserItemDataDto,
+        userId: String? = null
+    ): Response<Unit> {
+        ensureInitialized()
+        return api!!.updateUserItemData(itemId = itemId, userId = userId, data = data, authHeader = getApiKey())
+    }
+
+    suspend fun markItemPlayed(itemId: String, userId: String? = null): Response<Unit> {
+        ensureInitialized()
+        return api!!.markItemPlayed(itemId = itemId, userId = userId, authHeader = getApiKey())
+    }
     
     // ========== Image URL Builders ==========
-    
+
+    /**
+     * Gets the primary image URL for a user avatar.
+     * Returns null when the user has no image tag.
+     */
+    fun getUserImageUrl(userId: String, imageTag: String?): String? {
+        if (imageTag.isNullOrBlank()) return null
+        val baseUrl = currentBaseUrl ?: return null
+        val uri = baseUrl.toUri()
+            .buildUpon()
+            .appendPath("Users")
+            .appendPath(userId)
+            .appendPath("Images")
+            .appendPath("Primary")
+            .appendQueryParameter("tag", imageTag)
+            .build()
+        return uri.toString()
+    }
+
     /**
      * Gets the primary image URL for an item
      */

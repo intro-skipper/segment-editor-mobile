@@ -99,6 +99,9 @@ fun AppNavigation(
                 onLibraryClick = { libraryId, collectionType ->
                     navController.navigate("${Screen.Home.route}/$libraryId?type=$collectionType")
                 },
+                onContinueWatchingClick = { itemId ->
+                    navController.navigate(Screen.Player.createRoute(itemId, trackProgress = true))
+                },
                 onSettingsClick = {
                     navController.navigate(Screen.Settings.route)
                 },
@@ -110,6 +113,9 @@ fun AppNavigation(
             LibraryScreen(
                 onLibraryClick = { libraryId, collectionType ->
                     navController.navigate("${Screen.Home.route}/$libraryId?type=$collectionType")
+                },
+                onContinueWatchingClick = { itemId ->
+                    navController.navigate(Screen.Player.createRoute(itemId, trackProgress = true))
                 },
                 onSettingsClick = {
                     navController.navigate(Screen.Settings.route)
@@ -148,30 +154,43 @@ fun AppNavigation(
         }
         
         composable(
-            route = "${Screen.Player.route}/{itemId}",
-            arguments = listOf(navArgument("itemId") { type = NavType.StringType })
+            route = "${Screen.Player.route}/{itemId}?trackProgress={trackProgress}",
+            arguments = listOf(
+                navArgument("itemId") { type = NavType.StringType },
+                navArgument("trackProgress") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
+            )
         ) { backStackEntry ->
             val itemId = backStackEntry.arguments?.getString("itemId") ?: ""
-            PlayerScreen(itemId = itemId, navController = navController)
+            val trackProgress = backStackEntry.arguments?.getBoolean("trackProgress") ?: false
+            PlayerScreen(itemId = itemId, navController = navController, trackProgressEnabled = trackProgress)
         }
         
         composable(
-            route = "${Screen.Series.route}/{seriesId}?season={season}",
+            route = "${Screen.Series.route}/{seriesId}?season={season}&trackProgress={trackProgress}",
             arguments = listOf(
                 navArgument("seriesId") { type = NavType.StringType },
                 navArgument("season") {
                     type = NavType.IntType
                     defaultValue = -1
+                },
+                navArgument("trackProgress") {
+                    type = NavType.BoolType
+                    defaultValue = false
                 }
             )
         ) { backStackEntry ->
             val seriesId = backStackEntry.arguments?.getString("seriesId") ?: ""
             val initialSeason = backStackEntry.arguments?.getInt("season").takeIf { it != -1 }
+            val initialTrackProgress = backStackEntry.arguments?.getBoolean("trackProgress") ?: false
             SeriesScreen(
                 seriesId = seriesId,
                 navController = navController,
                 securePreferences = securePreferences,
-                initialSeason = initialSeason
+                initialSeason = initialSeason,
+                initialTrackProgress = initialTrackProgress
             )
         }
         

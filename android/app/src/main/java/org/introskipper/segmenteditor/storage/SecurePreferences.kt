@@ -74,6 +74,24 @@ class SecurePreferences(context: Context) {
         return sharedPreferences.getString(KEY_DEVICE_ID, null)
     }
     
+    // ========== Auth Mode ==========
+
+    fun saveIsApiKeyLogin(isApiKey: Boolean) {
+        sharedPreferences.edit { putBoolean(KEY_IS_API_KEY_LOGIN, isApiKey) }
+    }
+
+    fun getIsApiKeyLogin(): Boolean {
+        return sharedPreferences.getBoolean(KEY_IS_API_KEY_LOGIN, false)
+    }
+
+    fun saveHasExplicitUserSelection(hasSelection: Boolean) {
+        sharedPreferences.edit { putBoolean(KEY_HAS_EXPLICIT_USER_SELECTION, hasSelection) }
+    }
+
+    fun getHasExplicitUserSelection(): Boolean {
+        return sharedPreferences.getBoolean(KEY_HAS_EXPLICIT_USER_SELECTION, false)
+    }
+
     // ========== Playback Settings ==========
     
     fun setAutoPlayNextEpisode(enabled: Boolean) {
@@ -199,6 +217,8 @@ class SecurePreferences(context: Context) {
         private const val KEY_USER_ID = "user_id"
         private const val KEY_USERNAME = "username"
         private const val KEY_DEVICE_ID = "device_id"
+        private const val KEY_IS_API_KEY_LOGIN = "is_api_key_login"
+        private const val KEY_HAS_EXPLICIT_USER_SELECTION = "has_explicit_user_selection"
         
         // Playback keys
         private const val KEY_AUTO_PLAY_NEXT = "auto_play_next"

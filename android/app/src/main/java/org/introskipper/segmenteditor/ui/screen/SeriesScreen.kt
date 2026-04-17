@@ -80,7 +80,8 @@ fun SeriesScreen(
     navController: NavController,
     viewModel: SeriesViewModel = hiltViewModel(),
     securePreferences: SecurePreferences,
-    initialSeason: Int? = null
+    initialSeason: Int? = null,
+    initialTrackProgress: Boolean = false
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val serverUrl = securePreferences.getServerUrl() ?: ""
@@ -127,6 +128,24 @@ fun SeriesScreen(
             savedStateHandle?.getStateFlow("targetSeason", -1)
                 ?: kotlinx.coroutines.flow.MutableStateFlow(-1)
         }.collectAsState()
+
+        // Observe the track-progress flag communicated back from the player. Defaults to the
+        // route param (initialTrackProgress) so that it is correctly initialised when a new
+        // SeriesScreen is created (e.g. backing out from continue-watching with no prior
+        // SeriesScreen in the back-stack). After the first player session the savedStateHandle
+        // keeps the flag up-to-date automatically whenever the player navigates back.
+        val trackProgress by remember(savedStateHandle) {
+            savedStateHandle?.getStateFlow("trackProgress", initialTrackProgress)
+                ?: kotlinx.coroutines.flow.MutableStateFlow(initialTrackProgress)
+        }.collectAsState()
+
+        // Seed the savedStateHandle with initialTrackProgress so it is available to the player
+        // on the first episode launch (before any player has written back to it).
+        LaunchedEffect(Unit) {
+            if (savedStateHandle?.contains("trackProgress") != true) {
+                savedStateHandle?.set("trackProgress", initialTrackProgress)
+            }
+        }
 
         // initialSeason (route param) is consumed at most once; once a targetSeason is
         // applied it is nulled out so that a subsequent targetSeason clearing cannot
@@ -464,7 +483,7 @@ fun SeriesScreen(
                                             episode = episode,
                                             serverUrl = serverUrl,
                                             onClick = {
-                                                navController.navigate("player/${episode.episode.id}")
+                                                navController.navigate(Screen.Player.createRoute(episode.episode.id, trackProgress = trackProgress))
                                             },
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                         )
@@ -571,7 +590,7 @@ fun SeriesScreen(
                                             episode = episode,
                                             serverUrl = serverUrl,
                                             onClick = {
-                                                navController.navigate("player/${episode.episode.id}")
+                                                navController.navigate(Screen.Player.createRoute(episode.episode.id, trackProgress = trackProgress))
                                             },
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                         )

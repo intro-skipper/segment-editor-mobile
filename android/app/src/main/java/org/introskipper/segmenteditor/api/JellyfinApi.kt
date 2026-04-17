@@ -10,6 +10,7 @@ import org.introskipper.segmenteditor.data.model.AuthenticationResult
 import org.introskipper.segmenteditor.data.model.ItemsResponse
 import org.introskipper.segmenteditor.data.model.MediaItem
 import org.introskipper.segmenteditor.data.model.PublicSystemInfo
+import org.introskipper.segmenteditor.data.model.UpdateUserItemDataDto
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.SegmentCreateRequest
 import org.introskipper.segmenteditor.data.model.SegmentResponse
@@ -127,4 +128,19 @@ interface JellyfinApi {
         @Path("userId") userId: String,
         @Header("Authorization") authHeader: String
     ): Response<ItemsResponse>
+
+    @POST("UserItems/{itemId}/UserData")
+    suspend fun updateUserItemData(
+        @Path("itemId") itemId: String,
+        @Query("userId") userId: String? = null,
+        @Body data: UpdateUserItemDataDto,
+        @Header("Authorization") authHeader: String
+    ): Response<Unit>
+
+    @POST("UserPlayedItems/{itemId}")
+    suspend fun markItemPlayed(
+        @Path("itemId") itemId: String,
+        @Query("userId") userId: String? = null,
+        @Header("Authorization") authHeader: String
+    ): Response<Unit>
 }

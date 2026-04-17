@@ -8,6 +8,7 @@ package org.introskipper.segmenteditor.data.repository
 import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.data.model.ItemsResponse
 import org.introskipper.segmenteditor.data.model.MediaItem
+import org.introskipper.segmenteditor.data.model.UpdateUserItemDataDto
 import retrofit2.Response
 
 /**
@@ -171,15 +172,23 @@ class MediaRepository(
     /**
      * Gets continue watching items
      */
-    suspend fun getContinueWatching(userId: String, limit: Int = 20): Response<ItemsResponse> {
+    suspend fun getContinueWatching(
+        userId: String,
+        limit: Int = 20,
+        parentId: String? = null
+    ): Response<ItemsResponse> {
         return getItems(
             userId = userId,
+            parentId = parentId,
             filters = listOf("IsResumable"),
             recursive = true,
             limit = limit,
             sortBy = "DatePlayed",
             sortOrder = "Descending",
-            fields = JellyfinApiService.DETAIL_FIELDS
+            fields = listOf(
+                "Overview", "PrimaryImageAspectRatio", "ImageTags", "RunTimeTicks", "ProviderIds",
+                "UserData", "SeriesName", "SeasonName", "IndexNumber", "ParentIndexNumber"
+            )
         )
     }
     
@@ -197,6 +206,18 @@ class MediaRepository(
             sortOrder = "Descending",
             fields = JellyfinApiService.EPISODE_FIELDS
         )
+    }
+
+    suspend fun updateUserItemData(
+        itemId: String,
+        userId: String,
+        data: UpdateUserItemDataDto
+    ): Response<Unit> {
+        return apiService.updateUserItemData(itemId = itemId, data = data, userId = userId)
+    }
+
+    suspend fun markItemPlayed(itemId: String, userId: String): Response<Unit> {
+        return apiService.markItemPlayed(itemId = itemId, userId = userId)
     }
     
     /**

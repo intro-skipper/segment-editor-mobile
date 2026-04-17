@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.introskipper.segmenteditor.R
+import org.introskipper.segmenteditor.api.JellyfinApiService
+import org.introskipper.segmenteditor.data.model.User
 import org.introskipper.segmenteditor.data.repository.AuthRepository
 import org.introskipper.segmenteditor.data.repository.JellyfinRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
@@ -48,7 +50,21 @@ data class SettingsUiState(
     val serverVersion: String = "",
     val serverName: String = "",
     val supportedVideoCodecs: List<String> = emptyList(),
-    val supportedAudioCodecs: List<String> = emptyList()
+    val supportedAudioCodecs: List<String> = emptyList(),
+    // API-key user selection
+    val isApiKeyLogin: Boolean = false,
+    val availableUsers: List<UserInfo> = emptyList(),
+    val isLoadingUsers: Boolean = false,
+    val selectedUserId: String = "",
+    val selectedUsername: String = "",
+    val hasExplicitUserSelection: Boolean = false,
+    val isSwitchingUser: Boolean = false
+)
+
+data class UserInfo(
+    val id: String,
+    val name: String,
+    val avatarUrl: String?
 )
 
 data class LibraryInfo(
@@ -66,6 +82,7 @@ class SettingsViewModel @Inject constructor(
     private val securePreferences: SecurePreferences,
     private val jellyfinRepository: JellyfinRepository,
     private val authRepository: AuthRepository,
+    private val apiService: JellyfinApiService,
     private val translationService: TranslationService
 ) : ViewModel() {
 
@@ -80,7 +97,8 @@ class SettingsViewModel @Inject constructor(
         loadAvailableLibraries()
         loadServerInfo()
         loadSupportedCodecs()
-        
+        loadAvailableUsers()
+
         // Keep UI state in sync with translation service
         viewModelScope.launch {
             translationService.isDynamicTranslationEnabled.collectLatest { enabled ->
@@ -97,6 +115,8 @@ class SettingsViewModel @Inject constructor(
 
     fun loadPreferences() {
         viewModelScope.launch {
+            val isApiKeyLogin = securePreferences.getIsApiKeyLogin()
+            val hasExplicitUserSelection = securePreferences.getHasExplicitUserSelection()
             _uiState.value = _uiState.value.copy(
                 theme = securePreferences.getTheme(),
                 dynamicTranslationEnabled = securePreferences.isDynamicTranslationEnabled(),
@@ -109,8 +129,99 @@ class SettingsViewModel @Inject constructor(
                 itemsPerPage = securePreferences.getItemsPerPage(),
                 hiddenLibraryIds = securePreferences.getHiddenLibraryIds(),
                 currentLocaleName = translationService.getCurrentLocaleName(),
-                serverUrl = securePreferences.getServerUrl() ?: ""
+                serverUrl = securePreferences.getServerUrl() ?: "",
+                isApiKeyLogin = isApiKeyLogin,
+                hasExplicitUserSelection = hasExplicitUserSelection,
+                // Only show a selected user in the picker if the selection was made explicitly
+                selectedUserId = if (hasExplicitUserSelection) securePreferences.getUserId() ?: "" else "",
+                selectedUsername = if (hasExplicitUserSelection) securePreferences.getUsername() ?: "" else ""
             )
+        }
+    }
+
+    fun loadAvailableUsers() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoadingUsers = true)
+            try {
+                val response = authRepository.getUsers()
+                if (response.isSuccessful) {
+                    val users = response.body() ?: emptyList()
+                    val userInfos = users.map { user ->
+                        UserInfo(
+                            id = user.id,
+                            name = user.name,
+                            avatarUrl = apiService.getUserImageUrl(user.id, user.primaryImageTag)
+                        )
+                    }
+                    _uiState.value = _uiState.value.copy(
+                        availableUsers = userInfos,
+                        isLoadingUsers = false
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(isLoadingUsers = false)
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isLoadingUsers = false)
+            }
+        }
+    }
+
+    fun selectUser(userId: String, username: String) {
+        securePreferences.saveUserId(userId)
+        securePreferences.saveUsername(username)
+        securePreferences.saveHasExplicitUserSelection(true)
+        _uiState.value = _uiState.value.copy(
+            selectedUserId = userId,
+            selectedUsername = username,
+            hasExplicitUserSelection = true
+        )
+    }
+
+    fun switchUserWithCredentials(username: String, password: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSwitchingUser = true)
+            try {
+                val deviceId = securePreferences.getDeviceId()
+                    ?: java.util.UUID.randomUUID().toString().also { securePreferences.saveDeviceId(it) }
+                val deviceName = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
+                val result = authRepository.authenticateResult(
+                    username = username,
+                    password = password,
+                    deviceId = deviceId,
+                    deviceName = deviceName,
+                    appVersion = "1.0.0"
+                )
+                result.fold(
+                    onSuccess = { authResult ->
+                        securePreferences.saveApiKey(authResult.accessToken)
+                        securePreferences.saveUserId(authResult.user.id)
+                        securePreferences.saveUsername(authResult.user.name)
+                        securePreferences.saveIsApiKeyLogin(false)
+                        securePreferences.saveHasExplicitUserSelection(true)
+                        _uiState.value = _uiState.value.copy(
+                            isSwitchingUser = false,
+                            isApiKeyLogin = false,
+                            hasExplicitUserSelection = true,
+                            selectedUserId = authResult.user.id,
+                            selectedUsername = authResult.user.name
+                        )
+                        _events.emit(SettingsEvent.ShowToast(
+                            UiText.StringResource(R.string.settings_switch_account_success, authResult.user.name)
+                        ))
+                    },
+                    onFailure = { error ->
+                        _uiState.value = _uiState.value.copy(isSwitchingUser = false)
+                        _events.emit(SettingsEvent.ShowToast(
+                            UiText.DynamicString(error.message ?: "Failed to switch account")
+                        ))
+                    }
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isSwitchingUser = false)
+                _events.emit(SettingsEvent.ShowToast(
+                    UiText.DynamicString(e.message ?: "Failed to switch account")
+                ))
+            }
         }
     }
 

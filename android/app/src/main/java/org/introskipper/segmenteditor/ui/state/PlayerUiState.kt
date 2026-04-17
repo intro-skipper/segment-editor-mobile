@@ -51,6 +51,15 @@ data class PlayerUiState(
 
     // Auto Play
     val nextItemId: String? = null,
+    val nextItemName: String? = null,
+    val nextItemImageUrl: String? = null,
+    // Position (ms) at which the Next Up card should become visible; null = never show
+    val nextUpShowAtMs: Long? = null,
+    val showNextUpCard: Boolean = false,
+
+    // Server watch tracking (enabled only for continue-watching launch)
+    val trackProgressToServer: Boolean = false,
+    val resumePositionMs: Long = 0L,
 
     // Batch save in progress (used to disable Save All while a save is running)
     val isBatchSaving: Boolean = false
@@ -76,6 +85,6 @@ sealed class PlayerEvent {
     data class Error(val message: String) : PlayerEvent()
     data class SegmentLoaded(val segments: List<Segment>) : PlayerEvent()
     object PlaybackEnded : PlayerEvent()
-    data class NavigateToPlayer(val itemId: String) : PlayerEvent()
+    data class NavigateToPlayer(val itemId: String, val trackProgressToServer: Boolean = false) : PlayerEvent()
     data class ShowToast(val message: String) : PlayerEvent()
 }

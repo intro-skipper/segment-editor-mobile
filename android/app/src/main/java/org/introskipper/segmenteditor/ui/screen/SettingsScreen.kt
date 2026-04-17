@@ -22,17 +22,28 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -47,13 +58,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import coil.compose.AsyncImage
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.component.settings.ClickableSettingItem
 import org.introskipper.segmenteditor.ui.component.settings.DropdownSettingsItem
@@ -63,6 +79,7 @@ import org.introskipper.segmenteditor.ui.component.settings.SwitchSettingItem
 import org.introskipper.segmenteditor.ui.state.AppTheme
 import org.introskipper.segmenteditor.ui.state.ExportFormat
 import org.introskipper.segmenteditor.ui.viewmodel.SettingsViewModel
+import org.introskipper.segmenteditor.ui.viewmodel.UserInfo
 import org.introskipper.segmenteditor.ui.component.translatedString
 import org.introskipper.segmenteditor.ui.viewmodel.SettingsEvent
 
@@ -80,6 +97,7 @@ fun SettingsScreen(
     var showAboutDialog by remember { mutableStateOf(false) }
     var showChangeServerDialog by remember { mutableStateOf(false) }
     var showCodecSheet by remember { mutableStateOf(false) }
+    var showSwitchAccountSheet by remember { mutableStateOf(false) }
     
     // Handle events from ViewModel
     LaunchedEffect(viewModel.events) {
@@ -141,6 +159,21 @@ fun SettingsScreen(
                         SettingItem(
                             title = uiState.serverUrl,
                             subtitle = null
+                        )
+                    }
+
+                    if (uiState.isApiKeyLogin) {
+                        UserSelectionSettingItem(
+                            users = uiState.availableUsers,
+                            selectedUserId = uiState.selectedUserId,
+                            hasExplicitUserSelection = uiState.hasExplicitUserSelection,
+                            isLoading = uiState.isLoadingUsers,
+                            onUserSelected = { user -> viewModel.selectUser(user.id, user.name) }
+                        )
+                    } else {
+                        SwitchAccountSettingItem(
+                            currentUsername = uiState.selectedUsername,
+                            onClick = { showSwitchAccountSheet = true }
                         )
                     }
 
@@ -375,6 +408,233 @@ fun SettingsScreen(
                 }
             }
         )
+    }
+
+    var switchRequested by remember { mutableStateOf(false) }
+
+    if (showSwitchAccountSheet) {
+        SwitchAccountSheet(
+            isSwitching = uiState.isSwitchingUser,
+            onDismiss = {
+                showSwitchAccountSheet = false
+                switchRequested = false
+            },
+            onSwitch = { username, password ->
+                switchRequested = true
+                viewModel.switchUserWithCredentials(username, password)
+            }
+        )
+
+        // Auto-dismiss once switching completes (only after it was actually started)
+        LaunchedEffect(uiState.isSwitchingUser, switchRequested) {
+            if (switchRequested && !uiState.isSwitchingUser) {
+                showSwitchAccountSheet = false
+                switchRequested = false
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun UserSelectionSettingItem(
+    users: List<UserInfo>,
+    selectedUserId: String,
+    hasExplicitUserSelection: Boolean,
+    isLoading: Boolean,
+    onUserSelected: (UserInfo) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedUser = if (hasExplicitUserSelection) users.firstOrNull { it.id == selectedUserId } else null
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        SettingItem(
+            title = translatedString(R.string.settings_active_user),
+            subtitle = null
+        )
+
+        when {
+            isLoading -> CircularProgressIndicator(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .size(24.dp)
+            )
+            users.isEmpty() -> Text(
+                text = translatedString(R.string.settings_active_user_none),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            else -> ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                OutlinedTextField(
+                    value = selectedUser?.name ?: "",
+                    onValueChange = {},
+                    readOnly = true,
+                    placeholder = { Text(translatedString(R.string.settings_select_user)) },
+                    leadingIcon = {
+                        UserAvatar(
+                            avatarUrl = selectedUser?.avatarUrl,
+                            size = 28
+                        )
+                    },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier
+                        .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                        .fillMaxWidth()
+                )
+
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    users.forEach { user ->
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    UserAvatar(avatarUrl = user.avatarUrl, size = 32)
+                                    Text(
+                                        text = user.name,
+                                        modifier = Modifier.padding(start = 12.dp),
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                }
+                            },
+                            onClick = {
+                                onUserSelected(user)
+                                expanded = false
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SwitchAccountSettingItem(
+    currentUsername: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        SettingItem(
+            title = translatedString(R.string.settings_active_user),
+            subtitle = null
+        )
+        ClickableSettingItem(
+            title = currentUsername.ifEmpty { translatedString(R.string.settings_switch_account) },
+            subtitle = translatedString(R.string.settings_switch_account_subtitle),
+            onClick = onClick
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwitchAccountSheet(
+    isSwitching: Boolean,
+    onDismiss: () -> Unit,
+    onSwitch: (username: String, password: String) -> Unit
+) {
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = translatedString(R.string.settings_switch_account),
+                style = MaterialTheme.typography.headlineSmall
+            )
+            OutlinedTextField(
+                value = username,
+                onValueChange = { username = it },
+                label = { Text(translatedString(R.string.auth_username)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text(translatedString(R.string.auth_password)) },
+                singleLine = true,
+                visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                trailingIcon = {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = null
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (isSwitching) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+            } else {
+                Button(
+                    onClick = { onSwitch(username, password) },
+                    enabled = username.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(translatedString(R.string.auth_sign_in_button))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun UserAvatar(
+    avatarUrl: String?,
+    size: Int,
+    modifier: Modifier = Modifier
+) {
+    val sizeDp = size.dp
+    if (avatarUrl != null) {
+        AsyncImage(
+            model = avatarUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = modifier
+                .size(sizeDp)
+                .clip(CircleShape)
+        )
+    } else {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = modifier
+                .size(sizeDp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.secondaryContainer)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Person,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.size((sizeDp * 0.65f))
+            )
+        }
     }
 }
 

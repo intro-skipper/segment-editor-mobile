@@ -60,6 +60,7 @@ class LibraryViewModel @Inject constructor(
     val events: SharedFlow<LibraryEvent> = _events.asSharedFlow()
 
     private var lastHiddenLibraryIds: Set<String> = emptySet()
+    private var lastUserId: String? = null
 
     private val hiddenLibraryIds: Set<String>
         get() = securePreferences.getHiddenLibraryIds()
@@ -98,11 +99,67 @@ class LibraryViewModel @Inject constructor(
                             primaryImageTag = mediaItem.imageTags?.get("Primary")
                         )
                     }
+
+                val continueWatching = if (
+                    !securePreferences.getIsApiKeyLogin() || securePreferences.getHasExplicitUserSelection()
+                ) {
+                    val userId = securePreferences.getUserId()
+                    if (userId != null && libraryList.isNotEmpty()) {
+                        // Fetch resume items per visible library in parallel so that items from
+                        // hidden libraries are never included.
+                        coroutineScope {
+                            libraryList
+                                .map { library ->
+                                    async {
+                                        runCatching {
+                                            mediaRepository.getContinueWatching(
+                                                userId = userId,
+                                                limit = 20,
+                                                parentId = library.id
+                                            )
+                                        }.getOrNull()
+                                            ?.takeIf { it.isSuccessful }
+                                            ?.body()
+                                            ?.items
+                                            ?: emptyList()
+                                    }
+                                }
+                                .awaitAll()
+                        }
+                            .flatten()
+                            // Deduplicate by item ID (an item can only belong to one library)
+                            .distinctBy { it.id }
+                            // Sort by last played descending
+                            .sortedByDescending { it.userData?.lastPlayedDate }
+                            .mapNotNull { item ->
+                                val playbackPositionTicks = item.userData?.playbackPositionTicks ?: 0L
+                                if (playbackPositionTicks <= 0L) return@mapNotNull null
+                                ContinueWatchingItem(
+                                    id = item.id,
+                                    name = item.name ?: "Unknown",
+                                    type = item.type,
+                                    seriesName = item.seriesName,
+                                    seasonNumber = item.parentIndexNumber,
+                                    episodeNumber = item.indexNumber,
+                                    primaryImageTag = item.imageTags?.get("Primary"),
+                                    playbackPositionTicks = playbackPositionTicks,
+                                    runTimeTicks = item.runTimeTicks ?: 0L
+                                )
+                            }
+                    } else {
+                        emptyList()
+                    }
+                } else {
+                    emptyList()
+                }
                 
                 _uiState.value = if (libraryList.isEmpty()) {
                     LibraryUiState.Empty
                 } else {
-                    LibraryUiState.Success(libraryList)
+                    LibraryUiState.Success(
+                        libraries = libraryList,
+                        continueWatching = continueWatching
+                    )
                 }
             } catch (e: Exception) {
                 _uiState.value = LibraryUiState.Error(e.message ?: "Unknown error")
@@ -112,9 +169,11 @@ class LibraryViewModel @Inject constructor(
 
     fun refreshIfLibrariesChanged() {
         val currentLibraries = hiddenLibraryIds
-        if (lastHiddenLibraryIds != currentLibraries) {
+        val currentUserId = securePreferences.getUserId()
+        if (lastHiddenLibraryIds != currentLibraries || lastUserId != currentUserId) {
             loadLibraries()
             lastHiddenLibraryIds = currentLibraries
+            lastUserId = currentUserId
         }
     }
 
@@ -483,6 +542,7 @@ sealed class LibraryUiState {
     object Empty : LibraryUiState()
     data class Success(
         val libraries: List<Library>,
+        val continueWatching: List<ContinueWatchingItem> = emptyList(),
         val isSharingLibraryId: String? = null,
         val sharingProgress: Float? = null
     ) : LibraryUiState()
@@ -499,3 +559,24 @@ data class Library(
     val collectionType: String?,
     val primaryImageTag: String? = null
 )
+
+data class ContinueWatchingItem(
+    val id: String,
+    val name: String,
+    val type: String?,
+    val seriesName: String?,
+    val seasonNumber: Int?,
+    val episodeNumber: Int?,
+    val primaryImageTag: String?,
+    val playbackPositionTicks: Long,
+    val runTimeTicks: Long
+) {
+    val progress: Float
+        get() = if (runTimeTicks <= 0L) {
+            0f
+        } else {
+            (playbackPositionTicks.toDouble() / runTimeTicks.toDouble())
+                .coerceIn(0.0, 1.0)
+                .toFloat()
+        }
+}

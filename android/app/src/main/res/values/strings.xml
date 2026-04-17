@@ -28,6 +28,7 @@
     <string name="done">Done</string>
     <string name="apply">Apply</string>
     <string name="delete">Delete</string>
+    <string name="dismiss">Dismiss</string>
     <string name="save">Save</string>
     <string name="create">Create</string>
     <string name="success">Success</string>
@@ -91,6 +92,12 @@
     <string name="settings_change_server">Change Server</string>
     <string name="settings_change_server_subtitle">Connect to a different Jellyfin server</string>
     <string name="settings_change_server_dialog_message">This will disconnect from the current server and return to the connection wizard. Are you sure?</string>
+    <string name="settings_active_user">Active User</string>
+    <string name="settings_active_user_none">No users found</string>
+    <string name="settings_select_user">Select a user…</string>
+    <string name="settings_switch_account">Switch Account</string>
+    <string name="settings_switch_account_subtitle">Sign in as a different user</string>
+    <string name="settings_switch_account_success">Switched to %1$s</string>
     
     <string name="settings_section_admin">SkipMe.db</string>
 
@@ -159,6 +166,7 @@
 
     <!-- Player Screen -->
     <string name="player_title">Player</string>
+    <string name="player_next_up">Next Up</string>
     <string name="player_create_segment">Create Segment</string>
     <string name="player_audio">Audio</string>
     <string name="player_subtitles">Subs</string>
@@ -183,6 +191,7 @@
 
     <!-- Library Screen -->
     <string name="library_select">Select Library</string>
+    <string name="library_continue_watching">Continue Watching</string>
     <string name="library_no_libraries">No libraries found</string>
     <string name="library_type_format">(%1$s)</string>
     <string name="library_unknown">Unknown Library</string>
@@ -307,5 +316,6 @@
     <string name="share_failed_collection_generic">Error sharing collection: %1$s</string>
     <string name="share_segments">Segments</string>
     <string name="share_metadata">Metadata</string>
+    <string name="save_watch_progress">Save Watch Progress</string>
     <string name="share_already_in_progress">Another upload is already in progress. Please wait for it to finish.</string>
 </resources>
