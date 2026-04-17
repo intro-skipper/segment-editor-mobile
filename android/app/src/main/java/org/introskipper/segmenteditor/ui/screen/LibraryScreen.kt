@@ -119,7 +119,7 @@ fun LibraryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(translatedString(R.string.library_select)) },
+                title = { Text(translatedString(R.string.app_name)) },
                 actions = {
                     IconButton(onClick = onSettingsClick) {
                         Icon(
@@ -147,6 +147,16 @@ fun LibraryScreen(
                 viewModel.refresh()
             },
             state = pullToRefreshState,
+            indicator = {
+                if (isRefreshing) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        WavyCircularProgressIndicator()
+                    }
+                }
+            },
             modifier = Modifier.padding(paddingValues)
         ) {
             when (val state = uiState) {
