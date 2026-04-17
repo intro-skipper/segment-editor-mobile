@@ -56,6 +56,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -77,6 +78,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -752,10 +754,22 @@ private fun NextUpCard(
     visible: Boolean,
     nextEpisodeName: String?,
     thumbnailUrl: String?,
+    currentPosition: Long,
+    duration: Long,
+    showAtMs: Long?,
     onPlayNow: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val progress = remember(visible, currentPosition, duration, showAtMs) {
+        if (!visible || showAtMs == null || duration <= showAtMs) 0f
+        else {
+            val elapsed = (currentPosition - showAtMs).coerceAtLeast(0)
+            val total = (duration - showAtMs).coerceAtLeast(1)
+            (elapsed.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+        }
+    }
+
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn() + slideInHorizontally(initialOffsetX = { it }),
@@ -802,6 +816,18 @@ private fun NextUpCard(
                                 )
                             }
                         }
+                        
+                        // Progress bar at the bottom of the thumbnail
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(4.dp)
+                                .align(Alignment.BottomCenter),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = Color.White.copy(alpha = 0.3f),
+                            strokeCap = StrokeCap.Round,
+                        )
                     }
 
                     // Label + episode name
@@ -969,6 +995,9 @@ private fun PlayerContent(
                     visible = uiState.showNextUpCard,
                     nextEpisodeName = uiState.nextItemName,
                     thumbnailUrl = uiState.nextItemImageUrl,
+                    currentPosition = uiState.currentPosition,
+                    duration = uiState.duration,
+                    showAtMs = uiState.nextUpShowAtMs,
                     onPlayNow = onPlayNextUp,
                     onDismiss = { viewModel.dismissNextUpCard() },
                     modifier = Modifier

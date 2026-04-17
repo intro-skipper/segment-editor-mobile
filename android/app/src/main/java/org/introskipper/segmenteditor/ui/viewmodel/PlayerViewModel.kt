@@ -103,7 +103,8 @@ class PlayerViewModel @Inject constructor(
                     nextItemId = null,
                     showControls = true,
                     trackProgressToServer = trackProgressToServer,
-                    resumePositionMs = 0L
+                    resumePositionMs = 0L,
+                    showNextUpCard = false
                 )
             }
 
