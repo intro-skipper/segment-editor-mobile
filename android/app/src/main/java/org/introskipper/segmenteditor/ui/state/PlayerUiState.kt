@@ -18,6 +18,7 @@ data class PlayerUiState(
     // Metadata for sharing
     // seriesTmdbId holds the TMDB ID for the series (episodes) or the movie itself (movies)
     val seriesTmdbId: Int? = null,
+    val seriesImdbId: String? = null,
     val seriesTvdbId: Int? = null,
     val seasonTvdbId: Int? = null,
     val seriesAniListId: Int? = null,

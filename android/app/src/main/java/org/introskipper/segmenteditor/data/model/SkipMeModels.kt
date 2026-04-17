@@ -9,11 +9,14 @@ import com.google.gson.annotations.SerializedName
 
 /**
  * Request body for POST /v1/submit to the SkipMe.db API.
- * At least one of [tmdbId], [tvdbId], or [aniListId] is required.
+ * At least one of [tmdbId], [tvdbId], [imdbId], or [aniListId] is required.
  */
 data class SkipMeSubmitRequest(
     @SerializedName("tmdb_id")
     val tmdbId: Int? = null,
+
+    @SerializedName("imdb_id")
+    val imdbId: String? = null,
 
     @SerializedName("tvdb_series_id")
     val tvdbSeriesId: Int? = null,
@@ -91,7 +94,7 @@ data class SkipMeSeasonItem(
 /**
  * Request body for POST /v1/submit/season.
  * Groups all episode timestamps for one season into a single request.
- * At least one of [tmdbId], [tvdbSeriesId], or [aniListId] is required.
+ * At least one of [tmdbId], [tvdbSeriesId], [imdbId], or [aniListId] is required.
  */
 data class SkipMeSeasonSubmitRequest(
     @SerializedName("tvdb_series_id")
@@ -102,6 +105,9 @@ data class SkipMeSeasonSubmitRequest(
 
     @SerializedName("tmdb_id")
     val tmdbId: Int? = null,
+
+    @SerializedName("imdb_id")
+    val imdbId: String? = null,
 
     @SerializedName("anilist_id")
     val aniListId: Int? = null,
@@ -134,6 +140,9 @@ data class SkipMeBackfillRequest(
 
     @SerializedName("tmdb_id")
     val tmdbId: Int? = null,
+
+    @SerializedName("imdb_id")
+    val imdbId: String? = null,
 
     @SerializedName("tvdb_season_id")
     val tvdbSeasonId: Int? = null,

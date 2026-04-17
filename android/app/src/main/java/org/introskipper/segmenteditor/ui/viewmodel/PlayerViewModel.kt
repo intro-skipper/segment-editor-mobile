@@ -151,7 +151,8 @@ class PlayerViewModel @Inject constructor(
                             MediaItemType.EPISODE -> loadExtraMetadataForSharing(mediaItem)
                             MediaItemType.MOVIE -> _uiState.update { state ->
                                 state.copy(
-                                    seriesTmdbId = mediaItem.providerIds?.get("Tmdb")?.toIntOrNull()
+                                    seriesTmdbId = mediaItem.providerIds?.get("Tmdb")?.toIntOrNull(),
+                                    seriesImdbId = mediaItem.providerIds?.get("Imdb")
                                 )
                             }
                             MediaItemType.SEASON, MediaItemType.SERIES, MediaItemType.UNKNOWN -> Log.w(TAG, "Unsupported media item type for sharing metadata: ${mediaItem.type}")
@@ -191,7 +192,7 @@ class PlayerViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                // Load series to get its TMDB/TVDB IDs
+                // Load series to get its TMDB/TVDB/IMDB IDs
                 val seriesResult = mediaRepository.getItemResult(userId, seriesId, listOf("ProviderIds"))
                 val series = seriesResult.getOrNull()
                 
@@ -202,6 +203,7 @@ class PlayerViewModel @Inject constructor(
                 _uiState.update { state ->
                     state.copy(
                         seriesTmdbId = series?.providerIds?.get("Tmdb")?.toIntOrNull(),
+                        seriesImdbId = series?.providerIds?.get("Imdb"),
                         seriesTvdbId = series?.providerIds?.get("Tvdb")?.toIntOrNull(),
                         seasonTvdbId = season?.providerIds?.get("Tvdb")?.toIntOrNull(),
                         seriesAniListId = series?.providerIds?.get("AniList")?.toIntOrNull()
@@ -1092,12 +1094,13 @@ class PlayerViewModel @Inject constructor(
 
             val state = _uiState.value
             val tmdbId = state.seriesTmdbId
+            val imdbId = state.seriesImdbId
             val tvdbSeasonId = state.seasonTvdbId
             val tvdbId = mediaItem?.providerIds?.get("Tvdb")?.toIntOrNull()
             val aniListId = state.seriesAniListId
 
-            if (tmdbId == null && tvdbId == null && aniListId == null) {
-                Log.w(TAG, "Skipping SkipMe.db share: no series-level TMDB, TVDB, or AniList ID available")
+            if (tmdbId == null && tvdbId == null && aniListId == null && imdbId == null) {
+                Log.w(TAG, "Skipping SkipMe.db share: no series-level TMDB, IMDB, TVDB, or AniList ID available")
                 _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_no_ids))
                 return@launch
             }
@@ -1135,6 +1138,7 @@ class PlayerViewModel @Inject constructor(
 
             val request = SkipMeSubmitRequest(
                 tmdbId = tmdbId,
+                imdbId = imdbId,
                 tvdbSeriesId = state.seriesTvdbId,
                 tvdbSeasonId = tvdbSeasonId,
                 tvdbId = tvdbId,
