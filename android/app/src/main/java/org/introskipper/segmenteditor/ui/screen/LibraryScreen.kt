@@ -106,8 +106,9 @@ fun LibraryScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                // Always refresh when returning to the library screen.
-                viewModel.refresh()
+                // Refresh libraries only if needed (user/hidden libs changed).
+                // Always refresh continue watching.
+                viewModel.refresh(force = false)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -144,7 +145,7 @@ fun LibraryScreen(
             isRefreshing = isRefreshing,
             onRefresh = {
                 isRefreshing = true
-                viewModel.refresh()
+                viewModel.refresh(force = true)
             },
             state = pullToRefreshState,
             indicator = {

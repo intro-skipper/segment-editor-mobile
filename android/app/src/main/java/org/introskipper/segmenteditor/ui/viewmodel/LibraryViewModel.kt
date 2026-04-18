@@ -69,8 +69,12 @@ class LibraryViewModel @Inject constructor(
         loadLibraries()
     }
 
-    fun refresh() {
-        loadLibraries()
+    fun refresh(force: Boolean = true) {
+        if (force) {
+            loadLibraries()
+        } else {
+            refreshIfLibrariesChanged()
+        }
     }
     
     fun getPrimaryImageUrl(itemId: String, imageTag: String, maxWidth: Int = 800): String {
@@ -89,6 +93,10 @@ class LibraryViewModel @Inject constructor(
                 val libraries = jellyfinRepository.getLibraries()
                 val hiddenLibraryIds = securePreferences.getHiddenLibraryIds()
                 
+                // Track current state for conditional refreshes
+                lastHiddenLibraryIds = hiddenLibraryIds
+                lastUserId = securePreferences.getUserId()
+
                 val libraryList = libraries
                     .filter { !hiddenLibraryIds.contains(it.id) }
                     .map { mediaItem ->
@@ -100,58 +108,7 @@ class LibraryViewModel @Inject constructor(
                         )
                     }
 
-                val continueWatching = if (
-                    !securePreferences.getIsApiKeyLogin() || securePreferences.getHasExplicitUserSelection()
-                ) {
-                    val userId = securePreferences.getUserId()
-                    if (userId != null && libraryList.isNotEmpty()) {
-                        // Fetch resume items per visible library in parallel so that items from
-                        // hidden libraries are never included.
-                        coroutineScope {
-                            libraryList
-                                .map { library ->
-                                    async {
-                                        runCatching {
-                                            mediaRepository.getContinueWatching(
-                                                userId = userId,
-                                                limit = 20,
-                                                parentId = library.id
-                                            )
-                                        }.getOrNull()
-                                            ?.takeIf { it.isSuccessful }
-                                            ?.body()
-                                            ?.items
-                                            ?: emptyList()
-                                    }
-                                }
-                                .awaitAll()
-                        }
-                            .flatten()
-                            // Deduplicate by item ID (an item can only belong to one library)
-                            .distinctBy { it.id }
-                            // Sort by last played descending
-                            .sortedByDescending { it.userData?.lastPlayedDate }
-                            .mapNotNull { item ->
-                                val playbackPositionTicks = item.userData?.playbackPositionTicks ?: 0L
-                                if (playbackPositionTicks <= 0L) return@mapNotNull null
-                                ContinueWatchingItem(
-                                    id = item.id,
-                                    name = item.name ?: "Unknown",
-                                    type = item.type,
-                                    seriesName = item.seriesName,
-                                    seasonNumber = item.parentIndexNumber,
-                                    episodeNumber = item.indexNumber,
-                                    primaryImageTag = item.imageTags?.get("Primary"),
-                                    playbackPositionTicks = playbackPositionTicks,
-                                    runTimeTicks = item.runTimeTicks ?: 0L
-                                )
-                            }
-                    } else {
-                        emptyList()
-                    }
-                } else {
-                    emptyList()
-                }
+                val continueWatching = fetchContinueWatching(libraryList)
                 
                 _uiState.value = if (libraryList.isEmpty()) {
                     LibraryUiState.Empty
@@ -167,13 +124,88 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    private suspend fun fetchContinueWatching(libraryList: List<Library>): List<ContinueWatchingItem> {
+        return if (
+            !securePreferences.getIsApiKeyLogin() || securePreferences.getHasExplicitUserSelection()
+        ) {
+            val userId = securePreferences.getUserId()
+            if (userId != null && libraryList.isNotEmpty()) {
+                // Fetch resume items per visible library in parallel so that items from
+                // hidden libraries are never included.
+                coroutineScope {
+                    libraryList
+                        .map { library ->
+                            async {
+                                runCatching {
+                                    mediaRepository.getContinueWatching(
+                                        userId = userId,
+                                        limit = 20,
+                                        parentId = library.id
+                                    )
+                                }.getOrNull()
+                                    ?.takeIf { it.isSuccessful }
+                                    ?.body()
+                                    ?.items
+                                    ?: emptyList()
+                                }
+                            }
+                            .awaitAll()
+                    }
+                    .flatten()
+                    // Deduplicate by item ID (an item can only belong to one library)
+                    .distinctBy { it.id }
+                    // Sort by last played descending
+                    .sortedByDescending { it.userData?.lastPlayedDate }
+                    .mapNotNull { item ->
+                        val playbackPositionTicks = item.userData?.playbackPositionTicks ?: 0L
+                        if (playbackPositionTicks <= 0L) return@mapNotNull null
+                        ContinueWatchingItem(
+                            id = item.id,
+                            name = item.name ?: "Unknown",
+                            type = item.type,
+                            seriesName = item.seriesName,
+                            seasonNumber = item.parentIndexNumber,
+                            episodeNumber = item.indexNumber,
+                            primaryImageTag = item.imageTags?.get("Primary"),
+                            playbackPositionTicks = playbackPositionTicks,
+                            runTimeTicks = item.runTimeTicks ?: 0L
+                        )
+                    }
+            } else {
+                emptyList()
+            }
+        } else {
+            emptyList()
+        }
+    }
+
+    /**
+     * Refreshes the library list only if the user or hidden libraries have changed.
+     * Always refreshes the Continue Watching section if the UI state is Success.
+     */
     fun refreshIfLibrariesChanged() {
-        val currentLibraries = hiddenLibraryIds
+        val currentHidden = hiddenLibraryIds
         val currentUserId = securePreferences.getUserId()
-        if (lastHiddenLibraryIds != currentLibraries || lastUserId != currentUserId) {
+        val librariesChanged = lastHiddenLibraryIds != currentHidden || lastUserId != currentUserId
+        
+        if (librariesChanged) {
             loadLibraries()
-            lastHiddenLibraryIds = currentLibraries
-            lastUserId = currentUserId
+        } else {
+            val currentState = _uiState.value
+            if (currentState is LibraryUiState.Success) {
+                viewModelScope.launch {
+                    try {
+                        val updatedContinueWatching = fetchContinueWatching(currentState.libraries)
+                        _uiState.update { state ->
+                            if (state is LibraryUiState.Success) {
+                                state.copy(continueWatching = updatedContinueWatching)
+                            } else state
+                        }
+                    } catch (e: Exception) {
+                        Log.e("LibraryViewModel", "Failed to refresh continue watching", e)
+                    }
+                }
+            }
         }
     }
 
