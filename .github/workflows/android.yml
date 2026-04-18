@@ -31,7 +31,8 @@ jobs:
     - uses: actions/checkout@v6
       with:
         repository: intro-skipper/segment-editor-mobile
-        submodules: recursive
+        fetch-depth: 1
+        submodules: false
         token: ${{ secrets.EDITOR_TOKEN }}
 
     - name: set up JDK 17
@@ -43,21 +44,39 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Retrieve commit identification
+    - name: Set build hash
       run: |
-        GIT_BRANCH=$(git name-rev --name-only HEAD)
-        echo "GIT_BRANCH=${GIT_BRANCH}" >> $GITHUB_ENV
-        GIT_HASH=$(git rev-parse --short HEAD)
-        echo "GIT_HASH=${GIT_HASH}" >> $GITHUB_ENV
+        echo "GIT_HASH=$(echo "$GITHUB_SHA" | cut -c1-7)" >> "$GITHUB_ENV"
 
     - uses: burrunan/gradle-cache-action@v3
-      name: Build Release Gradle
+      name: Build PR Gradle checks
+      if: github.event_name == 'pull_request'
       with:
         job-id: SegmentEditor
         build-root-directory: android
         # Specifies arguments for Gradle execution
         arguments: |
           --configure-on-demand
+          --parallel
+          :app:compileGithubDebugKotlin
+        # Gradle version to use for execution:
+        #   wrapper (default), current, rc, nightly, release-nightly, or
+        #   versions like 6.6 (see https://services.gradle.org/versions/all)
+        gradle-version: wrapper
+        # Properties are passed as -Pname=value
+        properties: |
+          org.gradle.configuration-cache=true
+
+    - uses: burrunan/gradle-cache-action@v3
+      name: Build Release Gradle
+      if: github.event_name != 'pull_request'
+      with:
+        job-id: SegmentEditor
+        build-root-directory: android
+        # Specifies arguments for Gradle execution
+        arguments: |
+          --configure-on-demand
+          --parallel
           assembleGithubRelease
         # Gradle version to use for execution:
         #   wrapper (default), current, rc, nightly, release-nightly, or
@@ -69,6 +88,7 @@ jobs:
 
     - uses: r0adkll/sign-android-release@v1
       name: Sign Release APK
+      if: github.event_name != 'pull_request'
       # ID used to access action output
       id: sign_main
       with:
@@ -82,9 +102,11 @@ jobs:
         BUILD_TOOLS_VERSION: "34.0.0"
 
     - uses: actions/upload-artifact@v4
+      if: github.event_name != 'pull_request'
       with:
         name: Segment Editor ${{ env.GIT_HASH }}
         retention-days: 1
+        compression-level: 0
         path: ${{steps.sign_main.outputs.signedReleaseFile}}
 
     - uses: 8bitDream/action-github-releases@v1.0.0
