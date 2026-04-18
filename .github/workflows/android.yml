@@ -30,6 +30,7 @@ jobs:
     steps:
     - uses: actions/checkout@v6
       with:
+        repository: intro-skipper/segment-editor-mobile
         fetch-depth: 1
         token: ${{ secrets.EDITOR_TOKEN }}
 
@@ -100,7 +101,7 @@ jobs:
         BUILD_TOOLS_VERSION: "34.0.0"
 
     - uses: actions/upload-artifact@v4
-      if: github.event_name != 'pull_request'
+      if: github.event_name != 'pull_request' && steps.sign_main.outcome == 'success'
       with:
         name: Segment Editor ${{ env.GIT_HASH }}
         retention-days: 1
