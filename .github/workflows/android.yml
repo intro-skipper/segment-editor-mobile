@@ -32,6 +32,7 @@ jobs:
       with:
         repository: intro-skipper/segment-editor-mobile
         fetch-depth: 1
+        submodules: false
         token: ${{ secrets.EDITOR_TOKEN }}
 
     - name: set up JDK 17
@@ -45,7 +46,7 @@ jobs:
 
     - name: Set release metadata
       run: |
-        echo "GIT_HASH=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+        echo "GIT_HASH=$(echo "$GITHUB_SHA" | cut -c1-7)" >> "$GITHUB_ENV"
 
     - uses: burrunan/gradle-cache-action@v3
       name: Build PR Gradle checks
@@ -101,7 +102,7 @@ jobs:
         BUILD_TOOLS_VERSION: "34.0.0"
 
     - uses: actions/upload-artifact@v4
-      if: github.event_name != 'pull_request' && steps.sign_main.outcome == 'success'
+      if: github.event_name != 'pull_request' && success()
       with:
         name: Segment Editor ${{ env.GIT_HASH }}
         retention-days: 1
