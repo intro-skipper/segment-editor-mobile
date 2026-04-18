@@ -44,7 +44,7 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Set release metadata
+    - name: Set build hash
       run: |
         echo "GIT_HASH=$(echo "$GITHUB_SHA" | cut -c1-7)" >> "$GITHUB_ENV"
 
@@ -102,7 +102,7 @@ jobs:
         BUILD_TOOLS_VERSION: "34.0.0"
 
     - uses: actions/upload-artifact@v4
-      if: github.event_name != 'pull_request' && success()
+      if: github.event_name != 'pull_request'
       with:
         name: Segment Editor ${{ env.GIT_HASH }}
         retention-days: 1
