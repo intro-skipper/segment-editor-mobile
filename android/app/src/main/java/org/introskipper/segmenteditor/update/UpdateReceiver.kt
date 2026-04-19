@@ -13,12 +13,12 @@ import android.content.Intent
 import android.content.pm.PackageInstaller
 import android.widget.Toast
 import androidx.core.content.IntentCompat
+import androidx.core.content.IntentSanitizer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.R
-import java.net.URISyntaxException
 
 inline fun <reified T> Intent.getParcelableExtraCompat(name: String): T? {
     return IntentCompat.getParcelableExtra(this, name, T::class.java)
@@ -44,16 +44,18 @@ class UpdateReceiver : BroadcastReceiver() {
                 PackageInstaller.STATUS_FAILURE
             )) {
                 PackageInstaller.STATUS_PENDING_USER_ACTION -> {
-                    intent.getParcelableExtraCompat<Intent>(Intent.EXTRA_INTENT)?.let { intent ->
-                        try {
-                            startInstallActivity(
-                                context, Intent.parseUri(
-                                    intent.toUri(0),
-                                    Intent.URI_ALLOW_UNSAFE or Intent.URI_INTENT_SCHEME
-                                )
-                            )
-                        } catch (_: URISyntaxException) {
-                            context.toast(R.string.install_broken)
+                    intent.getParcelableExtraCompat<Intent>(Intent.EXTRA_INTENT)?.let { userIntent ->
+                        val sanitizedIntent = IntentSanitizer.Builder()
+                            .allowAnyComponent()
+                            .allowExtra(Intent.EXTRA_INTENT) { true }
+                            .allowExtra(Intent.EXTRA_INSTALLER_PACKAGE_NAME) { true }
+                            .build()
+                            .sanitize(userIntent) {
+                                // optional: log or handle violation
+                            }
+                        
+                        if (sanitizedIntent != null) {
+                            startInstallActivity(context, sanitizedIntent)
                         }
                     } ?: context.toast(R.string.install_rejected)
                 }
