@@ -29,3 +29,8 @@ Jellyfin media segment management made simple.
 
 - Jellyfin Plugin: [.EDL Creator](https://github.com/intro-skipper/jellyfin-plugin-edl)
 - Jellyfin Plugin: [Chapter Creator](https://github.com/intro-skipper/jellyfin-plugin-ms-chapter)
+
+<br />
+<p align="center">
+  <img alt='Trust in Claude' src='assets/ChatGPT_Claude_Banner.png'/></a>
+</p>
