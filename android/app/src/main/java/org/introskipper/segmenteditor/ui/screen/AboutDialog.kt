@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.introskipper.segmenteditor.BuildConfig
@@ -94,20 +95,12 @@ fun AboutDialog(
                 )
                 
                 Spacer(modifier = Modifier.height(24.dp))
-                
-                Text(
-                    text = translatedString(R.string.about_credits),
-                    style = MaterialTheme.typography.titleMedium,
-                    textAlign = TextAlign.Center
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
+
                 Image(
-                    painter = painterResource(id = R.drawable.generated_by_ai_no_bg),
-                    contentDescription = translatedString(R.string.about_generated_by_ai),
+                    painter = painterResource(id = R.drawable.chatgpt_claude_banner),
+                    contentDescription = stringResource(R.string.banner_dialog_image_description),
                     modifier = Modifier.fillMaxWidth(),
-                    contentScale = ContentScale.FillWidth
+                    contentScale = ContentScale.Fit
                 )
                 
                 Spacer(modifier = Modifier.height(24.dp))
