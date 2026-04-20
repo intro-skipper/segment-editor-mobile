@@ -227,7 +227,7 @@ class SeriesViewModel @Inject constructor(
             try {
                 val seriesTvdbId = currentState.series.providerIds?.get("Tvdb")?.toIntOrNull()
                 val seriesTmdbId = currentState.series.providerIds?.get("Tmdb")?.toIntOrNull()
-                val seriesImdbId = currentState.series.providerIds?.get("Imdb")
+                val seriesImdbId = currentState.series.providerIds?.get("Imdb")?.takeIf { it.isNotBlank() }
                 val seriesAniListId = currentState.series.providerIds?.get("AniList")?.toIntOrNull()
 
                 // Group deduplicated items by (season number, tvdb season id)
