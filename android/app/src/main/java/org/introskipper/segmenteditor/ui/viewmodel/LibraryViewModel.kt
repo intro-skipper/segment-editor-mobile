@@ -313,6 +313,7 @@ class LibraryViewModel @Inject constructor(
                 async {
                     semaphore.withPermit {
                         val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull() ?: return@withPermit emptyList()
+                        val imdbId = movie.providerIds?.get("Imdb")
                         val durationMs = movie.runTimeTicks?.div(10_000) ?: return@withPermit emptyList()
                         if (durationMs <= 0) return@withPermit emptyList()
 
@@ -324,6 +325,7 @@ class LibraryViewModel @Inject constructor(
                             if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
                                 SkipMeSubmitRequest(
                                     tmdbId = tmdbId,
+                                    imdbId = imdbId,
                                     segment = skipMeType,
                                     durationMs = durationMs,
                                     startMs = startMs,

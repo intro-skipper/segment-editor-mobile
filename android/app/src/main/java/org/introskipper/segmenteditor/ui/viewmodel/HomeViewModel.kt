@@ -445,6 +445,7 @@ class HomeViewModel @Inject constructor(
                         val segments = segmentResult.getOrNull() ?: emptyList()
 
                         val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull()
+                        val imdbId = movie.providerIds?.get("Imdb")
                         val durationMs = movie.runTimeTicks?.div(10_000)
 
                         if (tmdbId == null || durationMs == null || durationMs <= 0 || segments.isEmpty()) {
@@ -462,6 +463,7 @@ class HomeViewModel @Inject constructor(
                                 val response = skipMeApiService.submitSegment(
                                     SkipMeSubmitRequest(
                                         tmdbId = tmdbId,
+                                        imdbId = imdbId,
                                         segment = skipMeType,
                                         durationMs = durationMs,
                                         startMs = startMs,
