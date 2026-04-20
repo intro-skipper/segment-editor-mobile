@@ -241,7 +241,7 @@ class LibraryViewModel @Inject constructor(
                     semaphore.withPermit {
                         val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
                         val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
-                        val seriesImdbId = series.providerIds?.get("Imdb")
+                        val seriesImdbId = series.providerIds?.get("Imdb")?.takeIf { it.isNotBlank() }
                         val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
 
                         val episodesResponse = mediaRepository.getEpisodes(
@@ -388,7 +388,7 @@ class LibraryViewModel @Inject constructor(
             val requests = run {
                 val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
                 val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
-                val seriesImdbId = series.providerIds?.get("Imdb")
+                val seriesImdbId = series.providerIds?.get("Imdb")?.takeIf { it.isNotBlank() }
                 val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
 
                 val episodesResponse = mediaRepository.getEpisodes(

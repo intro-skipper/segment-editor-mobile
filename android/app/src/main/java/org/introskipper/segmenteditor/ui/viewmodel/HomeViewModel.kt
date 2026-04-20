@@ -260,7 +260,7 @@ class HomeViewModel @Inject constructor(
 
                             val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
                             val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
-                            val seriesImdbId = series.providerIds?.get("Imdb")
+                            val seriesImdbId = series.providerIds?.get("Imdb")?.takeIf { it.isNotBlank() }
                             val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
 
                             episodes.body()?.items?.filter { (it.parentIndexNumber ?: 0) != 0 }?.forEach { episode ->
@@ -293,7 +293,7 @@ class HomeViewModel @Inject constructor(
                         if (episodes.isSuccessful) {
                             val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
                             val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
-                            val seriesImdbId = series.providerIds?.get("Imdb")
+                            val seriesImdbId = series.providerIds?.get("Imdb")?.takeIf { it.isNotBlank() }
                             val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
                             val seasonTvdbId = season.providerIds?.get("Tvdb")?.toIntOrNull()
 
@@ -376,7 +376,7 @@ class HomeViewModel @Inject constructor(
 
                         val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
                         val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
-                        val seriesImdbId = series.providerIds?.get("Imdb")
+                        val seriesImdbId = series.providerIds?.get("Imdb")?.takeIf { it.isNotBlank() }
                         val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
 
                         val seasonRequests = buildSeasonRequests(
@@ -420,7 +420,7 @@ class HomeViewModel @Inject constructor(
                         val episodes = episodesResponse.body()?.items ?: emptyList()
                         val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
                         val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
-                        val seriesImdbId = series.providerIds?.get("Imdb")
+                        val seriesImdbId = series.providerIds?.get("Imdb")?.takeIf { it.isNotBlank() }
                         val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
                         val seasonTvdbId = season.providerIds?.get("Tvdb")?.toIntOrNull()
 

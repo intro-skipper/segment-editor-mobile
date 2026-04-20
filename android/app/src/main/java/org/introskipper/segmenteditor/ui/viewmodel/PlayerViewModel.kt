@@ -152,7 +152,7 @@ class PlayerViewModel @Inject constructor(
                             MediaItemType.MOVIE -> _uiState.update { state ->
                                 state.copy(
                                     seriesTmdbId = mediaItem.providerIds?.get("Tmdb")?.toIntOrNull(),
-                                    seriesImdbId = mediaItem.providerIds?.get("Imdb")
+                                    seriesImdbId = mediaItem.providerIds?.get("Imdb")?.takeIf { it.isNotBlank() }
                                 )
                             }
                             MediaItemType.SEASON, MediaItemType.SERIES, MediaItemType.UNKNOWN -> Log.w(TAG, "Unsupported media item type for sharing metadata: ${mediaItem.type}")
@@ -203,7 +203,7 @@ class PlayerViewModel @Inject constructor(
                 _uiState.update { state ->
                     state.copy(
                         seriesTmdbId = series?.providerIds?.get("Tmdb")?.toIntOrNull(),
-                        seriesImdbId = series?.providerIds?.get("Imdb"),
+                        seriesImdbId = series?.providerIds?.get("Imdb")?.takeIf { it.isNotBlank() },
                         seriesTvdbId = series?.providerIds?.get("Tvdb")?.toIntOrNull(),
                         seasonTvdbId = season?.providerIds?.get("Tvdb")?.toIntOrNull(),
                         seriesAniListId = series?.providerIds?.get("AniList")?.toIntOrNull()
