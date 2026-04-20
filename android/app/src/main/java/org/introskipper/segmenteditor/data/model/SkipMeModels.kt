@@ -9,7 +9,7 @@ import com.google.gson.annotations.SerializedName
 
 /**
  * Request body for POST /v1/submit to the SkipMe.db API.
- * At least one of [tmdbId], [tvdbId], [imdbSeriesId], or [aniListId] is required.
+ * At least one of [tmdbId], [tvdbId], [imdbSeriesId] (for TV), [imdbId] (for movies), or [aniListId] is required.
  */
 data class SkipMeSubmitRequest(
     @SerializedName("tmdb_id")

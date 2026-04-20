@@ -448,7 +448,7 @@ class HomeViewModel @Inject constructor(
                         val imdbId = movie.providerIds?.get("Imdb")
                         val durationMs = movie.runTimeTicks?.div(10_000)
 
-                        if (tmdbId == null || durationMs == null || durationMs <= 0 || segments.isEmpty()) {
+                        if ((tmdbId == null && imdbId == null) || durationMs == null || durationMs <= 0 || segments.isEmpty()) {
                             _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
                             return@launch
                         }
