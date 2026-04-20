@@ -388,6 +388,7 @@ class LibraryViewModel @Inject constructor(
             val requests = run {
                 val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
                 val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
+                val seriesImdbId = series.providerIds?.get("Imdb")
                 val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
 
                 val episodesResponse = mediaRepository.getEpisodes(
@@ -407,8 +408,10 @@ class LibraryViewModel @Inject constructor(
                         SkipMeBackfillRequest(
                             tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull(),
                             tmdbId = seriesTmdbId,
+                            imdbId = episode.providerIds?.get("Imdb"),
                             tvdbSeasonId = seasonTvdbIds[episode.seasonId ?: ""],
                             tvdbSeriesId = seriesTvdbId,
+                            imdbSeriesId = seriesImdbId,
                             aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null,
                             season = episode.parentIndexNumber,
                             episode = episode.indexNumber
@@ -444,8 +447,10 @@ class LibraryViewModel @Inject constructor(
         }
 
         val requests = (moviesResponse.body()?.items ?: emptyList()).mapNotNull { movie ->
-            val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull() ?: return@mapNotNull null
-            SkipMeBackfillRequest(tmdbId = tmdbId)
+            val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull()
+            val imdbId = movie.providerIds?.get("Imdb")
+            if (tmdbId == null && imdbId == null) return@mapNotNull null
+            SkipMeBackfillRequest(tmdbId = tmdbId, imdbId = imdbId)
         }
 
         var totalUpdated = 0
@@ -574,6 +579,11 @@ class LibraryViewModel @Inject constructor(
                 season = key.seasonNumber,
                 items = items.toList()
             )
+        }.filter { request ->
+            request.tmdbId != null ||
+            request.imdbSeriesId != null ||
+            request.aniListId != null ||
+            request.items.any { it.tvdbId != null || it.imdbId != null }
         }
     }
 }

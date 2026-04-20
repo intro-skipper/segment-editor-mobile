@@ -260,6 +260,7 @@ class HomeViewModel @Inject constructor(
 
                             val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
                             val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
+                            val seriesImdbId = series.providerIds?.get("Imdb")
                             val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
 
                             episodes.body()?.items?.filter { (it.parentIndexNumber ?: 0) != 0 }?.forEach { episode ->
@@ -267,8 +268,10 @@ class HomeViewModel @Inject constructor(
                                     SkipMeBackfillRequest(
                                         tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull(),
                                         tmdbId = seriesTmdbId,
+                                        imdbId = episode.providerIds?.get("Imdb"),
                                         tvdbSeasonId = seasonTvdbIds[episode.seasonId ?: ""],
                                         tvdbSeriesId = seriesTvdbId,
+                                        imdbSeriesId = seriesImdbId,
                                         aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null,
                                         season = episode.parentIndexNumber,
                                         episode = episode.indexNumber
@@ -290,6 +293,7 @@ class HomeViewModel @Inject constructor(
                         if (episodes.isSuccessful) {
                             val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
                             val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
+                            val seriesImdbId = series.providerIds?.get("Imdb")
                             val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
                             val seasonTvdbId = season.providerIds?.get("Tvdb")?.toIntOrNull()
 
@@ -298,8 +302,10 @@ class HomeViewModel @Inject constructor(
                                     SkipMeBackfillRequest(
                                         tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull(),
                                         tmdbId = seriesTmdbId,
+                                        imdbId = episode.providerIds?.get("Imdb"),
                                         tvdbSeasonId = seasonTvdbId,
                                         tvdbSeriesId = seriesTvdbId,
+                                        imdbSeriesId = seriesImdbId,
                                         aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null,
                                         season = episode.parentIndexNumber,
                                         episode = episode.indexNumber
@@ -312,7 +318,8 @@ class HomeViewModel @Inject constructor(
                         val movie = jellyfinRepository.getMediaItem(item.id)
                         requests.add(
                             SkipMeBackfillRequest(
-                                tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull()
+                                tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull(),
+                                imdbId = movie.providerIds?.get("Imdb")
                             )
                         )
                     }
@@ -503,7 +510,6 @@ class HomeViewModel @Inject constructor(
         tvdbSeasonIdFor: (MediaItem) -> Int?
     ): List<SkipMeSeasonSubmitRequest> {
         if (tvdbSeriesId == null && tmdbId == null && imdbSeriesId == null && aniListId == null) return emptyList()
-
         data class SeasonKey(val seasonNumber: Int?, val tvdbSeasonId: Int?)
         val itemsBySeason = mutableMapOf<SeasonKey, MutableSet<SkipMeSeasonItem>>()
 
@@ -546,6 +552,11 @@ class HomeViewModel @Inject constructor(
                 season = key.seasonNumber,
                 items = items.toList()
             )
+        }.filter { request ->
+            request.tmdbId != null ||
+            request.imdbSeriesId != null ||
+            request.aniListId != null ||
+            request.items.any { it.tvdbId != null || it.imdbId != null }
         }
     }
 }
