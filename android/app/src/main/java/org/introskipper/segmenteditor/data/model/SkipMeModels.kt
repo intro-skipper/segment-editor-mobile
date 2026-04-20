@@ -9,11 +9,15 @@ import com.google.gson.annotations.SerializedName
 
 /**
  * Request body for POST /v1/submit to the SkipMe.db API.
- * At least one of [tmdbId], [tvdbId], [imdbId], or [aniListId] is required.
+ * At least one of [tvdbId], [imdbId], [tmdbId], [imdbSeriesId], or [aniListId] is required.
+ * [imdbSeriesId] is only applicable to TV episodes; movies use [imdbId] instead.
  */
 data class SkipMeSubmitRequest(
     @SerializedName("tmdb_id")
     val tmdbId: Int? = null,
+
+    @SerializedName("imdb_series_id")
+    val imdbSeriesId: String? = null,
 
     @SerializedName("imdb_id")
     val imdbId: String? = null,
@@ -75,6 +79,9 @@ data class SkipMeSeasonItem(
     @SerializedName("tvdb_id")
     val tvdbId: Int? = null,
 
+    @SerializedName("imdb_id")
+    val imdbId: String? = null,
+
     @SerializedName("episode")
     val episode: Int?,
 
@@ -94,7 +101,9 @@ data class SkipMeSeasonItem(
 /**
  * Request body for POST /v1/submit/season.
  * Groups all episode timestamps for one season into a single request.
- * At least one of [tmdbId], [tvdbSeriesId], [imdbId], or [aniListId] is required.
+ * At least one of [tmdbId], [tvdbSeriesId], [imdbSeriesId], or [aniListId] must be set at the
+ * request level, OR at least one item must carry a [SkipMeSeasonItem.tvdbId] or
+ * [SkipMeSeasonItem.imdbId] episode-level identifier.
  */
 data class SkipMeSeasonSubmitRequest(
     @SerializedName("tvdb_series_id")
@@ -106,8 +115,8 @@ data class SkipMeSeasonSubmitRequest(
     @SerializedName("tmdb_id")
     val tmdbId: Int? = null,
 
-    @SerializedName("imdb_id")
-    val imdbId: String? = null,
+    @SerializedName("imdb_series_id")
+    val imdbSeriesId: String? = null,
 
     @SerializedName("anilist_id")
     val aniListId: Int? = null,
@@ -149,6 +158,9 @@ data class SkipMeBackfillRequest(
 
     @SerializedName("tvdb_series_id")
     val tvdbSeriesId: Int? = null,
+
+    @SerializedName("imdb_series_id")
+    val imdbSeriesId: String? = null,
 
     @SerializedName("anilist_id")
     val aniListId: Int? = null,

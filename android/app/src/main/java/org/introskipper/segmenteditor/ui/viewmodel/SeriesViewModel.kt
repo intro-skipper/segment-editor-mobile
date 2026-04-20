@@ -227,6 +227,7 @@ class SeriesViewModel @Inject constructor(
             try {
                 val seriesTvdbId = currentState.series.providerIds?.get("Tvdb")?.toIntOrNull()
                 val seriesTmdbId = currentState.series.providerIds?.get("Tmdb")?.toIntOrNull()
+                val seriesImdbId = currentState.series.providerIds?.get("Imdb")
                 val seriesAniListId = currentState.series.providerIds?.get("AniList")?.toIntOrNull()
 
                 // Group deduplicated items by (season number, tvdb season id)
@@ -238,10 +239,11 @@ class SeriesViewModel @Inject constructor(
                     val segments = episodeWithSegments.segments ?: return@forEach
 
                     val tvdbEpisodeId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+                    val imdbEpisodeId = episode.providerIds?.get("Imdb")
                     val tvdbSeasonId = currentState.seasonTvdbIds[episode.seasonId ?: ""]
                     val durationMs = episode.runTimeTicks?.div(10_000)
 
-                    if ((seriesTmdbId != null || seriesTvdbId != null || seriesAniListId != null) && durationMs != null && durationMs > 0) {
+                    if ((seriesTmdbId != null || seriesTvdbId != null || seriesImdbId != null || seriesAniListId != null) && durationMs != null && durationMs > 0) {
                         segments.forEach { segment ->
                             val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType()
                             if (skipMeType == null) return@forEach
@@ -256,6 +258,7 @@ class SeriesViewModel @Inject constructor(
                             itemsBySeason.getOrPut(key) { mutableSetOf() }.add(
                                 SkipMeSeasonItem(
                                     tvdbId = tvdbEpisodeId,
+                                    imdbId = imdbEpisodeId,
                                     episode = episode.indexNumber,
                                     segment = skipMeType,
                                     durationMs = durationMs,
@@ -277,6 +280,7 @@ class SeriesViewModel @Inject constructor(
                         tvdbSeriesId = seriesTvdbId,
                         tvdbSeasonId = key.tvdbSeasonId,
                         tmdbId = seriesTmdbId,
+                        imdbSeriesId = seriesImdbId,
                         aniListId = if (key.seasonNumber == 1) seriesAniListId else null,
                         season = key.seasonNumber,
                         items = items.toList()

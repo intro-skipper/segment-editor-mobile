@@ -241,6 +241,7 @@ class LibraryViewModel @Inject constructor(
                     semaphore.withPermit {
                         val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
                         val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
+                        val seriesImdbId = series.providerIds?.get("Imdb")
                         val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
 
                         val episodesResponse = mediaRepository.getEpisodes(
@@ -261,6 +262,7 @@ class LibraryViewModel @Inject constructor(
                             episodes = episodes,
                             tvdbSeriesId = seriesTvdbId,
                             tmdbId = seriesTmdbId,
+                            imdbSeriesId = seriesImdbId,
                             aniListId = seriesAniListId,
                             tvdbSeasonIdFor = { episode -> seasonTvdbIds[episode.seasonId ?: ""] }
                         )
@@ -310,7 +312,9 @@ class LibraryViewModel @Inject constructor(
             allMovies.map { movie ->
                 async {
                     semaphore.withPermit {
-                        val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull() ?: return@withPermit emptyList()
+                        val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull()
+                        val imdbId = movie.providerIds?.get("Imdb")
+                        if (tmdbId == null && imdbId == null) return@withPermit emptyList()
                         val durationMs = movie.runTimeTicks?.div(10_000) ?: return@withPermit emptyList()
                         if (durationMs <= 0) return@withPermit emptyList()
 
@@ -322,6 +326,7 @@ class LibraryViewModel @Inject constructor(
                             if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
                                 SkipMeSubmitRequest(
                                     tmdbId = tmdbId,
+                                    imdbId = imdbId,
                                     segment = skipMeType,
                                     durationMs = durationMs,
                                     startMs = startMs,
@@ -383,6 +388,7 @@ class LibraryViewModel @Inject constructor(
             val requests = run {
                 val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
                 val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
+                val seriesImdbId = series.providerIds?.get("Imdb")
                 val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
 
                 val episodesResponse = mediaRepository.getEpisodes(
@@ -402,8 +408,10 @@ class LibraryViewModel @Inject constructor(
                         SkipMeBackfillRequest(
                             tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull(),
                             tmdbId = seriesTmdbId,
+                            imdbId = episode.providerIds?.get("Imdb"),
                             tvdbSeasonId = seasonTvdbIds[episode.seasonId ?: ""],
                             tvdbSeriesId = seriesTvdbId,
+                            imdbSeriesId = seriesImdbId,
                             aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null,
                             season = episode.parentIndexNumber,
                             episode = episode.indexNumber
@@ -439,8 +447,10 @@ class LibraryViewModel @Inject constructor(
         }
 
         val requests = (moviesResponse.body()?.items ?: emptyList()).mapNotNull { movie ->
-            val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull() ?: return@mapNotNull null
-            SkipMeBackfillRequest(tmdbId = tmdbId)
+            val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull()
+            val imdbId = movie.providerIds?.get("Imdb")
+            if (tmdbId == null && imdbId == null) return@mapNotNull null
+            SkipMeBackfillRequest(tmdbId = tmdbId, imdbId = imdbId)
         }
 
         var totalUpdated = 0
@@ -513,10 +523,11 @@ class LibraryViewModel @Inject constructor(
         episodes: List<MediaItem>,
         tvdbSeriesId: Int?,
         tmdbId: Int?,
+        imdbSeriesId: String?,
         aniListId: Int?,
         tvdbSeasonIdFor: (MediaItem) -> Int?
     ): List<SkipMeSeasonSubmitRequest> = coroutineScope {
-        if (tvdbSeriesId == null && tmdbId == null && aniListId == null) return@coroutineScope emptyList()
+        if (tvdbSeriesId == null && tmdbId == null && imdbSeriesId == null && aniListId == null) return@coroutineScope emptyList()
 
         data class SeasonKey(val seasonNumber: Int?, val tvdbSeasonId: Int?)
         val itemsBySeason = mutableMapOf<SeasonKey, MutableSet<SkipMeSeasonItem>>()
@@ -528,6 +539,7 @@ class LibraryViewModel @Inject constructor(
                 semaphore.withPermit {
                     val segments = segmentRepository.getSegmentsResult(episode.id).getOrNull() ?: return@withPermit null
                     val tvdbEpisodeId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+                    val imdbEpisodeId = episode.providerIds?.get("Imdb")
                     val durationMs = episode.runTimeTicks?.div(10_000) ?: return@withPermit null
                     if (durationMs <= 0) return@withPermit null
 
@@ -539,6 +551,7 @@ class LibraryViewModel @Inject constructor(
                         if (startMs in 0..<endMs && endMs <= durationMs) {
                             SkipMeSeasonItem(
                                 tvdbId = tvdbEpisodeId,
+                                imdbId = imdbEpisodeId,
                                 episode = episode.indexNumber,
                                 segment = skipMeType,
                                 durationMs = durationMs,
@@ -561,10 +574,16 @@ class LibraryViewModel @Inject constructor(
                 tvdbSeriesId = tvdbSeriesId,
                 tvdbSeasonId = key.tvdbSeasonId,
                 tmdbId = tmdbId,
+                imdbSeriesId = imdbSeriesId,
                 aniListId = if (key.seasonNumber == 1) aniListId else null,
                 season = key.seasonNumber,
                 items = items.toList()
             )
+        }.filter { request ->
+            request.tmdbId != null ||
+            request.imdbSeriesId != null ||
+            request.aniListId != null ||
+            request.items.any { it.tvdbId != null || it.imdbId != null }
         }
     }
 }
