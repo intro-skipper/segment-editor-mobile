@@ -1094,12 +1094,13 @@ class PlayerViewModel @Inject constructor(
 
             val state = _uiState.value
             val tmdbId = state.seriesTmdbId
-            val imdbId = state.seriesImdbId
+            val imdbSeriesId = state.seriesImdbId
+            val imdbId = mediaItem?.providerIds?.get("Imdb")
             val tvdbSeasonId = state.seasonTvdbId
             val tvdbId = mediaItem?.providerIds?.get("Tvdb")?.toIntOrNull()
             val aniListId = state.seriesAniListId
 
-            if (tmdbId == null && tvdbId == null && aniListId == null && imdbId == null) {
+            if (tmdbId == null && tvdbId == null && aniListId == null && imdbSeriesId == null) {
                 Log.w(TAG, "Skipping SkipMe.db share: no series-level TMDB, IMDB, TVDB, or AniList ID available")
                 _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_no_ids))
                 return@launch
@@ -1138,6 +1139,7 @@ class PlayerViewModel @Inject constructor(
 
             val request = SkipMeSubmitRequest(
                 tmdbId = tmdbId,
+                imdbSeriesId = imdbSeriesId,
                 imdbId = imdbId,
                 tvdbSeriesId = state.seriesTvdbId,
                 tvdbSeasonId = tvdbSeasonId,
