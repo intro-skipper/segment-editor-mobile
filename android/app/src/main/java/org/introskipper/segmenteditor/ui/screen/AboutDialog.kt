@@ -43,6 +43,7 @@ fun AboutDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val GITHUB_REPO_URL = "https://github.com/intro-skipper/segment-editor-mobile"
     
     BasicAlertDialog(
         onDismissRequest = onDismiss
@@ -110,31 +111,31 @@ fun AboutDialog(
                 )
                 
                 Spacer(modifier = Modifier.height(24.dp))
-                
-                Button(
-                    onClick = {
-                        ChromeIntegration.openBrowserTab(
-                            context,
-                            "https://github.com/intro-skipper/segment-editor-mobile"
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(translatedString(R.string.about_view_github))
-                }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
+
                 OutlinedButton(
                     onClick = {
                         ChromeIntegration.openBrowserTab(
                             context,
-                            "https://github.com/intro-skipper/segment-editor-mobile/blob/main/PRIVACY.md"
+                            "$GITHUB_REPO_URL/blob/main/PRIVACY.md"
                         )
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(translatedString(R.string.about_privacy))
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = {
+                        ChromeIntegration.openBrowserTab(
+                            context,
+                            GITHUB_REPO_URL
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(translatedString(R.string.about_view_github))
                 }
             }
         }

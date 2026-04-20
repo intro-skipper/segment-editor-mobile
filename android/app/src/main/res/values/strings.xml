@@ -108,8 +108,6 @@
     <string name="settings_section_about">About</string>
     <string name="settings_about">About Segment Editor</string>
     <string name="settings_about_subtitle">Version info and credits</string>
-    <string name="settings_github">GitHub Repository</string>
-    <string name="settings_github_subtitle">View source code and contribute</string>
 
     <!-- Authentication Screen -->
     <string name="authentication">Authentication</string>

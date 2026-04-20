@@ -358,12 +358,6 @@ fun SettingsScreen(
                         subtitle = translatedString(R.string.settings_about_subtitle),
                         onClick = { showAboutDialog = true }
                     )
-                    
-                    ClickableSettingItem(
-                        title = translatedString(R.string.settings_github),
-                        subtitle = translatedString(R.string.settings_github_subtitle),
-                        onClick = { showAboutDialog = true }
-                    )
                 }
             }
             
