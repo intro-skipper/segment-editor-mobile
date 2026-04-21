@@ -5,10 +5,12 @@
 
 package org.introskipper.segmenteditor.ui.viewmodel
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -21,11 +23,13 @@ import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.api.SkipMeApiService
+import org.introskipper.segmenteditor.data.local.SubmissionDao
 import org.introskipper.segmenteditor.data.model.filterSkipMe
 import org.introskipper.segmenteditor.data.model.SegmentType
 import org.introskipper.segmenteditor.data.model.SkipMeBackfillRequest
 import org.introskipper.segmenteditor.data.model.SkipMeSeasonItem
 import org.introskipper.segmenteditor.data.model.SkipMeSeasonSubmitRequest
+import org.introskipper.segmenteditor.data.model.Submission
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
@@ -34,6 +38,7 @@ import org.introskipper.segmenteditor.ui.state.SeriesEvent
 import org.introskipper.segmenteditor.ui.state.SeriesUiState
 import org.introskipper.segmenteditor.ui.util.SeasonSortUtil
 import org.introskipper.segmenteditor.ui.util.UiText
+import org.introskipper.segmenteditor.utils.getTranslatedString
 import javax.inject.Inject
 
 @HiltViewModel
@@ -41,7 +46,9 @@ class SeriesViewModel @Inject constructor(
     private val mediaRepository: MediaRepository,
     private val segmentRepository: SegmentRepository,
     private val securePreferences: SecurePreferences,
-    private val skipMeApiService: SkipMeApiService
+    private val skipMeApiService: SkipMeApiService,
+    private val submissionDao: SubmissionDao,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<SeriesUiState>(SeriesUiState.Loading)
@@ -233,6 +240,7 @@ class SeriesViewModel @Inject constructor(
                 // Group deduplicated items by (season number, tvdb season id)
                 data class SeasonKey(val seasonNumber: Int?, val tvdbSeasonId: Int?)
                 val itemsBySeason = mutableMapOf<SeasonKey, MutableSet<SkipMeSeasonItem>>()
+                var totalDuplicates = 0
 
                 episodes.forEach { episodeWithSegments ->
                     val episode = episodeWithSegments.episode
@@ -254,6 +262,24 @@ class SeriesViewModel @Inject constructor(
                                 return@forEach
                             }
 
+                            // Filter local duplicates
+                            if (submissionDao.isDuplicate(
+                                    segmentType = skipMeType,
+                                    durationMs = durationMs,
+                                    startMs = startMs,
+                                    endMs = endMs,
+                                    tvdbId = tvdbEpisodeId,
+                                    imdbId = imdbEpisodeId,
+                                    tmdbId = seriesTmdbId,
+                                    imdbSeriesId = seriesImdbId,
+                                    aniListId = seriesAniListId,
+                                    season = episode.parentIndexNumber,
+                                    episode = episode.indexNumber
+                                )) {
+                                totalDuplicates++
+                                return@forEach
+                            }
+
                             val key = SeasonKey(episode.parentIndexNumber, tvdbSeasonId)
                             itemsBySeason.getOrPut(key) { mutableSetOf() }.add(
                                 SkipMeSeasonItem(
@@ -271,7 +297,11 @@ class SeriesViewModel @Inject constructor(
                 }
 
                 if (itemsBySeason.isEmpty()) {
-                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
+                    if (totalDuplicates > 0) {
+                        _events.emit(SeriesEvent.ShowToast(UiText.DynamicString(context.getTranslatedString(R.string.share_duplicates, totalDuplicates))))
+                    } else {
+                        _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
+                    }
                     return@launch
                 }
 
@@ -290,7 +320,34 @@ class SeriesViewModel @Inject constructor(
                 val response = skipMeApiService.submitSeason(seasonRequests)
                 if (response.isSuccessful) {
                     val count = response.body()?.submitted ?: 0
-                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_success_collection, count)))
+                    
+                    // Log all successfully submitted segments to local store
+                    seasonRequests.forEach { seasonRequest ->
+                        seasonRequest.items.forEach { item ->
+                            submissionDao.insert(Submission(
+                                tmdbId = seasonRequest.tmdbId,
+                                imdbId = item.imdbId,
+                                tvdbSeriesId = seasonRequest.tvdbSeriesId,
+                                tvdbSeasonId = seasonRequest.tvdbSeasonId,
+                                tvdbId = item.tvdbId,
+                                aniListId = seasonRequest.aniListId,
+                                segmentType = item.segment,
+                                season = seasonRequest.season,
+                                episode = item.episode,
+                                durationMs = item.durationMs,
+                                startMs = item.startMs,
+                                endMs = item.endMs
+                            ))
+                        }
+                    }
+
+                    val successMsg = if (totalDuplicates > 0) {
+                        "${context.getTranslatedString(R.string.share_success_collection, count)}\n${context.getTranslatedString(R.string.share_duplicates, totalDuplicates)}"
+                    } else {
+                        context.getTranslatedString(R.string.share_success_collection, count)
+                    }
+                    _events.emit(SeriesEvent.ShowToast(UiText.DynamicString(successMsg)))
+
                     if (hideAfterSuccess) {
                         _uiState.update { (it as SeriesUiState.Success).copy(isShared = true) }
                     }

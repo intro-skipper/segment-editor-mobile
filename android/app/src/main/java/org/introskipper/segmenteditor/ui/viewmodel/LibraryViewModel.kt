@@ -24,17 +24,20 @@ import kotlinx.coroutines.sync.withPermit
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.api.SkipMeApiService
+import org.introskipper.segmenteditor.data.local.SubmissionDao
 import org.introskipper.segmenteditor.data.model.MediaItem
 import org.introskipper.segmenteditor.data.model.SegmentType
 import org.introskipper.segmenteditor.data.model.SkipMeBackfillRequest
 import org.introskipper.segmenteditor.data.model.SkipMeSeasonItem
 import org.introskipper.segmenteditor.data.model.SkipMeSeasonSubmitRequest
 import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
+import org.introskipper.segmenteditor.data.model.Submission
 import org.introskipper.segmenteditor.data.repository.JellyfinRepository
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.util.UiText
+import org.introskipper.segmenteditor.utils.TranslationService
 import javax.inject.Inject
 
 // Increased batch sizes to take advantage of 100MB request limit
@@ -51,7 +54,9 @@ class LibraryViewModel @Inject constructor(
     private val mediaRepository: MediaRepository,
     private val segmentRepository: SegmentRepository,
     private val skipMeApiService: SkipMeApiService,
-    private val securePreferences: SecurePreferences
+    private val submissionDao: SubmissionDao,
+    private val securePreferences: SecurePreferences,
+    private val translationService: TranslationService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<LibraryUiState>(LibraryUiState.Loading)
@@ -236,6 +241,8 @@ class LibraryViewModel @Inject constructor(
         // Phase 1: collect all season requests from all series in parallel, capped by semaphore
         val semaphore = Semaphore(MAX_CONCURRENT_SERIES)
         val completed = java.util.concurrent.atomic.AtomicInteger(0)
+        var totalDuplicates = 0
+        
         val allSeasonRequests = coroutineScope {
             allSeries.map { series ->
                 async {
@@ -259,7 +266,7 @@ class LibraryViewModel @Inject constructor(
                         val episodes = (episodesResponse.body()?.items ?: emptyList())
                             .filter { (it.parentIndexNumber ?: 0) != 0 }
 
-                        buildSeasonRequests(
+                        val (requests, duplicates) = buildSeasonRequests(
                             episodes = episodes,
                             tvdbSeriesId = seriesTvdbId,
                             tmdbId = seriesTmdbId,
@@ -267,6 +274,8 @@ class LibraryViewModel @Inject constructor(
                             aniListId = seriesAniListId,
                             tvdbSeasonIdFor = { episode -> seasonTvdbIds[episode.seasonId ?: ""] }
                         )
+                        totalDuplicates += duplicates
+                        requests
                     }.also {
                         val count = completed.incrementAndGet()
                         updateSharingProgress(count.toFloat() / allSeries.size.coerceAtLeast(1) * 0.5f)
@@ -281,14 +290,36 @@ class LibraryViewModel @Inject constructor(
         chunks.forEachIndexed { chunkIndex, chunk ->
             val response = skipMeApiService.submitSeason(chunk)
             if (response.isSuccessful) {
-                totalSubmitted += response.body()?.submitted ?: 0
+                val submittedCount = response.body()?.submitted ?: 0
+                totalSubmitted += submittedCount
+                
+                // Log all successfully submitted segments to local store
+                chunk.forEach { seasonRequest ->
+                    seasonRequest.items.forEach { item ->
+                        submissionDao.insert(Submission(
+                            tmdbId = seasonRequest.tmdbId,
+                            imdbId = item.imdbId,
+                            tvdbSeriesId = seasonRequest.tvdbSeriesId,
+                            imdbSeriesId = seasonRequest.imdbSeriesId,
+                            tvdbSeasonId = seasonRequest.tvdbSeasonId,
+                            tvdbId = item.tvdbId,
+                            aniListId = seasonRequest.aniListId,
+                            segmentType = item.segment,
+                            season = seasonRequest.season,
+                            episode = item.episode,
+                            durationMs = item.durationMs,
+                            startMs = item.startMs,
+                            endMs = item.endMs
+                        ))
+                    }
+                }
             } else if (firstFailCode == null) {
                 firstFailCode = response.code()
             }
             updateSharingProgress(0.5f + (chunkIndex + 1f) / chunks.size.coerceAtLeast(1) * 0.5f)
         }
 
-        reportResult(totalSubmitted, firstFailCode, R.string.share_success_collection, R.string.share_no_segments_found)
+        reportResult(totalSubmitted, totalDuplicates, firstFailCode, R.string.share_success_collection, R.string.share_no_segments_found)
     }
 
     private suspend fun shareLibraryMovies(libraryId: String, userId: String) {
@@ -304,12 +335,14 @@ class LibraryViewModel @Inject constructor(
 
         val allMovies = moviesResponse.body()?.items ?: emptyList()
         var totalSubmitted = 0
+        var totalDuplicates = 0
         var firstFailCode: Int? = null
 
         // Phase 1: collect segments for all movies in parallel, capped by semaphore
         val semaphore = Semaphore(MAX_CONCURRENT_MOVIE_SEGMENTS)
         val completed = java.util.concurrent.atomic.AtomicInteger(0)
-        val allMovieSegments: List<List<SkipMeSubmitRequest>> = coroutineScope {
+        
+        val allMovieRequests: List<SkipMeSubmitRequest> = coroutineScope {
             allMovies.map { movie ->
                 async {
                     semaphore.withPermit {
@@ -324,15 +357,22 @@ class LibraryViewModel @Inject constructor(
                             val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType() ?: return@mapNotNull null
                             val startMs = segment.startTicks / 10_000
                             val endMs = segment.endTicks / 10_000
+                            
                             if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
-                                SkipMeSubmitRequest(
-                                    tmdbId = tmdbId,
-                                    imdbId = imdbId,
-                                    segment = skipMeType,
-                                    durationMs = durationMs,
-                                    startMs = startMs,
-                                    endMs = endMs
-                                )
+                                // Filter local duplicates
+                                if (submissionDao.isDuplicate(segmentType = skipMeType, durationMs = durationMs, startMs = startMs, endMs = endMs, tmdbId = tmdbId, imdbId = imdbId)) {
+                                    totalDuplicates++
+                                    null
+                                } else {
+                                    SkipMeSubmitRequest(
+                                        tmdbId = tmdbId,
+                                        imdbId = imdbId,
+                                        segment = skipMeType,
+                                        durationMs = durationMs,
+                                        startMs = startMs,
+                                        endMs = endMs
+                                    )
+                                }
                             } else null
                         } ?: emptyList()
                     }.also {
@@ -340,17 +380,30 @@ class LibraryViewModel @Inject constructor(
                         updateSharingProgress(count.toFloat() / allMovies.size.coerceAtLeast(1) * 0.5f)
                     }
                 }
-            }.awaitAll()
+            }.awaitAll().flatten()
         }
 
         // Phase 2: submit significantly larger batches of movies sequentially
-        val submissionBatches = allMovieSegments.chunked(BATCH_SIZE)
+        val submissionBatches = allMovieRequests.chunked(BATCH_SIZE)
         submissionBatches.forEachIndexed { batchIndex, movieBatch ->
-            val batchRequests = movieBatch.flatten()
-            if (batchRequests.isNotEmpty()) {
-                val response = skipMeApiService.submitCollection(batchRequests)
+            if (movieBatch.isNotEmpty()) {
+                val response = skipMeApiService.submitCollection(movieBatch)
                 if (response.isSuccessful) {
-                    totalSubmitted += response.body()?.submitted ?: 0
+                    val submittedCount = response.body()?.submitted ?: 0
+                    totalSubmitted += submittedCount
+                    
+                    // Log to local store
+                    movieBatch.forEach { request ->
+                        submissionDao.insert(Submission(
+                            tmdbId = request.tmdbId,
+                            imdbId = request.imdbId,
+                            tvdbId = request.tvdbId,
+                            segmentType = request.segment,
+                            durationMs = request.durationMs,
+                            startMs = request.startMs,
+                            endMs = request.endMs
+                        ))
+                    }
                 } else if (firstFailCode == null) {
                     firstFailCode = response.code()
                 }
@@ -358,7 +411,7 @@ class LibraryViewModel @Inject constructor(
             updateSharingProgress(0.5f + (batchIndex + 1f) / submissionBatches.size.coerceAtLeast(1) * 0.5f)
         }
 
-        reportResult(totalSubmitted, firstFailCode, R.string.share_success_collection, R.string.share_no_segments_found)
+        reportResult(totalSubmitted, totalDuplicates, firstFailCode, R.string.share_success_collection, R.string.share_no_segments_found)
     }
 
     fun submitLibraryMetadata(libraryId: String, collectionType: String?) =
@@ -433,7 +486,7 @@ class LibraryViewModel @Inject constructor(
             updateSharingProgress((seriesIndex + 1f) / allSeries.size.coerceAtLeast(1))
         }
 
-        reportResult(totalUpdated, firstFailCode, R.string.backfill_success, R.string.backfill_no_identifiers)
+        reportResult(totalUpdated, 0, firstFailCode, R.string.backfill_success, R.string.backfill_no_identifiers)
     }
 
     private suspend fun submitLibraryMoviesMetadata(libraryId: String, userId: String) {
@@ -467,7 +520,7 @@ class LibraryViewModel @Inject constructor(
             updateSharingProgress((chunkIndex + 1f) / chunks.size.coerceAtLeast(1))
         }
 
-        reportResult(totalUpdated, firstFailCode, R.string.backfill_success, R.string.backfill_no_identifiers)
+        reportResult(totalUpdated, 0, firstFailCode, R.string.backfill_success, R.string.backfill_no_identifiers)
     }
 
     private fun launchLibraryOperation(
@@ -506,12 +559,22 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    private suspend fun reportResult(count: Int, failCode: Int?, successRes: Int, emptyRes: Int) {
-        when {
-            count > 0 -> _events.emit(LibraryEvent.ShowToast(UiText.StringResource(successRes, count)))
-            failCode != null -> _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.share_failed_http, failCode)))
-            else -> _events.emit(LibraryEvent.ShowToast(UiText.StringResource(emptyRes)))
+    private suspend fun reportResult(count: Int, duplicates: Int, failCode: Int?, successRes: Int, emptyRes: Int) {
+        val message = when {
+            count > 0 -> {
+                val success = translationService.getString(successRes, count)
+                if (duplicates > 0) {
+                    val duplicateText = translationService.getString(R.string.share_duplicates, duplicates)
+                    "$success\n$duplicateText"
+                } else {
+                    success
+                }
+            }
+            duplicates > 0 -> translationService.getString(R.string.share_duplicates, duplicates)
+            failCode != null -> translationService.getString(R.string.share_failed_http, failCode)
+            else -> translationService.getString(emptyRes)
         }
+        _events.emit(LibraryEvent.ShowToast(UiText.DynamicString(message)))
     }
 
     private fun updateSharingProgress(progress: Float) {
@@ -527,11 +590,12 @@ class LibraryViewModel @Inject constructor(
         imdbSeriesId: String?,
         aniListId: Int?,
         tvdbSeasonIdFor: (MediaItem) -> Int?
-    ): List<SkipMeSeasonSubmitRequest> = coroutineScope {
-        if (tvdbSeriesId == null && tmdbId == null && imdbSeriesId == null && aniListId == null) return@coroutineScope emptyList()
+    ): Pair<List<SkipMeSeasonSubmitRequest>, Int> = coroutineScope {
+        if (tvdbSeriesId == null && tmdbId == null && imdbSeriesId == null && aniListId == null) return@coroutineScope emptyList<SkipMeSeasonSubmitRequest>() to 0
 
         data class SeasonKey(val seasonNumber: Int?, val tvdbSeasonId: Int?)
         val itemsBySeason = mutableMapOf<SeasonKey, MutableSet<SkipMeSeasonItem>>()
+        var totalDuplicates = 0
 
         val semaphore = Semaphore(MAX_CONCURRENT_EPISODE_SEGMENTS)
 
@@ -545,32 +609,53 @@ class LibraryViewModel @Inject constructor(
                     if (durationMs <= 0) return@withPermit null
 
                     val key = SeasonKey(episode.parentIndexNumber, tvdbSeasonIdFor(episode))
+                    var duplicates = 0
                     val items = segments.mapNotNull { segment ->
                         val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType() ?: return@mapNotNull null
                         val startMs = segment.startTicks / 10_000
                         val endMs = segment.endTicks / 10_000
                         if (startMs in 0..<endMs && endMs <= durationMs) {
-                            SkipMeSeasonItem(
-                                tvdbId = tvdbEpisodeId,
-                                imdbId = imdbEpisodeId,
-                                episode = episode.indexNumber,
-                                segment = skipMeType,
-                                durationMs = durationMs,
-                                startMs = startMs,
-                                endMs = endMs
-                            )
+                            // Filter local duplicates
+                            if (submissionDao.isDuplicate(
+                                    segmentType = skipMeType,
+                                    durationMs = durationMs,
+                                    startMs = startMs,
+                                    endMs = endMs,
+                                    tvdbId = tvdbEpisodeId,
+                                    imdbId = imdbEpisodeId,
+                                    tmdbId = tmdbId,
+                                    imdbSeriesId = imdbSeriesId,
+                                    aniListId = aniListId,
+                                    season = episode.parentIndexNumber,
+                                    episode = episode.indexNumber
+                                )) {
+                                duplicates++
+                                null
+                            } else {
+                                SkipMeSeasonItem(
+                                    tvdbId = tvdbEpisodeId,
+                                    imdbId = imdbEpisodeId,
+                                    episode = episode.indexNumber,
+                                    segment = skipMeType,
+                                    durationMs = durationMs,
+                                    startMs = startMs,
+                                    endMs = endMs
+                                )
+                            }
                         } else null
                     }
-                    if (items.isEmpty()) null else key to items
+                    if (items.isEmpty() && duplicates == 0) null else key to (items to duplicates)
                 }
             }
         }
 
-        deferredResults.awaitAll().filterNotNull().forEach { (key, items) ->
+        deferredResults.awaitAll().filterNotNull().forEach { (key, result) ->
+            val (items, duplicates) = result
             itemsBySeason.getOrPut(key) { mutableSetOf() }.addAll(items)
+            totalDuplicates += duplicates
         }
 
-        itemsBySeason.map { (key, items) ->
+        val requests = itemsBySeason.map { (key, items) ->
             SkipMeSeasonSubmitRequest(
                 tvdbSeriesId = tvdbSeriesId,
                 tvdbSeasonId = key.tvdbSeasonId,
@@ -581,11 +666,15 @@ class LibraryViewModel @Inject constructor(
                 items = items.toList()
             )
         }.filter { request ->
-            request.tmdbId != null ||
-            request.imdbSeriesId != null ||
-            request.aniListId != null ||
-            request.items.any { it.tvdbId != null || it.imdbId != null }
+            request.items.isNotEmpty() && (
+                request.tmdbId != null ||
+                request.imdbSeriesId != null ||
+                request.aniListId != null ||
+                request.items.any { it.tvdbId != null || it.imdbId != null }
+            )
         }
+        
+        requests to totalDuplicates
     }
 }
 

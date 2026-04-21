@@ -31,12 +31,14 @@ import okhttp3.OkHttpClient
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.api.SkipMeApiService
 import org.introskipper.segmenteditor.api.JellyfinApiService
+import org.introskipper.segmenteditor.data.local.SubmissionDao
 import org.introskipper.segmenteditor.data.model.MediaItem
 import org.introskipper.segmenteditor.data.model.MediaItemType
 import org.introskipper.segmenteditor.data.model.MediaStream
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.SegmentType
 import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
+import org.introskipper.segmenteditor.data.model.Submission
 import org.introskipper.segmenteditor.data.model.UpdateUserItemDataDto
 import org.introskipper.segmenteditor.data.model.filterSkipMe
 import org.introskipper.segmenteditor.data.repository.MediaRepository
@@ -59,6 +61,7 @@ class PlayerViewModel @Inject constructor(
     private val httpClient: OkHttpClient,
     private val jellyfinApiService: JellyfinApiService,
     private val skipMeApiService: SkipMeApiService,
+    private val submissionDao: SubmissionDao,
     private val translationService: TranslationService,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
@@ -1137,6 +1140,29 @@ class PlayerViewModel @Inject constructor(
                 return@launch
             }
 
+            val season = mediaItem?.parentIndexNumber
+            val episode = mediaItem?.indexNumber
+
+            // Check for local duplicate using improved ID matching logic
+            val isDuplicate = submissionDao.isDuplicate(
+                segmentType = skipMeType,
+                durationMs = durationMs,
+                startMs = startMs,
+                endMs = endMs,
+                tvdbId = tvdbId,
+                imdbId = imdbId,
+                tmdbId = tmdbId,
+                imdbSeriesId = imdbSeriesId,
+                aniListId = aniListId,
+                season = season,
+                episode = episode
+            )
+
+            if (isDuplicate) {
+                _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_already_submitted))
+                return@launch
+            }
+
             val request = SkipMeSubmitRequest(
                 tmdbId = tmdbId,
                 imdbSeriesId = imdbSeriesId,
@@ -1146,8 +1172,8 @@ class PlayerViewModel @Inject constructor(
                 tvdbId = tvdbId,
                 aniListId = if (mediaItem?.parentIndexNumber == 1) aniListId else null,
                 segment = skipMeType,
-                season = mediaItem?.parentIndexNumber,
-                episode = mediaItem?.indexNumber,
+                season = season,
+                episode = episode,
                 durationMs = durationMs,
                 startMs = startMs,
                 endMs = endMs
@@ -1158,6 +1184,24 @@ class PlayerViewModel @Inject constructor(
                 if (response.isSuccessful) {
                     val body = response.body()
                     Log.d(TAG, "SkipMe.db share accepted: id=${body?.submission?.id}, status=${body?.submission?.status}")
+                    
+                    // Log to local store
+                    submissionDao.insert(Submission(
+                        tmdbId = tmdbId,
+                        imdbId = imdbId,
+                        tvdbSeriesId = state.seriesTvdbId,
+                        imdbSeriesId = imdbSeriesId,
+                        tvdbSeasonId = tvdbSeasonId,
+                        tvdbId = tvdbId,
+                        aniListId = if (mediaItem?.parentIndexNumber == 1) aniListId else null,
+                        segmentType = skipMeType,
+                        season = season,
+                        episode = episode,
+                        durationMs = durationMs,
+                        startMs = startMs,
+                        endMs = endMs
+                    ))
+
                     _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_success))
                 } else {
                     Log.w(TAG, "SkipMe.db share failed: HTTP ${response.code()}")

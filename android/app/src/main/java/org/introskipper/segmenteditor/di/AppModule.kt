@@ -6,6 +6,7 @@
 package org.introskipper.segmenteditor.di
 
 import android.content.Context
+import androidx.room.Room
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -16,6 +17,8 @@ import okhttp3.logging.HttpLoggingInterceptor
 import org.introskipper.segmenteditor.BuildConfig
 import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.api.SkipMeApiService
+import org.introskipper.segmenteditor.data.local.AppDatabase
+import org.introskipper.segmenteditor.data.local.SubmissionDao
 import org.introskipper.segmenteditor.data.repository.AuthRepository
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
@@ -102,5 +105,20 @@ object AppModule {
         httpClient: OkHttpClient
     ): SkipMeApiService {
         return SkipMeApiService(BuildConfig.SKIPME_BASE_URL, httpClient)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
+        return Room.databaseBuilder(
+            context,
+            AppDatabase::class.java,
+            "segment_editor.db"
+        ).build()
+    }
+
+    @Provides
+    fun provideSubmissionDao(database: AppDatabase): SubmissionDao {
+        return database.submissionDao()
     }
 }
