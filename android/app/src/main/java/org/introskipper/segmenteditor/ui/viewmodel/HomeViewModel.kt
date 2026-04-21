@@ -25,19 +25,24 @@ import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.api.SkipMeApiService
+import org.introskipper.segmenteditor.data.local.MetadataSubmissionDao
+import org.introskipper.segmenteditor.data.local.SubmissionDao
 import org.introskipper.segmenteditor.data.model.JellyfinMediaItem
 import org.introskipper.segmenteditor.data.model.MediaItem
+import org.introskipper.segmenteditor.data.model.MetadataSubmission
 import org.introskipper.segmenteditor.data.model.SegmentType
 import org.introskipper.segmenteditor.data.model.SkipMeBackfillRequest
 import org.introskipper.segmenteditor.data.model.SkipMeSeasonItem
 import org.introskipper.segmenteditor.data.model.SkipMeSeasonSubmitRequest
 import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
+import org.introskipper.segmenteditor.data.model.Submission
 import org.introskipper.segmenteditor.data.model.toJellyfinMediaItem
 import org.introskipper.segmenteditor.data.repository.JellyfinRepository
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.util.UiText
+import org.introskipper.segmenteditor.utils.TranslationService
 import javax.inject.Inject
 
 @OptIn(FlowPreview::class)
@@ -47,7 +52,10 @@ class HomeViewModel @Inject constructor(
     private val mediaRepository: MediaRepository,
     private val segmentRepository: SegmentRepository,
     private val securePreferences: SecurePreferences,
-    private val skipMeApiService: SkipMeApiService
+    private val skipMeApiService: SkipMeApiService,
+    private val submissionDao: SubmissionDao,
+    private val metadataSubmissionDao: MetadataSubmissionDao,
+    private val translationService: TranslationService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
@@ -246,7 +254,7 @@ class HomeViewModel @Inject constructor(
                         val episodes = mediaRepository.getEpisodes(
                             seriesId = item.id,
                             userId = userId,
-                            fields = listOf("ProviderIds", "ParentIndexNumber", "IndexNumber")
+                            fields = listOf("ProviderIds", "ParentIndexNumber", "IndexNumber", "SeriesId", "SeasonId")
                         )
 
                         if (episodes.isSuccessful) {
@@ -264,15 +272,39 @@ class HomeViewModel @Inject constructor(
                             val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
 
                             episodes.body()?.items?.filter { (it.parentIndexNumber ?: 0) != 0 }?.forEach { episode ->
+                                val tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+                                val tvdbSeasonId = seasonTvdbIds[episode.seasonId ?: ""]
+                                val aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null
+                                val imdbId = episode.providerIds?.get("Imdb")
+
+                                // Check for duplicates
+                                val existing = metadataSubmissionDao.getSubmission(
+                                    seriesId = item.id,
+                                    seasonNumber = episode.parentIndexNumber ?: 0,
+                                    episodeNumber = episode.indexNumber ?: 0
+                                )
+
+                                if (existing != null && 
+                                    existing.tmdbId == seriesTmdbId &&
+                                    existing.imdbId == imdbId &&
+                                    existing.tvdbId == tvdbId &&
+                                    existing.tvdbSeriesId == seriesTvdbId &&
+                                    existing.tvdbSeasonId == tvdbSeasonId &&
+                                    existing.imdbSeriesId == seriesImdbId &&
+                                    existing.aniListId == aniListId
+                                ) {
+                                    return@forEach // Skip duplicate
+                                }
+
                                 requests.add(
                                     SkipMeBackfillRequest(
-                                        tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull(),
+                                        tvdbId = tvdbId,
                                         tmdbId = seriesTmdbId,
-                                        imdbId = episode.providerIds?.get("Imdb"),
-                                        tvdbSeasonId = seasonTvdbIds[episode.seasonId ?: ""],
+                                        imdbId = imdbId,
+                                        tvdbSeasonId = tvdbSeasonId,
                                         tvdbSeriesId = seriesTvdbId,
                                         imdbSeriesId = seriesImdbId,
-                                        aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null,
+                                        aniListId = aniListId,
                                         season = episode.parentIndexNumber,
                                         episode = episode.indexNumber
                                     )
@@ -288,7 +320,7 @@ class HomeViewModel @Inject constructor(
                             seriesId = seriesId,
                             userId = userId,
                             seasonId = item.id,
-                            fields = listOf("ProviderIds", "ParentIndexNumber", "IndexNumber")
+                            fields = listOf("ProviderIds", "ParentIndexNumber", "IndexNumber", "SeriesId", "SeasonId")
                         )
                         if (episodes.isSuccessful) {
                             val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
@@ -298,15 +330,38 @@ class HomeViewModel @Inject constructor(
                             val seasonTvdbId = season.providerIds?.get("Tvdb")?.toIntOrNull()
 
                             episodes.body()?.items?.forEach { episode ->
+                                val tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+                                val aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null
+                                val imdbId = episode.providerIds?.get("Imdb")
+
+                                // Check for duplicates
+                                val existing = metadataSubmissionDao.getSubmission(
+                                    seriesId = seriesId,
+                                    seasonNumber = episode.parentIndexNumber ?: 0,
+                                    episodeNumber = episode.indexNumber ?: 0
+                                )
+
+                                if (existing != null && 
+                                    existing.tmdbId == seriesTmdbId &&
+                                    existing.imdbId == imdbId &&
+                                    existing.tvdbId == tvdbId &&
+                                    existing.tvdbSeriesId == seriesTvdbId &&
+                                    existing.tvdbSeasonId == seasonTvdbId &&
+                                    existing.imdbSeriesId == seriesImdbId &&
+                                    existing.aniListId == aniListId
+                                ) {
+                                    return@forEach // Skip duplicate
+                                }
+
                                 requests.add(
                                     SkipMeBackfillRequest(
-                                        tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull(),
+                                        tvdbId = tvdbId,
                                         tmdbId = seriesTmdbId,
-                                        imdbId = episode.providerIds?.get("Imdb"),
+                                        imdbId = imdbId,
                                         tvdbSeasonId = seasonTvdbId,
                                         tvdbSeriesId = seriesTvdbId,
                                         imdbSeriesId = seriesImdbId,
-                                        aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null,
+                                        aniListId = aniListId,
                                         season = episode.parentIndexNumber,
                                         episode = episode.indexNumber
                                     )
@@ -316,12 +371,29 @@ class HomeViewModel @Inject constructor(
                     }
                     "Movie" -> {
                         val movie = jellyfinRepository.getMediaItem(item.id)
-                        requests.add(
-                            SkipMeBackfillRequest(
-                                tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull(),
-                                imdbId = movie.providerIds?.get("Imdb")
-                            )
+                        val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull()
+                        val imdbId = movie.providerIds?.get("Imdb")
+
+                        // Check for duplicates
+                        val existing = metadataSubmissionDao.getSubmission(
+                            seriesId = item.id,
+                            seasonNumber = 0,
+                            episodeNumber = 0
                         )
+
+                        if (existing != null && 
+                            existing.tmdbId == tmdbId &&
+                            existing.imdbId == imdbId
+                        ) {
+                            // Already submitted
+                        } else {
+                            requests.add(
+                                SkipMeBackfillRequest(
+                                    tmdbId = tmdbId,
+                                    imdbId = imdbId
+                                )
+                            )
+                        }
                     }
                 }
 
@@ -332,8 +404,28 @@ class HomeViewModel @Inject constructor(
 
                 val response = skipMeApiService.backfill(requests)
                 if (response.isSuccessful) {
-                    val updated = response.body()?.updated ?: 0
-                    _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.backfill_success, updated)))
+                    val updatedCount = response.body()?.updated ?: 0
+                    
+                    // Update local store
+                    requests.forEach { request ->
+                        // Find the relevant item ID for the local store
+                        val storeItemId = if (item.type == "Movie") item.id else item.id // Simplified, ideally we'd have the episode ID here for series/season
+
+                        metadataSubmissionDao.insert(MetadataSubmission(
+                            seriesId = storeItemId,
+                            seasonNumber = request.season ?: 0,
+                            episodeNumber = request.episode ?: 0,
+                            tmdbId = request.tmdbId,
+                            imdbId = request.imdbId,
+                            tvdbId = request.tvdbId,
+                            tvdbSeriesId = request.tvdbSeriesId,
+                            tvdbSeasonId = request.tvdbSeasonId,
+                            imdbSeriesId = request.imdbSeriesId,
+                            aniListId = request.aniListId
+                        ))
+                    }
+
+                    _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.backfill_success, updatedCount)))
                 } else {
                     _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_http, response.code())))
                 }
@@ -379,7 +471,7 @@ class HomeViewModel @Inject constructor(
                         val seriesImdbId = series.providerIds?.get("Imdb")?.takeIf { it.isNotBlank() }
                         val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
 
-                        val seasonRequests = buildSeasonRequests(
+                        val (seasonRequests, duplicates) = buildSeasonRequestsWithDuplicates(
                             episodes = episodes,
                             tvdbSeriesId = seriesTvdbId,
                             tmdbId = seriesTmdbId,
@@ -389,14 +481,45 @@ class HomeViewModel @Inject constructor(
                         )
 
                         if (seasonRequests.isEmpty()) {
-                            _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
+                            if (duplicates > 0) {
+                                _events.emit(HomeEvent.ShowToast(UiText.DynamicString(translationService.getString(R.string.share_duplicates, duplicates))))
+                            } else {
+                                _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
+                            }
                             return@launch
                         }
 
                         val response = skipMeApiService.submitSeason(seasonRequests)
                         if (response.isSuccessful) {
                             val count = response.body()?.submitted ?: 0
-                            _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_success_collection, count)))
+                            
+                            // Log successfully submitted segments to local store
+                            seasonRequests.forEach { seasonRequest ->
+                                seasonRequest.items.forEach { segmentItem ->
+                                    submissionDao.insert(Submission(
+                                        tmdbId = seasonRequest.tmdbId,
+                                        imdbId = segmentItem.imdbId,
+                                        tvdbSeriesId = seasonRequest.tvdbSeriesId,
+                                        imdbSeriesId = seasonRequest.imdbSeriesId,
+                                        tvdbSeasonId = seasonRequest.tvdbSeasonId,
+                                        tvdbId = segmentItem.tvdbId,
+                                        aniListId = seasonRequest.aniListId,
+                                        segmentType = segmentItem.segment,
+                                        season = seasonRequest.season,
+                                        episode = segmentItem.episode,
+                                        durationMs = segmentItem.durationMs,
+                                        startMs = segmentItem.startMs,
+                                        endMs = segmentItem.endMs
+                                    ))
+                                }
+                            }
+
+                            val successMsg = if (duplicates > 0) {
+                                "${translationService.getString(R.string.share_success_collection, count)}\n${translationService.getString(R.string.share_duplicates, duplicates)}"
+                            } else {
+                                translationService.getString(R.string.share_success_collection, count)
+                            }
+                            _events.emit(HomeEvent.ShowToast(UiText.DynamicString(successMsg)))
                         } else {
                             _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_failed_http, response.code())))
                         }
@@ -424,7 +547,7 @@ class HomeViewModel @Inject constructor(
                         val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
                         val seasonTvdbId = season.providerIds?.get("Tvdb")?.toIntOrNull()
 
-                        val seasonRequests = buildSeasonRequests(
+                        val (seasonRequests, duplicates) = buildSeasonRequestsWithDuplicates(
                             episodes = episodes,
                             tvdbSeriesId = seriesTvdbId,
                             tmdbId = seriesTmdbId,
@@ -434,14 +557,45 @@ class HomeViewModel @Inject constructor(
                         )
 
                         if (seasonRequests.isEmpty()) {
-                            _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
+                            if (duplicates > 0) {
+                                _events.emit(HomeEvent.ShowToast(UiText.DynamicString(translationService.getString(R.string.share_duplicates, duplicates))))
+                            } else {
+                                _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
+                            }
                             return@launch
                         }
 
                         val response = skipMeApiService.submitSeason(seasonRequests)
                         if (response.isSuccessful) {
                             val count = response.body()?.submitted ?: 0
-                            _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_success_collection, count)))
+                            
+                            // Log successfully submitted segments to local store
+                            seasonRequests.forEach { seasonRequest ->
+                                seasonRequest.items.forEach { segmentItem ->
+                                    submissionDao.insert(Submission(
+                                        tmdbId = seasonRequest.tmdbId,
+                                        imdbId = segmentItem.imdbId,
+                                        tvdbSeriesId = seasonRequest.tvdbSeriesId,
+                                        imdbSeriesId = seasonRequest.imdbSeriesId,
+                                        tvdbSeasonId = seasonRequest.tvdbSeasonId,
+                                        tvdbId = segmentItem.tvdbId,
+                                        aniListId = seasonRequest.aniListId,
+                                        segmentType = segmentItem.segment,
+                                        season = seasonRequest.season,
+                                        episode = segmentItem.episode,
+                                        durationMs = segmentItem.durationMs,
+                                        startMs = segmentItem.startMs,
+                                        endMs = segmentItem.endMs
+                                    ))
+                                }
+                            }
+
+                            val successMsg = if (duplicates > 0) {
+                                "${translationService.getString(R.string.share_success_collection, count)}\n${translationService.getString(R.string.share_duplicates, duplicates)}"
+                            } else {
+                                translationService.getString(R.string.share_success_collection, count)
+                            }
+                            _events.emit(HomeEvent.ShowToast(UiText.DynamicString(successMsg)))
                         } else {
                             _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_failed_http, response.code())))
                         }
@@ -461,12 +615,28 @@ class HomeViewModel @Inject constructor(
                         }
 
                         var submitted = 0
+                        var duplicates = 0
                         var firstFailCode: Int? = null
+                        val submissionsToInsert = mutableListOf<Submission>()
+
                         segments.forEach { segment ->
                             val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType() ?: return@forEach
                             val startMs = segment.startTicks / 10_000
                             val endMs = segment.endTicks / 10_000
                             if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
+                                // Filter local duplicates
+                                if (submissionDao.isDuplicate(
+                                        segmentType = skipMeType,
+                                        durationMs = durationMs,
+                                        startMs = startMs,
+                                        endMs = endMs,
+                                        tmdbId = tmdbId,
+                                        imdbId = imdbId
+                                    )) {
+                                    duplicates++
+                                    return@forEach
+                                }
+
                                 val response = skipMeApiService.submitSegment(
                                     SkipMeSubmitRequest(
                                         tmdbId = tmdbId,
@@ -477,15 +647,37 @@ class HomeViewModel @Inject constructor(
                                         endMs = endMs
                                     )
                                 )
-                                if (response.isSuccessful) submitted++ else if (firstFailCode == null) firstFailCode = response.code()
+                                if (response.isSuccessful) {
+                                    submitted++
+                                    submissionsToInsert.add(Submission(
+                                        tmdbId = tmdbId,
+                                        imdbId = imdbId,
+                                        segmentType = skipMeType,
+                                        durationMs = durationMs,
+                                        startMs = startMs,
+                                        endMs = endMs
+                                    ))
+                                } else if (firstFailCode == null) {
+                                    firstFailCode = response.code()
+                                }
                             }
                         }
 
-                        when {
-                            submitted > 0 -> _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_success_collection, submitted)))
-                            firstFailCode != null -> _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_failed_http, firstFailCode)))
-                            else -> _events.emit(HomeEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
+                        // Batch insert successful submissions
+                        submissionsToInsert.forEach { submissionDao.insert(it) }
+
+                        val message = when {
+                            submitted > 0 -> {
+                                val success = translationService.getString(R.string.share_success_collection, submitted)
+                                if (duplicates > 0) {
+                                    "$success\n${translationService.getString(R.string.share_duplicates, duplicates)}"
+                                } else success
+                            }
+                            duplicates > 0 -> translationService.getString(R.string.share_duplicates, duplicates)
+                            firstFailCode != null -> translationService.getString(R.string.share_failed_http, firstFailCode!!)
+                            else -> translationService.getString(R.string.share_no_segments_found)
                         }
+                        _events.emit(HomeEvent.ShowToast(UiText.DynamicString(message)))
                     }
                 }
             } catch (e: Exception) {
@@ -497,21 +689,18 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Groups episodes by (season number, tvdb season id) and builds the list of
-     * [SkipMeSeasonSubmitRequest] objects for POST /v1/submit/season.
-     */
-    private suspend fun buildSeasonRequests(
+    private suspend fun buildSeasonRequestsWithDuplicates(
         episodes: List<MediaItem>,
         tvdbSeriesId: Int?,
         tmdbId: Int?,
         imdbSeriesId: String?,
         aniListId: Int?,
         tvdbSeasonIdFor: (MediaItem) -> Int?
-    ): List<SkipMeSeasonSubmitRequest> {
-        if (tvdbSeriesId == null && tmdbId == null && imdbSeriesId == null && aniListId == null) return emptyList()
+    ): Pair<List<SkipMeSeasonSubmitRequest>, Int> {
+        if (tvdbSeriesId == null && tmdbId == null && imdbSeriesId == null && aniListId == null) return emptyList<SkipMeSeasonSubmitRequest>() to 0
         data class SeasonKey(val seasonNumber: Int?, val tvdbSeasonId: Int?)
         val itemsBySeason = mutableMapOf<SeasonKey, MutableSet<SkipMeSeasonItem>>()
+        var totalDuplicates = 0
 
         for (episode in episodes) {
             val segmentResult = segmentRepository.getSegmentsResult(episode.id)
@@ -526,6 +715,24 @@ class HomeViewModel @Inject constructor(
                 val startMs = segment.startTicks / 10_000
                 val endMs = segment.endTicks / 10_000
                 if (startMs >= 0 && endMs > startMs && endMs <= durationMs) {
+                    // Filter local duplicates
+                    if (submissionDao.isDuplicate(
+                            segmentType = skipMeType,
+                            durationMs = durationMs,
+                            startMs = startMs,
+                            endMs = endMs,
+                            tvdbId = tvdbEpisodeId,
+                            imdbId = imdbEpisodeId,
+                            tmdbId = tmdbId,
+                            imdbSeriesId = imdbSeriesId,
+                            aniListId = aniListId,
+                            season = episode.parentIndexNumber,
+                            episode = episode.indexNumber
+                        )) {
+                        totalDuplicates++
+                        return@forEach
+                    }
+
                     val key = SeasonKey(episode.parentIndexNumber, tvdbSeasonIdFor(episode))
                     itemsBySeason.getOrPut(key) { mutableSetOf() }.add(
                         SkipMeSeasonItem(
@@ -542,7 +749,7 @@ class HomeViewModel @Inject constructor(
             }
         }
 
-        return itemsBySeason.map { (key, items) ->
+        val requests = itemsBySeason.map { (key, items) ->
             SkipMeSeasonSubmitRequest(
                 tvdbSeriesId = tvdbSeriesId,
                 tvdbSeasonId = key.tvdbSeasonId,
@@ -558,6 +765,8 @@ class HomeViewModel @Inject constructor(
             request.aniListId != null ||
             request.items.any { it.tvdbId != null || it.imdbId != null }
         }
+        
+        return requests to totalDuplicates
     }
 }
 

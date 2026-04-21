@@ -24,8 +24,10 @@ import kotlinx.coroutines.sync.withPermit
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.api.SkipMeApiService
+import org.introskipper.segmenteditor.data.local.MetadataSubmissionDao
 import org.introskipper.segmenteditor.data.local.SubmissionDao
 import org.introskipper.segmenteditor.data.model.MediaItem
+import org.introskipper.segmenteditor.data.model.MetadataSubmission
 import org.introskipper.segmenteditor.data.model.SegmentType
 import org.introskipper.segmenteditor.data.model.SkipMeBackfillRequest
 import org.introskipper.segmenteditor.data.model.SkipMeSeasonItem
@@ -55,6 +57,7 @@ class LibraryViewModel @Inject constructor(
     private val segmentRepository: SegmentRepository,
     private val skipMeApiService: SkipMeApiService,
     private val submissionDao: SubmissionDao,
+    private val metadataSubmissionDao: MetadataSubmissionDao,
     private val securePreferences: SecurePreferences,
     private val translationService: TranslationService
 ) : ViewModel() {
@@ -448,7 +451,7 @@ class LibraryViewModel @Inject constructor(
                 val episodesResponse = mediaRepository.getEpisodes(
                     seriesId = series.id,
                     userId = userId,
-                    fields = listOf("ProviderIds", "ParentIndexNumber", "IndexNumber")
+                    fields = listOf("ProviderIds", "ParentIndexNumber", "IndexNumber", "SeriesId", "SeasonId")
                 )
                 if (!episodesResponse.isSuccessful) return@run emptyList()
 
@@ -458,15 +461,39 @@ class LibraryViewModel @Inject constructor(
 
                 (episodesResponse.body()?.items ?: emptyList())
                     .filter { (it.parentIndexNumber ?: 0) != 0 }
-                    .map { episode ->
+                    .mapNotNull { episode ->
+                        val tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+                        val tvdbSeasonId = seasonTvdbIds[episode.seasonId ?: ""]
+                        val aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null
+                        val imdbId = episode.providerIds?.get("Imdb")
+
+                        // Check for duplicates
+                        val existing = metadataSubmissionDao.getSubmission(
+                            seriesId = series.id,
+                            seasonNumber = episode.parentIndexNumber ?: 0,
+                            episodeNumber = episode.indexNumber ?: 0
+                        )
+
+                        if (existing != null && 
+                            existing.tmdbId == seriesTmdbId &&
+                            existing.imdbId == imdbId &&
+                            existing.tvdbId == tvdbId &&
+                            existing.tvdbSeriesId == seriesTvdbId &&
+                            existing.tvdbSeasonId == tvdbSeasonId &&
+                            existing.imdbSeriesId == seriesImdbId &&
+                            existing.aniListId == aniListId
+                        ) {
+                            return@mapNotNull null // Skip duplicate
+                        }
+
                         SkipMeBackfillRequest(
-                            tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull(),
+                            tvdbId = tvdbId,
                             tmdbId = seriesTmdbId,
-                            imdbId = episode.providerIds?.get("Imdb"),
-                            tvdbSeasonId = seasonTvdbIds[episode.seasonId ?: ""],
+                            imdbId = imdbId,
+                            tvdbSeasonId = tvdbSeasonId,
                             tvdbSeriesId = seriesTvdbId,
                             imdbSeriesId = seriesImdbId,
-                            aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null,
+                            aniListId = aniListId,
                             season = episode.parentIndexNumber,
                             episode = episode.indexNumber
                         )
@@ -477,7 +504,24 @@ class LibraryViewModel @Inject constructor(
                 for (chunk in requests.chunked(BATCH_SIZE)) {
                     val response = skipMeApiService.backfill(chunk)
                     if (response.isSuccessful) {
-                        totalUpdated += response.body()?.updated ?: 0
+                        val updated = response.body()?.updated ?: 0
+                        totalUpdated += updated
+                        
+                        // Update local store
+                        chunk.forEach { request ->
+                            metadataSubmissionDao.insert(MetadataSubmission(
+                                seriesId = series.id,
+                                seasonNumber = request.season ?: 0,
+                                episodeNumber = request.episode ?: 0,
+                                tmdbId = request.tmdbId,
+                                imdbId = request.imdbId,
+                                tvdbId = request.tvdbId,
+                                tvdbSeriesId = request.tvdbSeriesId,
+                                tvdbSeasonId = request.tvdbSeasonId,
+                                imdbSeriesId = request.imdbSeriesId,
+                                aniListId = request.aniListId
+                            ))
+                        }
                     } else if (firstFailCode == null) {
                         firstFailCode = response.code()
                     }
@@ -500,10 +544,26 @@ class LibraryViewModel @Inject constructor(
             return
         }
 
-        val requests = (moviesResponse.body()?.items ?: emptyList()).mapNotNull { movie ->
+        val allMovies = moviesResponse.body()?.items ?: emptyList()
+        val requests = allMovies.mapNotNull { movie ->
             val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull()
             val imdbId = movie.providerIds?.get("Imdb")
             if (tmdbId == null && imdbId == null) return@mapNotNull null
+
+            // Check for duplicates
+            val existing = metadataSubmissionDao.getSubmission(
+                seriesId = movie.id,
+                seasonNumber = 0,
+                episodeNumber = 0
+            )
+
+            if (existing != null && 
+                existing.tmdbId == tmdbId &&
+                existing.imdbId == imdbId
+            ) {
+                return@mapNotNull null
+            }
+
             SkipMeBackfillRequest(tmdbId = tmdbId, imdbId = imdbId)
         }
 
@@ -513,7 +573,28 @@ class LibraryViewModel @Inject constructor(
         chunks.forEachIndexed { chunkIndex, chunk ->
             val response = skipMeApiService.backfill(chunk)
             if (response.isSuccessful) {
-                totalUpdated += response.body()?.updated ?: 0
+                val updated = response.body()?.updated ?: 0
+                totalUpdated += updated
+
+                // Update local store
+                chunk.forEachIndexed { index, request ->
+                    // Find the original movie ID for the local store
+                    // This is slightly inefficient but the number of chunks should be small
+                    val originalMovie = allMovies.find { 
+                        it.providerIds?.get("Tmdb")?.toIntOrNull() == request.tmdbId && 
+                        it.providerIds?.get("Imdb") == request.imdbId 
+                    }
+                    
+                    if (originalMovie != null) {
+                        metadataSubmissionDao.insert(MetadataSubmission(
+                            seriesId = originalMovie.id,
+                            seasonNumber = 0,
+                            episodeNumber = 0,
+                            tmdbId = request.tmdbId,
+                            imdbId = request.imdbId
+                        ))
+                    }
+                }
             } else if (firstFailCode == null) {
                 firstFailCode = response.code()
             }

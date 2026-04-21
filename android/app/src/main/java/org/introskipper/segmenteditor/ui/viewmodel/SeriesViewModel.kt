@@ -23,7 +23,9 @@ import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.api.SkipMeApiService
+import org.introskipper.segmenteditor.data.local.MetadataSubmissionDao
 import org.introskipper.segmenteditor.data.local.SubmissionDao
+import org.introskipper.segmenteditor.data.model.MetadataSubmission
 import org.introskipper.segmenteditor.data.model.filterSkipMe
 import org.introskipper.segmenteditor.data.model.SegmentType
 import org.introskipper.segmenteditor.data.model.SkipMeBackfillRequest
@@ -48,6 +50,7 @@ class SeriesViewModel @Inject constructor(
     private val securePreferences: SecurePreferences,
     private val skipMeApiService: SkipMeApiService,
     private val submissionDao: SubmissionDao,
+    private val metadataSubmissionDao: MetadataSubmissionDao,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -378,13 +381,40 @@ class SeriesViewModel @Inject constructor(
 
                 episodes.forEach { episodeWithSegments ->
                     val episode = episodeWithSegments.episode
+                    val tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+                    val tvdbSeasonId = currentState.seasonTvdbIds[episode.seasonId ?: ""]
+                    val aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null
+                    val imdbId = episode.providerIds?.get("Imdb")
+                    val imdbSeriesId = currentState.series.providerIds?.get("Imdb")
+
+                    // Check for duplicates
+                    val existing = metadataSubmissionDao.getSubmission(
+                        seriesId = currentState.series.id,
+                        seasonNumber = episode.parentIndexNumber ?: 0,
+                        episodeNumber = episode.indexNumber ?: 0
+                    )
+
+                    if (existing != null && 
+                        existing.tmdbId == seriesTmdbId &&
+                        existing.imdbId == imdbId &&
+                        existing.tvdbId == tvdbId &&
+                        existing.tvdbSeriesId == seriesTvdbId &&
+                        existing.tvdbSeasonId == tvdbSeasonId &&
+                        existing.imdbSeriesId == imdbSeriesId &&
+                        existing.aniListId == aniListId
+                    ) {
+                        return@forEach // Skip duplicate
+                    }
+
                     requests.add(
                         SkipMeBackfillRequest(
-                            tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull(),
+                            tvdbId = tvdbId,
                             tmdbId = seriesTmdbId,
-                            tvdbSeasonId = currentState.seasonTvdbIds[episode.seasonId ?: ""],
+                            imdbId = imdbId,
+                            tvdbSeasonId = tvdbSeasonId,
                             tvdbSeriesId = seriesTvdbId,
-                            aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null,
+                            imdbSeriesId = imdbSeriesId,
+                            aniListId = aniListId,
                             season = episode.parentIndexNumber,
                             episode = episode.indexNumber
                         )
@@ -398,8 +428,25 @@ class SeriesViewModel @Inject constructor(
 
                 val response = skipMeApiService.backfill(requests)
                 if (response.isSuccessful) {
-                    val updated = response.body()?.updated ?: 0
-                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_success, updated)))
+                    val updatedCount = response.body()?.updated ?: 0
+                    
+                    // Update local store
+                    requests.forEach { request ->
+                        metadataSubmissionDao.insert(MetadataSubmission(
+                            seriesId = currentState.series.id,
+                            seasonNumber = request.season ?: 0,
+                            episodeNumber = request.episode ?: 0,
+                            tmdbId = request.tmdbId,
+                            imdbId = request.imdbId,
+                            tvdbId = request.tvdbId,
+                            tvdbSeriesId = request.tvdbSeriesId,
+                            tvdbSeasonId = request.tvdbSeasonId,
+                            imdbSeriesId = request.imdbSeriesId,
+                            aniListId = request.aniListId
+                        ))
+                    }
+
+                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_success, updatedCount)))
                 } else {
                     _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_http, response.code())))
                 }
@@ -421,18 +468,45 @@ class SeriesViewModel @Inject constructor(
                 val seriesTmdbId = currentState.series.providerIds?.get("Tmdb")?.toIntOrNull()
                 val seriesTvdbId = currentState.series.providerIds?.get("Tvdb")?.toIntOrNull()
                 val seriesAniListId = currentState.series.providerIds?.get("AniList")?.toIntOrNull()
+                val imdbSeriesId = currentState.series.providerIds?.get("Imdb")
 
                 currentState.episodesBySeason.values.flatten().forEach { episodeWithSegments ->
                     val episode = episodeWithSegments.episode
                     if ((episode.parentIndexNumber ?: 0) == 0) return@forEach
                     
+                    val tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+                    val tvdbSeasonId = currentState.seasonTvdbIds[episode.seasonId ?: ""]
+                    val aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null
+                    val imdbId = episode.providerIds?.get("Imdb")
+
+                    // Check for duplicates
+                    val existing = metadataSubmissionDao.getSubmission(
+                        seriesId = currentState.series.id,
+                        seasonNumber = episode.parentIndexNumber ?: 0,
+                        episodeNumber = episode.indexNumber ?: 0
+                    )
+
+                    if (existing != null && 
+                        existing.tmdbId == seriesTmdbId &&
+                        existing.imdbId == imdbId &&
+                        existing.tvdbId == tvdbId &&
+                        existing.tvdbSeriesId == seriesTvdbId &&
+                        existing.tvdbSeasonId == tvdbSeasonId &&
+                        existing.imdbSeriesId == imdbSeriesId &&
+                        existing.aniListId == aniListId
+                    ) {
+                        return@forEach // Skip duplicate
+                    }
+
                     requests.add(
                         SkipMeBackfillRequest(
-                            tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull(),
+                            tvdbId = tvdbId,
                             tmdbId = seriesTmdbId,
-                            tvdbSeasonId = currentState.seasonTvdbIds[episode.seasonId ?: ""],
+                            imdbId = imdbId,
+                            tvdbSeasonId = tvdbSeasonId,
                             tvdbSeriesId = seriesTvdbId,
-                            aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null,
+                            imdbSeriesId = imdbSeriesId,
+                            aniListId = aniListId,
                             season = episode.parentIndexNumber,
                             episode = episode.indexNumber
                         )
@@ -446,8 +520,25 @@ class SeriesViewModel @Inject constructor(
 
                 val response = skipMeApiService.backfill(requests)
                 if (response.isSuccessful) {
-                    val updated = response.body()?.updated ?: 0
-                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_success, updated)))
+                    val updatedCount = response.body()?.updated ?: 0
+                    
+                    // Update local store
+                    requests.forEach { request ->
+                        metadataSubmissionDao.insert(MetadataSubmission(
+                            seriesId = currentState.series.id,
+                            seasonNumber = request.season ?: 0,
+                            episodeNumber = request.episode ?: 0,
+                            tmdbId = request.tmdbId,
+                            imdbId = request.imdbId,
+                            tvdbId = request.tvdbId,
+                            tvdbSeriesId = request.tvdbSeriesId,
+                            tvdbSeasonId = request.tvdbSeasonId,
+                            imdbSeriesId = request.imdbSeriesId,
+                            aniListId = request.aniListId
+                        ))
+                    }
+
+                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_success, updatedCount)))
                 } else {
                     _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_http, response.code())))
                 }

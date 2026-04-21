@@ -18,6 +18,7 @@ import org.introskipper.segmenteditor.BuildConfig
 import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.api.SkipMeApiService
 import org.introskipper.segmenteditor.data.local.AppDatabase
+import org.introskipper.segmenteditor.data.local.MetadataSubmissionDao
 import org.introskipper.segmenteditor.data.local.SubmissionDao
 import org.introskipper.segmenteditor.data.repository.AuthRepository
 import org.introskipper.segmenteditor.data.repository.MediaRepository
@@ -114,11 +115,17 @@ object AppModule {
             context,
             AppDatabase::class.java,
             "segment_editor.db"
-        ).build()
+        ).fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides
     fun provideSubmissionDao(database: AppDatabase): SubmissionDao {
         return database.submissionDao()
+    }
+
+    @Provides
+    fun provideMetadataSubmissionDao(database: AppDatabase): MetadataSubmissionDao {
+        return database.metadataSubmissionDao()
     }
 }
