@@ -37,11 +37,12 @@ import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.util.UiText
 import javax.inject.Inject
 
-private const val BATCH_SIZE = 250
-private const val SEASON_BATCH_SIZE = 25
-private const val MAX_CONCURRENT_SERIES = 2
-private const val MAX_CONCURRENT_MOVIE_SEGMENTS = 8
-private const val MAX_CONCURRENT_EPISODE_SEGMENTS = 6
+// Increased batch sizes to take advantage of 100MB request limit
+private const val BATCH_SIZE = 1000 
+private const val SEASON_BATCH_SIZE = 250
+private const val MAX_CONCURRENT_SERIES = 4
+private const val MAX_CONCURRENT_MOVIE_SEGMENTS = 16
+private const val MAX_CONCURRENT_EPISODE_SEGMENTS = 12
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
@@ -274,7 +275,7 @@ class LibraryViewModel @Inject constructor(
             }.awaitAll().flatten()
         }
 
-        // Phase 2: submit batches of SEASON_BATCH_SIZE seasons sequentially to avoid 429s
+        // Phase 2: submit larger chunks of seasons sequentially to take advantage of the 100MB limit
         var totalSubmitted = 0
         val chunks = allSeasonRequests.chunked(SEASON_BATCH_SIZE)
         chunks.forEachIndexed { chunkIndex, chunk ->
@@ -342,7 +343,7 @@ class LibraryViewModel @Inject constructor(
             }.awaitAll()
         }
 
-        // Phase 2: submit batches of BATCH_SIZE movies sequentially to avoid 429s
+        // Phase 2: submit significantly larger batches of movies sequentially
         val submissionBatches = allMovieSegments.chunked(BATCH_SIZE)
         submissionBatches.forEachIndexed { batchIndex, movieBatch ->
             val batchRequests = movieBatch.flatten()
