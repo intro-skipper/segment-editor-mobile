@@ -12,6 +12,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.introskipper.segmenteditor.BuildConfig
@@ -26,7 +27,12 @@ import org.introskipper.segmenteditor.data.repository.SegmentRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.utils.TranslationService
 import java.util.concurrent.TimeUnit
+import javax.inject.Qualifier
 import javax.inject.Singleton
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class SkipMeClient
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -52,6 +58,34 @@ object AppModule {
         }
         
         return OkHttpClient.Builder()
+            .addInterceptor(loggingInterceptor)
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    @SkipMeClient
+    fun provideSkipMeOkHttpClient(): OkHttpClient {
+        val loggingInterceptor = HttpLoggingInterceptor().apply {
+            level = if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BODY
+            } else {
+                HttpLoggingInterceptor.Level.BASIC
+            }
+        }
+
+        val userAgentInterceptor = Interceptor { chain ->
+            val request = chain.request().newBuilder()
+                .header("User-Agent", "SkipMe.db")
+                .build()
+            chain.proceed(request)
+        }
+        
+        return OkHttpClient.Builder()
+            .addInterceptor(userAgentInterceptor)
             .addInterceptor(loggingInterceptor)
             .connectTimeout(60, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
@@ -103,7 +137,7 @@ object AppModule {
     @Provides
     @Singleton
     fun provideSkipMeApiService(
-        httpClient: OkHttpClient
+        @SkipMeClient httpClient: OkHttpClient
     ): SkipMeApiService {
         return SkipMeApiService(BuildConfig.SKIPME_BASE_URL, httpClient)
     }
