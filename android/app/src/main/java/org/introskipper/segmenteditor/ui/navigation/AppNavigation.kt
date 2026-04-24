@@ -100,7 +100,7 @@ fun AppNavigation(
                     navController.navigate("${Screen.Home.route}/$libraryId?type=$collectionType")
                 },
                 onContinueWatchingClick = { itemId ->
-                    navController.navigate(Screen.Player.createRoute(itemId, trackProgress = true))
+                    navController.navigate(Screen.Player.createRoute(itemId, trackProgress = true, fullscreen = true))
                 },
                 onSettingsClick = {
                     navController.navigate(Screen.Settings.route)
@@ -115,7 +115,7 @@ fun AppNavigation(
                     navController.navigate("${Screen.Home.route}/$libraryId?type=$collectionType")
                 },
                 onContinueWatchingClick = { itemId ->
-                    navController.navigate(Screen.Player.createRoute(itemId, trackProgress = true))
+                    navController.navigate(Screen.Player.createRoute(itemId, trackProgress = true, fullscreen = true))
                 },
                 onSettingsClick = {
                     navController.navigate(Screen.Settings.route)
@@ -154,10 +154,14 @@ fun AppNavigation(
         }
         
         composable(
-            route = "${Screen.Player.route}/{itemId}?trackProgress={trackProgress}",
+            route = "${Screen.Player.route}/{itemId}?trackProgress={trackProgress}&fullscreen={fullscreen}",
             arguments = listOf(
                 navArgument("itemId") { type = NavType.StringType },
                 navArgument("trackProgress") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                },
+                navArgument("fullscreen") {
                     type = NavType.BoolType
                     defaultValue = false
                 }
@@ -165,7 +169,13 @@ fun AppNavigation(
         ) { backStackEntry ->
             val itemId = backStackEntry.arguments?.getString("itemId") ?: ""
             val trackProgress = backStackEntry.arguments?.getBoolean("trackProgress") ?: false
-            PlayerScreen(itemId = itemId, navController = navController, trackProgressEnabled = trackProgress)
+            val fullscreen = backStackEntry.arguments?.getBoolean("fullscreen") ?: false
+            PlayerScreen(
+                itemId = itemId,
+                navController = navController,
+                trackProgressEnabled = trackProgress,
+                initialFullscreen = fullscreen
+            )
         }
         
         composable(

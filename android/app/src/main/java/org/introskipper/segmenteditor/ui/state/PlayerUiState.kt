@@ -86,6 +86,10 @@ sealed class PlayerEvent {
     data class Error(val message: String) : PlayerEvent()
     data class SegmentLoaded(val segments: List<Segment>) : PlayerEvent()
     object PlaybackEnded : PlayerEvent()
-    data class NavigateToPlayer(val itemId: String, val trackProgressToServer: Boolean = false) : PlayerEvent()
+    data class NavigateToPlayer(
+        val itemId: String,
+        val trackProgressToServer: Boolean = false,
+        val fullscreen: Boolean = false
+    ) : PlayerEvent()
     data class ShowToast(val message: String) : PlayerEvent()
 }

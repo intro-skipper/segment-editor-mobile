@@ -86,7 +86,11 @@ class PlayerViewModel @Inject constructor(
     private val _events = MutableStateFlow<PlayerEvent?>(null)
     val events: StateFlow<PlayerEvent?> = _events.asStateFlow()
 
-    fun loadMediaItem(itemId: String, trackProgressToServer: Boolean = false) {
+    fun loadMediaItem(
+        itemId: String,
+        trackProgressToServer: Boolean = false,
+        initialFullscreen: Boolean = false
+    ) {
         viewModelScope.launch {
             lastProgressReportAtMs = 0L
             hasMarkedPlayedForCurrentItem = false
@@ -107,7 +111,8 @@ class PlayerViewModel @Inject constructor(
                     showControls = true,
                     trackProgressToServer = trackProgressToServer,
                     resumePositionMs = 0L,
-                    showNextUpCard = false
+                    showNextUpCard = false,
+                    isFullscreen = initialFullscreen
                 )
             }
 
@@ -715,7 +720,8 @@ class PlayerViewModel @Inject constructor(
         if (autoPlayEnabled && nextId != null) {
             _events.value = PlayerEvent.NavigateToPlayer(
                 itemId = nextId,
-                trackProgressToServer = uiState.trackProgressToServer
+                trackProgressToServer = uiState.trackProgressToServer,
+                fullscreen = uiState.isFullscreen
             )
         } else if (uiState.mediaItem?.itemType == MediaItemType.MOVIE) {
             // For movies, stay on the player screen instead of returning to menu

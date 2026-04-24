@@ -85,7 +85,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.PlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
@@ -118,6 +117,7 @@ fun PlayerScreen(
     itemId: String,
     navController: NavController,
     trackProgressEnabled: Boolean = false,
+    initialFullscreen: Boolean = false,
     viewModel: PlayerViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -149,7 +149,8 @@ fun PlayerScreen(
                 navController.navigate(
                     Screen.Player.createRoute(
                         itemId = event.itemId,
-                        trackProgress = event.trackProgressToServer
+                        trackProgress = event.trackProgressToServer,
+                        fullscreen = event.fullscreen
                     )
                 ) {
                     // Pop current player from backstack to avoid loops
@@ -247,7 +248,11 @@ fun PlayerScreen(
     
     // Load media item when itemId changes
     LaunchedEffect(itemId) {
-        viewModel.loadMediaItem(itemId, trackProgressToServer = trackProgressEnabled)
+        viewModel.loadMediaItem(
+            itemId = itemId,
+            trackProgressToServer = trackProgressEnabled,
+            initialFullscreen = initialFullscreen
+        )
     }
 
     var lastResumedItemId by remember(itemId) { mutableStateOf<String?>(null) }
