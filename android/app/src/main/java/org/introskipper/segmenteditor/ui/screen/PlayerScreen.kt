@@ -222,12 +222,12 @@ fun PlayerScreen(
     // Helper function to transfer key from old segment to new segment
     fun transferSegmentKey(oldSegment: Segment, newSegment: Segment) {
         val key = getSegmentKey(oldSegment)
-        if (newSegment.id == null) {
+        segmentKeys = if (newSegment.id == null) {
             // Only track unsaved segments
-            segmentKeys = segmentKeys - oldSegment + (newSegment to key)
+            segmentKeys - oldSegment + (newSegment to key)
         } else {
             // Saved segment, remove from tracking
-            segmentKeys = segmentKeys - oldSegment
+            segmentKeys - oldSegment
         }
     }
     
@@ -271,7 +271,7 @@ fun PlayerScreen(
         val resumePosition = uiState.resumePositionMs
         val duration = uiState.duration
         if (duration <= 0L) return@LaunchedEffect
-        if (resumePosition > 0L && resumePosition < duration) {
+        if (resumePosition in 1..<duration) {
             currentPlayer.seekTo(resumePosition)
             lastResumedItemId = mediaItemId
         }
@@ -891,7 +891,7 @@ private fun navigateBack(
         // getBackStackEntry throws if the entry is not found, so we catch it.
         val seriesEntry = try {
             navController.getBackStackEntry(seriesRouteTemplate)
-        } catch (e: IllegalArgumentException) {
+        } catch (_: IllegalArgumentException) {
             null
         }
 

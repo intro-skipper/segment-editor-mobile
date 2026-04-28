@@ -9,6 +9,7 @@ import android.content.Context
 import android.util.Log
 import androidx.annotation.StringRes
 import androidx.compose.ui.layout.ContentScale
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.C
@@ -55,6 +56,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
+    private val savedStateHandle: SavedStateHandle,
     private val mediaRepository: MediaRepository,
     private val segmentRepository: SegmentRepository,
     private val securePreferences: SecurePreferences,
@@ -66,7 +68,12 @@ class PlayerViewModel @Inject constructor(
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(PlayerUiState())
+    private val _uiState = MutableStateFlow(
+        PlayerUiState(
+            isFullscreen = savedStateHandle.get<Boolean>("fullscreen") ?: false,
+            trackProgressToServer = savedStateHandle.get<Boolean>("trackProgress") ?: false
+        )
+    )
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
     // Tracks an in-flight batch save so it can be cancelled before starting a new one
@@ -909,7 +916,7 @@ class PlayerViewModel @Inject constructor(
         return try {
             val segmentRequest = org.introskipper.segmenteditor.data.model.SegmentCreateRequest(
                 itemId = segment.itemId,
-                type = org.introskipper.segmenteditor.data.model.SegmentType.stringToApiValue(segment.type),
+                type = SegmentType.stringToApiValue(segment.type),
                 startTicks = segment.startTicks,
                 endTicks = segment.endTicks
             )
@@ -986,7 +993,7 @@ class PlayerViewModel @Inject constructor(
                                 result.onFailure { e ->
                                     Log.w(TAG, "Failed to delete segment ${segment.type} (ID: ${segment.id}) during batch save", e)
                                 }
-                                segment.id!! to result
+                                segment.id to result
                             }
                         }
                         .awaitAll()
@@ -1011,7 +1018,7 @@ class PlayerViewModel @Inject constructor(
                         async {
                             val segmentRequest = org.introskipper.segmenteditor.data.model.SegmentCreateRequest(
                                 itemId = segment.itemId,
-                                type = org.introskipper.segmenteditor.data.model.SegmentType.stringToApiValue(segment.type),
+                                type = SegmentType.stringToApiValue(segment.type),
                                 startTicks = segment.startTicks,
                                 endTicks = segment.endTicks
                             )
@@ -1146,8 +1153,8 @@ class PlayerViewModel @Inject constructor(
                 return@launch
             }
 
-            val season = mediaItem?.parentIndexNumber
-            val episode = mediaItem?.indexNumber
+            val season = mediaItem.parentIndexNumber
+            val episode = mediaItem.indexNumber
 
             // Check for local duplicate using improved ID matching logic
             val isDuplicate = submissionDao.isDuplicate(
@@ -1176,7 +1183,7 @@ class PlayerViewModel @Inject constructor(
                 tvdbSeriesId = state.seriesTvdbId,
                 tvdbSeasonId = tvdbSeasonId,
                 tvdbId = tvdbId,
-                aniListId = if (mediaItem?.parentIndexNumber == 1) aniListId else null,
+                aniListId = if (mediaItem.parentIndexNumber == 1) aniListId else null,
                 segment = skipMeType,
                 season = season,
                 episode = episode,
@@ -1199,7 +1206,7 @@ class PlayerViewModel @Inject constructor(
                         imdbSeriesId = imdbSeriesId,
                         tvdbSeasonId = tvdbSeasonId,
                         tvdbId = tvdbId,
-                        aniListId = if (mediaItem?.parentIndexNumber == 1) aniListId else null,
+                        aniListId = if (mediaItem.parentIndexNumber == 1) aniListId else null,
                         segmentType = skipMeType,
                         season = season,
                         episode = episode,
