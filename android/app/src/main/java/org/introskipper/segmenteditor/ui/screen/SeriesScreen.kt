@@ -35,7 +35,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
@@ -379,7 +378,7 @@ fun SeriesScreen(
                                 }
                             } else if (sortedSeasons.size > 1) {
                                 // Show tabs for multiple seasons
-                                ScrollableTabRow(
+                                SecondaryScrollableTabRow(
                                     selectedTabIndex = selectedSeasonIndex,
                                     modifier = Modifier.fillMaxWidth(),
                                     edgePadding = 8.dp,
