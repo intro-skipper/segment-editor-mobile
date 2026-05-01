@@ -6,6 +6,7 @@
 package org.introskipper.segmenteditor.ui.viewmodel
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,12 +21,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.api.SkipMeApiService
 import org.introskipper.segmenteditor.data.local.MetadataSubmissionDao
 import org.introskipper.segmenteditor.data.local.SubmissionDao
 import org.introskipper.segmenteditor.data.model.MetadataSubmission
+import org.introskipper.segmenteditor.data.model.Segment
+import org.introskipper.segmenteditor.data.model.SegmentCreateRequest
 import org.introskipper.segmenteditor.data.model.filterSkipMe
 import org.introskipper.segmenteditor.data.model.SegmentType
 import org.introskipper.segmenteditor.data.model.SkipMeBackfillRequest
@@ -43,6 +48,21 @@ import org.introskipper.segmenteditor.ui.util.UiText
 import org.introskipper.segmenteditor.utils.getTranslatedString
 import javax.inject.Inject
 
+@Serializable
+data class ImportJson(
+    val items: List<ImportItem>
+)
+
+@Serializable
+data class ImportItem(
+    val imdb_series_id: String? = null,
+    val segment_type: String,
+    val season: Int,
+    val episode: Int,
+    val start_sec: Double,
+    val end_sec: Double
+)
+
 @HiltViewModel
 class SeriesViewModel @Inject constructor(
     private val mediaRepository: MediaRepository,
@@ -59,6 +79,11 @@ class SeriesViewModel @Inject constructor(
 
     private val _events = MutableSharedFlow<SeriesEvent>()
     val events: SharedFlow<SeriesEvent> = _events.asSharedFlow()
+
+    private val json = Json { 
+        ignoreUnknownKeys = true 
+        coerceInputValues = true
+    }
 
     fun loadSeries(seriesId: String) {
         viewModelScope.launch {
@@ -547,6 +572,81 @@ class SeriesViewModel @Inject constructor(
                 _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_generic, e.message ?: "")))
             } finally {
                 _uiState.update { (it as? SeriesUiState.Success)?.copy(isSharing = false) ?: it }
+            }
+        }
+    }
+
+    fun importJson(uri: Uri) {
+        viewModelScope.launch {
+            val currentState = _uiState.value as? SeriesUiState.Success ?: return@launch
+            _uiState.update { currentState.copy(isLoadingSegments = true) }
+            
+            try {
+                val content = context.contentResolver.openInputStream(uri)?.use { 
+                    it.bufferedReader().readText() 
+                } ?: throw Exception("Could not read file")
+                
+                val importData = json.decodeFromString<ImportJson>(content)
+                val seriesImdbId = currentState.series.providerIds?.get("Imdb")
+                
+                var successCount = 0
+                var failCount = 0
+                var skipCount = 0
+                
+                importData.items.forEach { item ->
+                    // Validate IMDb ID if provided
+                    if (item.imdb_series_id != null && seriesImdbId != null && item.imdb_series_id != seriesImdbId) {
+                        skipCount++
+                        return@forEach
+                    }
+                    
+                    // Find matching episode
+                    val episode = currentState.episodesBySeason[item.season]?.find { it.episode.indexNumber == item.episode }
+                    if (episode == null) {
+                        skipCount++
+                        return@forEach
+                    }
+                    
+                    val segmentType = SegmentType.fromString(item.segment_type)
+                    if (segmentType == null) {
+                        skipCount++
+                        return@forEach
+                    }
+                    
+                    val startTicks = Segment.secondsToTicks(item.start_sec)
+                    val endTicks = Segment.secondsToTicks(item.end_sec)
+                    
+                    val request = SegmentCreateRequest(
+                        itemId = episode.episode.id,
+                        type = segmentType.apiValue,
+                        startTicks = startTicks,
+                        endTicks = endTicks
+                    )
+                    
+                    val result = segmentRepository.createSegmentResult(episode.episode.id, request)
+                    if (result.isSuccess) {
+                        successCount++
+                    } else {
+                        failCount++
+                        Log.e("SeriesViewModel", "Failed to import segment: ${result.exceptionOrNull()?.message}")
+                    }
+                }
+                
+                _events.emit(SeriesEvent.ShowToast(UiText.DynamicString(
+                    buildString {
+                        append(context.getTranslatedString(R.string.import_success, successCount))
+                        if (failCount > 0) append("\n").append(context.getTranslatedString(R.string.import_failed, failCount))
+                        if (skipCount > 0) append("\n").append(context.getTranslatedString(R.string.import_skipped, skipCount))
+                    }
+                )))
+                
+                // Refresh segments after import
+                loadSegmentsForEpisodes(currentState.episodesBySeason)
+                
+            } catch (e: Exception) {
+                Log.e("SeriesViewModel", "Error importing JSON", e)
+                _events.emit(SeriesEvent.ShowToast(UiText.DynamicString("Error: ${e.message}")))
+                _uiState.update { currentState.copy(isLoadingSegments = false) }
             }
         }
     }

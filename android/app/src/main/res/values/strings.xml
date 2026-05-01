@@ -316,4 +316,10 @@
     <string name="save_watch_progress">Save Watch Progress</string>
     <string name="share_already_in_progress">Another upload is already in progress. Please wait for it to finish.</string>
     <string name="share_already_submitted">Segment already shared with SkipMe.db</string>
+
+    <!-- Import JSON -->
+    <string name="import_json">Import JSON</string>
+    <string name="import_success">Successfully imported %1$d segments</string>
+    <string name="import_failed">Failed to import %1$d segments</string>
+    <string name="import_skipped">Skipped %1$d segments (no match)</string>
 </resources>

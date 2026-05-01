@@ -7,6 +7,8 @@ package org.introskipper.segmenteditor.ui.screen
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,6 +33,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -86,6 +89,12 @@ fun SeriesScreen(
     val serverUrl = securePreferences.getServerUrl() ?: ""
     val context = LocalContext.current
     var dominantColor by remember { mutableStateOf<Int?>(null) }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { viewModel.importJson(it) }
+    }
 
     LaunchedEffect(seriesId) {
         viewModel.loadSeries(seriesId)
@@ -259,6 +268,18 @@ fun SeriesScreen(
                                     }
                                 )
                             }
+                            
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            
+                            DropdownMenuItem(
+                                text = {
+                                    Text(translatedString(R.string.import_json))
+                                },
+                                onClick = {
+                                    showShareMenu = false
+                                    importLauncher.launch("application/json")
+                                }
+                            )
                         }
                     }
                 }
