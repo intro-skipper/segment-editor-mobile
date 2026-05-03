@@ -274,11 +274,13 @@ class HomeViewModel @Inject constructor(
                             val seriesAniListId = series.getAniListId()
 
                             // Try TVMaze to fill any missing series-level IDs
-                            if (seriesTvdbId != null && seriesImdbId == null) {
-                                val show = tvMazeRepository.lookupByTvdbId(seriesTvdbId!!)
+                            val tvdbIdForLookup = seriesTvdbId
+                            val imdbIdForLookup = seriesImdbId
+                            if (tvdbIdForLookup != null && seriesImdbId == null) {
+                                val show = tvMazeRepository.lookupByTvdbId(tvdbIdForLookup)
                                 if (show != null) seriesImdbId = show.imdbId
-                            } else if (seriesImdbId != null && seriesTvdbId == null) {
-                                val show = tvMazeRepository.lookupByImdbId(seriesImdbId!!)
+                            } else if (imdbIdForLookup != null && seriesTvdbId == null) {
+                                val show = tvMazeRepository.lookupByImdbId(imdbIdForLookup)
                                 if (show != null) seriesTvdbId = show.tvdbId
                             }
 
@@ -341,11 +343,13 @@ class HomeViewModel @Inject constructor(
                             val seasonTvdbId = season.getTvdbId()
 
                             // Try TVMaze to fill any missing series-level IDs
-                            if (seriesTvdbId != null && seriesImdbId == null) {
-                                val show = tvMazeRepository.lookupByTvdbId(seriesTvdbId!!)
+                            val tvdbIdForLookup = seriesTvdbId
+                            val imdbIdForLookup = seriesImdbId
+                            if (tvdbIdForLookup != null && seriesImdbId == null) {
+                                val show = tvMazeRepository.lookupByTvdbId(tvdbIdForLookup)
                                 if (show != null) seriesImdbId = show.imdbId
-                            } else if (seriesImdbId != null && seriesTvdbId == null) {
-                                val show = tvMazeRepository.lookupByImdbId(seriesImdbId!!)
+                            } else if (imdbIdForLookup != null && seriesTvdbId == null) {
+                                val show = tvMazeRepository.lookupByImdbId(imdbIdForLookup)
                                 if (show != null) seriesTvdbId = show.tvdbId
                             }
 

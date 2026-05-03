@@ -1153,17 +1153,19 @@ class PlayerViewModel @Inject constructor(
             }
 
             // Try TVMaze to fill any remaining missing series-level IDs
-            if (tvdbSeriesId != null && imdbSeriesId == null) {
-                val show = tvMazeRepository.lookupByTvdbId(tvdbSeriesId!!)
+            val tvdbSeriesIdForLookup = tvdbSeriesId
+            val imdbSeriesIdForLookup = imdbSeriesId
+            if (tvdbSeriesIdForLookup != null && imdbSeriesId == null) {
+                val show = tvMazeRepository.lookupByTvdbId(tvdbSeriesIdForLookup)
                 if (show != null) {
                     imdbSeriesId = show.imdbId
-                    Log.d(TAG, "TVMaze filled imdbSeriesId=$imdbSeriesId from tvdbSeriesId=$tvdbSeriesId")
+                    Log.d(TAG, "TVMaze filled imdbSeriesId=$imdbSeriesId from tvdbSeriesId=$tvdbSeriesIdForLookup")
                 }
-            } else if (imdbSeriesId != null && tvdbSeriesId == null) {
-                val show = tvMazeRepository.lookupByImdbId(imdbSeriesId!!)
+            } else if (imdbSeriesIdForLookup != null && tvdbSeriesId == null) {
+                val show = tvMazeRepository.lookupByImdbId(imdbSeriesIdForLookup)
                 if (show != null) {
                     tvdbSeriesId = show.tvdbId
-                    Log.d(TAG, "TVMaze filled tvdbSeriesId=$tvdbSeriesId from imdbSeriesId=$imdbSeriesId")
+                    Log.d(TAG, "TVMaze filled tvdbSeriesId=$tvdbSeriesId from imdbSeriesId=$imdbSeriesIdForLookup")
                 }
             }
 
