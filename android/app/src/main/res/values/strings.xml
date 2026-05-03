@@ -68,7 +68,7 @@
     <string name="backfill_success">Updated %1$d records in SkipMe.db</string>
     <string name="backfill_failed_http">SkipMe.db backfill failed (HTTP %1$d)</string>
     <string name="backfill_failed_generic">Failed to submit metadata: %1$s</string>
-    <string name="backfill_no_identifiers">No usable identifiers found for this item</string>
+    <string name="backfill_no_identifiers">No unique identifiers found for selection</string>
     
     <string name="settings_section_export">Export</string>
     <string name="settings_export_format">Default Export Format</string>
