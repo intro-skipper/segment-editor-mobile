@@ -268,14 +268,14 @@ class SeriesViewModel @Inject constructor(
                 val seriesAniListId = currentState.series.getAniListId()
 
                 // Try TVMaze to fill any missing series-level IDs
-                val tvdbIdForLookup = seriesTvdbId
-                val imdbIdForLookup = seriesImdbId
-                if (tvdbIdForLookup != null && seriesImdbId == null) {
-                    val show = tvMazeRepository.lookupByTvdbId(tvdbIdForLookup)
-                    if (show != null) seriesImdbId = show.imdbId
-                } else if (imdbIdForLookup != null && seriesTvdbId == null) {
-                    val show = tvMazeRepository.lookupByImdbId(imdbIdForLookup)
-                    if (show != null) seriesTvdbId = show.tvdbId
+                if (seriesImdbId == null) {
+                    seriesTvdbId?.let { id ->
+                        tvMazeRepository.lookupByTvdbId(id)?.imdbId?.also { seriesImdbId = it }
+                    }
+                } else if (seriesTvdbId == null) {
+                    seriesImdbId?.let { id ->
+                        tvMazeRepository.lookupByImdbId(id)?.tvdbId?.also { seriesTvdbId = it }
+                    }
                 }
 
                 // Group deduplicated items by (season number, tvdb season id)
@@ -419,14 +419,14 @@ class SeriesViewModel @Inject constructor(
                 var seriesImdbId = currentState.series.getImdbId()
 
                 // Try TVMaze to fill any missing series-level IDs
-                val tvdbIdForLookup = seriesTvdbId
-                val imdbIdForLookup = seriesImdbId
-                if (tvdbIdForLookup != null && seriesImdbId == null) {
-                    val show = tvMazeRepository.lookupByTvdbId(tvdbIdForLookup)
-                    if (show != null) seriesImdbId = show.imdbId
-                } else if (imdbIdForLookup != null && seriesTvdbId == null) {
-                    val show = tvMazeRepository.lookupByImdbId(imdbIdForLookup)
-                    if (show != null) seriesTvdbId = show.tvdbId
+                if (seriesImdbId == null) {
+                    seriesTvdbId?.let { id ->
+                        tvMazeRepository.lookupByTvdbId(id)?.imdbId?.also { seriesImdbId = it }
+                    }
+                } else if (seriesTvdbId == null) {
+                    seriesImdbId?.let { id ->
+                        tvMazeRepository.lookupByImdbId(id)?.tvdbId?.also { seriesTvdbId = it }
+                    }
                 }
 
                 episodes.forEach { episodeWithSegments ->
@@ -521,14 +521,14 @@ class SeriesViewModel @Inject constructor(
                 var imdbSeriesId = currentState.series.getImdbId()
 
                 // Try TVMaze to fill any missing series-level IDs
-                val tvdbIdForLookup = seriesTvdbId
-                val imdbIdForLookup = imdbSeriesId
-                if (tvdbIdForLookup != null && imdbSeriesId == null) {
-                    val show = tvMazeRepository.lookupByTvdbId(tvdbIdForLookup)
-                    if (show != null) imdbSeriesId = show.imdbId
-                } else if (imdbIdForLookup != null && seriesTvdbId == null) {
-                    val show = tvMazeRepository.lookupByImdbId(imdbIdForLookup)
-                    if (show != null) seriesTvdbId = show.tvdbId
+                if (imdbSeriesId == null) {
+                    seriesTvdbId?.let { id ->
+                        tvMazeRepository.lookupByTvdbId(id)?.imdbId?.also { imdbSeriesId = it }
+                    }
+                } else if (seriesTvdbId == null) {
+                    imdbSeriesId?.let { id ->
+                        tvMazeRepository.lookupByImdbId(id)?.tvdbId?.also { seriesTvdbId = it }
+                    }
                 }
 
                 currentState.episodesBySeason.values.flatten().forEach { episodeWithSegments ->
