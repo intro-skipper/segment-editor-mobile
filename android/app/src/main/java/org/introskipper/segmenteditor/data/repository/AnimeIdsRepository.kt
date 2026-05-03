@@ -51,11 +51,11 @@ class AnimeIdsRepository @Inject constructor(
 
     private suspend fun refreshCacheIfNeeded() {
         try {
-            val lastModified = securePreferences.getAnimeIdsLastModified()
+            val etag = securePreferences.getAnimeIdsETag()
             val requestBuilder = Request.Builder().url(ANIME_IDS_URL)
             
-            if (lastModified != null && cacheFile.exists()) {
-                requestBuilder.header("If-Modified-Since", lastModified)
+            if (etag != null && cacheFile.exists()) {
+                requestBuilder.header("If-None-Match", etag)
             }
 
             val request = requestBuilder.build()
@@ -71,11 +71,11 @@ class AnimeIdsRepository @Inject constructor(
                 }
 
                 val body = response.body?.string() ?: return
-                val newLastModified = response.header("Last-Modified")
+                val newEtag = response.header("ETag")
 
                 cacheFile.writeText(body)
-                if (newLastModified != null) {
-                    securePreferences.saveAnimeIdsLastModified(newLastModified)
+                if (newEtag != null) {
+                    securePreferences.saveAnimeIdsETag(newEtag)
                 }
                 
                 cachedIds = gson.fromJson(body, object : TypeToken<List<Map<String, Any>>>() {}.type)

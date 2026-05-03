@@ -37,6 +37,7 @@ import org.introskipper.segmenteditor.data.model.Submission
 import org.introskipper.segmenteditor.data.repository.JellyfinRepository
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
+import org.introskipper.segmenteditor.data.repository.TvMazeRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.util.UiText
 import org.introskipper.segmenteditor.utils.TranslationService
@@ -59,6 +60,7 @@ class LibraryViewModel @Inject constructor(
     private val submissionDao: SubmissionDao,
     private val metadataSubmissionDao: MetadataSubmissionDao,
     private val securePreferences: SecurePreferences,
+    private val tvMazeRepository: TvMazeRepository,
     private val translationService: TranslationService
 ) : ViewModel() {
 
@@ -250,10 +252,21 @@ class LibraryViewModel @Inject constructor(
             allSeries.map { series ->
                 async {
                     semaphore.withPermit {
-                        val seriesTvdbId = series.getTvdbId()
+                        var seriesTvdbId = series.getTvdbId()
                         val seriesTmdbId = series.getTmdbId()
-                        val seriesImdbId = series.getImdbId()
+                        var seriesImdbId = series.getImdbId()
                         val seriesAniListId = series.getAniListId()
+
+                        // Try TVMaze to fill any missing series-level IDs
+                        if (seriesImdbId == null) {
+                            seriesTvdbId?.let { id ->
+                                tvMazeRepository.lookupByTvdbId(id)?.imdbId?.also { seriesImdbId = it }
+                            }
+                        } else if (seriesTvdbId == null) {
+                            seriesImdbId?.let { id ->
+                                tvMazeRepository.lookupByImdbId(id)?.tvdbId?.also { seriesTvdbId = it }
+                            }
+                        }
 
                         val episodesResponse = mediaRepository.getEpisodes(
                             seriesId = series.id,
@@ -444,9 +457,20 @@ class LibraryViewModel @Inject constructor(
         allSeries.forEachIndexed { seriesIndex, series ->
             val requests = run {
                 val seriesTmdbId = series.getTmdbId()
-                val seriesTvdbId = series.getTvdbId()
-                val seriesImdbId = series.getImdbId()
+                var seriesTvdbId = series.getTvdbId()
+                var seriesImdbId = series.getImdbId()
                 val seriesAniListId = series.getAniListId()
+
+                // Try TVMaze to fill any missing series-level IDs
+                if (seriesImdbId == null) {
+                    seriesTvdbId?.let { id ->
+                        tvMazeRepository.lookupByTvdbId(id)?.imdbId?.also { seriesImdbId = it }
+                    }
+                } else if (seriesTvdbId == null) {
+                    seriesImdbId?.let { id ->
+                        tvMazeRepository.lookupByImdbId(id)?.tvdbId?.also { seriesTvdbId = it }
+                    }
+                }
 
                 val episodesResponse = mediaRepository.getEpisodes(
                     seriesId = series.id,

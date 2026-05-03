@@ -39,6 +39,7 @@ import org.introskipper.segmenteditor.data.model.SkipMeSeasonSubmitRequest
 import org.introskipper.segmenteditor.data.model.Submission
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
+import org.introskipper.segmenteditor.data.repository.TvMazeRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.state.EpisodeWithSegments
 import org.introskipper.segmenteditor.ui.state.SeriesEvent
@@ -71,6 +72,7 @@ class SeriesViewModel @Inject constructor(
     private val skipMeApiService: SkipMeApiService,
     private val submissionDao: SubmissionDao,
     private val metadataSubmissionDao: MetadataSubmissionDao,
+    private val tvMazeRepository: TvMazeRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -260,10 +262,21 @@ class SeriesViewModel @Inject constructor(
             val currentState = _uiState.value as? SeriesUiState.Success ?: run { onComplete(); return@launch }
             
             try {
-                val seriesTvdbId = currentState.series.getTvdbId()
+                var seriesTvdbId = currentState.series.getTvdbId()
                 val seriesTmdbId = currentState.series.getTmdbId()
-                val seriesImdbId = currentState.series.getImdbId()
+                var seriesImdbId = currentState.series.getImdbId()
                 val seriesAniListId = currentState.series.getAniListId()
+
+                // Try TVMaze to fill any missing series-level IDs
+                if (seriesImdbId == null) {
+                    seriesTvdbId?.let { id ->
+                        tvMazeRepository.lookupByTvdbId(id)?.imdbId?.also { seriesImdbId = it }
+                    }
+                } else if (seriesTvdbId == null) {
+                    seriesImdbId?.let { id ->
+                        tvMazeRepository.lookupByImdbId(id)?.tvdbId?.also { seriesTvdbId = it }
+                    }
+                }
 
                 // Group deduplicated items by (season number, tvdb season id)
                 data class SeasonKey(val seasonNumber: Int?, val tvdbSeasonId: Int?)
@@ -401,8 +414,20 @@ class SeriesViewModel @Inject constructor(
             try {
                 val requests = mutableListOf<SkipMeBackfillRequest>()
                 val seriesTmdbId = currentState.series.getTmdbId()
-                val seriesTvdbId = currentState.series.getTvdbId()
+                var seriesTvdbId = currentState.series.getTvdbId()
                 val seriesAniListId = currentState.series.getAniListId()
+                var seriesImdbId = currentState.series.getImdbId()
+
+                // Try TVMaze to fill any missing series-level IDs
+                if (seriesImdbId == null) {
+                    seriesTvdbId?.let { id ->
+                        tvMazeRepository.lookupByTvdbId(id)?.imdbId?.also { seriesImdbId = it }
+                    }
+                } else if (seriesTvdbId == null) {
+                    seriesImdbId?.let { id ->
+                        tvMazeRepository.lookupByImdbId(id)?.tvdbId?.also { seriesTvdbId = it }
+                    }
+                }
 
                 episodes.forEach { episodeWithSegments ->
                     val episode = episodeWithSegments.episode
@@ -410,7 +435,7 @@ class SeriesViewModel @Inject constructor(
                     val tvdbSeasonId = currentState.seasonTvdbIds[episode.seasonId ?: ""]
                     val aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null
                     val imdbId = episode.getImdbId()
-                    val imdbSeriesId = currentState.series.getImdbId()
+                    val imdbSeriesId = seriesImdbId
 
                     // Check for duplicates
                     val existing = metadataSubmissionDao.getSubmission(
@@ -491,9 +516,20 @@ class SeriesViewModel @Inject constructor(
             try {
                 val requests = mutableListOf<SkipMeBackfillRequest>()
                 val seriesTmdbId = currentState.series.getTmdbId()
-                val seriesTvdbId = currentState.series.getTvdbId()
+                var seriesTvdbId = currentState.series.getTvdbId()
                 val seriesAniListId = currentState.series.getAniListId()
-                val imdbSeriesId = currentState.series.getImdbId()
+                var imdbSeriesId = currentState.series.getImdbId()
+
+                // Try TVMaze to fill any missing series-level IDs
+                if (imdbSeriesId == null) {
+                    seriesTvdbId?.let { id ->
+                        tvMazeRepository.lookupByTvdbId(id)?.imdbId?.also { imdbSeriesId = it }
+                    }
+                } else if (seriesTvdbId == null) {
+                    imdbSeriesId?.let { id ->
+                        tvMazeRepository.lookupByImdbId(id)?.tvdbId?.also { seriesTvdbId = it }
+                    }
+                }
 
                 currentState.episodesBySeason.values.flatten().forEach { episodeWithSegments ->
                     val episode = episodeWithSegments.episode

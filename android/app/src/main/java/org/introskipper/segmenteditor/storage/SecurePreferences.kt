@@ -206,12 +206,12 @@ class SecurePreferences(context: Context) {
 
     // ========== External Metadata Settings ==========
 
-    fun saveAnimeIdsLastModified(lastModified: String) {
-        sharedPreferences.edit { putString(KEY_ANIME_IDS_LAST_MODIFIED, lastModified) }
+    fun saveAnimeIdsETag(etag: String) {
+        sharedPreferences.edit { putString(KEY_ANIME_IDS_ETAG, etag) }
     }
 
-    fun getAnimeIdsLastModified(): String? {
-        return sharedPreferences.getString(KEY_ANIME_IDS_LAST_MODIFIED, null)
+    fun getAnimeIdsETag(): String? {
+        return sharedPreferences.getString(KEY_ANIME_IDS_ETAG, null)
     }
     
     // ========== Utility Methods ==========
@@ -263,6 +263,6 @@ class SecurePreferences(context: Context) {
         private const val KEY_DISABLE_SKIPME_SEGMENTS = "disable_skipme_segments"
 
         // External Metadata keys
-        private const val KEY_ANIME_IDS_LAST_MODIFIED = "anime_ids_last_modified"
+        private const val KEY_ANIME_IDS_ETAG = "anime_ids_etag"
     }
 }
