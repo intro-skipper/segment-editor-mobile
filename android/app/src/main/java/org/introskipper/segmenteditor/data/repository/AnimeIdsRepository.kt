@@ -16,9 +16,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Locale
-import java.util.TimeZone
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -30,7 +27,6 @@ class AnimeIdsRepository @Inject constructor(
 ) {
     private val gson = Gson()
     private val cacheFile = File(context.cacheDir, "anime_ids.json")
-    private val lastModifiedKey = "anime_ids_last_modified"
     
     private var cachedIds: List<Map<String, Any>>? = null
 
@@ -122,15 +118,3 @@ class AnimeIdsRepository @Inject constructor(
         private const val ANIME_IDS_URL = "https://raw.githubusercontent.com/Kometa-Team/Anime-IDs/master/anime_ids.json"
     }
 }
-
-// Add these to SecurePreferences.kt extensions or modify SecurePreferences.kt
-fun SecurePreferences.getAnimeIdsLastModified(): String? {
-    return SharedPreferencesAccess.getString(this, "anime_ids_last_modified", null)
-}
-
-fun SecurePreferences.saveAnimeIdsLastModified(lastModified: String) {
-    SharedPreferencesAccess.saveString(this, "anime_ids_last_modified", lastModified)
-}
-
-// Internal helper to access private sharedPreferences in SecurePreferences if we can't modify it directly
-// Or I should just modify SecurePreferences.kt directly.
