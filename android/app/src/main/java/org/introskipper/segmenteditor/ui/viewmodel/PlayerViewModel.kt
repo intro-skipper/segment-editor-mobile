@@ -45,6 +45,7 @@ import org.introskipper.segmenteditor.data.model.filterSkipMe
 import org.introskipper.segmenteditor.data.repository.AnimeIdsRepository
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
+import org.introskipper.segmenteditor.data.repository.TvMazeRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.preview.TrickplayPreviewLoader
@@ -67,6 +68,7 @@ class PlayerViewModel @Inject constructor(
     private val submissionDao: SubmissionDao,
     private val translationService: TranslationService,
     private val animeIdsRepository: AnimeIdsRepository,
+    private val tvMazeRepository: TvMazeRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -1147,6 +1149,21 @@ class PlayerViewModel @Inject constructor(
                         // imdb_id from anime mapping is the series-level ID
                         if (imdbSeriesId == null) imdbSeriesId = mapping["imdb_id"] as? String
                     }
+                }
+            }
+
+            // Try TVMaze to fill any remaining missing series-level IDs
+            if (tvdbSeriesId != null && imdbSeriesId == null) {
+                val show = tvMazeRepository.lookupByTvdbId(tvdbSeriesId!!)
+                if (show != null) {
+                    imdbSeriesId = show.imdbId
+                    Log.d(TAG, "TVMaze filled imdbSeriesId=$imdbSeriesId from tvdbSeriesId=$tvdbSeriesId")
+                }
+            } else if (imdbSeriesId != null && tvdbSeriesId == null) {
+                val show = tvMazeRepository.lookupByImdbId(imdbSeriesId!!)
+                if (show != null) {
+                    tvdbSeriesId = show.tvdbId
+                    Log.d(TAG, "TVMaze filled tvdbSeriesId=$tvdbSeriesId from imdbSeriesId=$imdbSeriesId")
                 }
             }
 

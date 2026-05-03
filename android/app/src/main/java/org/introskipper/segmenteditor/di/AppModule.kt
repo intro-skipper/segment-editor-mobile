@@ -25,6 +25,7 @@ import org.introskipper.segmenteditor.data.repository.AnimeIdsRepository
 import org.introskipper.segmenteditor.data.repository.AuthRepository
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
+import org.introskipper.segmenteditor.data.repository.TvMazeRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.utils.TranslationService
 import java.util.concurrent.TimeUnit
@@ -172,5 +173,14 @@ object AppModule {
         securePreferences: SecurePreferences
     ): AnimeIdsRepository {
         return AnimeIdsRepository(context, httpClient, securePreferences)
+    }
+
+    @Provides
+    @Singleton
+    fun provideTvMazeRepository(
+        @ApplicationContext context: Context,
+        httpClient: OkHttpClient
+    ): TvMazeRepository {
+        return TvMazeRepository(context, httpClient)
     }
 }
