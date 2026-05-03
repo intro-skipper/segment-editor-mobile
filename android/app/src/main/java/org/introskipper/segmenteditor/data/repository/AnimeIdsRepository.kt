@@ -87,9 +87,12 @@ class AnimeIdsRepository @Inject constructor(
     }
 
     /**
-     * Finds mapping IDs for a given provider ID.
+     * Finds mapping IDs for a given provider series ID.
+     * 
+     * Note: The source data from Kometa-Team uses series-level IDs for TVDB and IMDB.
+     *
      * @param providerName The name of the provider (e.g., "tvdb", "tmdb", "anilist")
-     * @param providerId The ID from the provider
+     * @param providerId The series ID from the provider
      * @return A map of all associated IDs, or null if not found
      */
     suspend fun findIds(providerName: String, providerId: Any): Map<String, Any>? {

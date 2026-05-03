@@ -1123,6 +1123,7 @@ class PlayerViewModel @Inject constructor(
             var tvdbSeasonId = state.seasonTvdbId
             var tvdbId = mediaItem?.getTvdbId()
             var aniListId = state.seriesAniListId
+            var tvdbSeriesId = state.seriesTvdbId
 
             // Try to augment missing IDs for anime using the cached mapping
             if (tmdbId != null || tvdbId != null || aniListId != null || imdbSeriesId != null || imdbId != null) {
@@ -1140,14 +1141,16 @@ class PlayerViewModel @Inject constructor(
                     if (mapping != null) {
                         Log.d(TAG, "Found ID mappings for anime: $mapping")
                         if (tmdbId == null) tmdbId = (mapping["themoviedb_id"] as? Number)?.toInt()
-                        if (tvdbId == null) tvdbId = (mapping["thetvdb_id"] as? Number)?.toInt()
+                        // thetvdb_id from anime mapping is the series-level ID
+                        if (tvdbSeriesId == null) tvdbSeriesId = (mapping["thetvdb_id"] as? Number)?.toInt()
                         if (aniListId == null) aniListId = (mapping["anilist_id"] as? Number)?.toInt()
+                        // imdb_id from anime mapping is the series-level ID
                         if (imdbSeriesId == null) imdbSeriesId = mapping["imdb_id"] as? String
                     }
                 }
             }
 
-            if (tmdbId == null && tvdbId == null && aniListId == null && imdbSeriesId == null) {
+            if (tmdbId == null && tvdbSeriesId == null && aniListId == null && imdbSeriesId == null) {
                 Log.w(TAG, "Skipping SkipMe.db share: no series-level TMDB, IMDB, TVDB, or AniList ID available")
                 _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_no_ids))
                 return@launch
@@ -1211,7 +1214,7 @@ class PlayerViewModel @Inject constructor(
                 tmdbId = tmdbId,
                 imdbSeriesId = imdbSeriesId,
                 imdbId = imdbId,
-                tvdbSeriesId = state.seriesTvdbId,
+                tvdbSeriesId = tvdbSeriesId,
                 tvdbSeasonId = tvdbSeasonId,
                 tvdbId = tvdbId,
                 aniListId = if (mediaItem.parentIndexNumber == 1) aniListId else null,
@@ -1233,7 +1236,7 @@ class PlayerViewModel @Inject constructor(
                     submissionDao.insert(Submission(
                         tmdbId = tmdbId,
                         imdbId = imdbId,
-                        tvdbSeriesId = state.seriesTvdbId,
+                        tvdbSeriesId = tvdbSeriesId,
                         imdbSeriesId = imdbSeriesId,
                         tvdbSeasonId = tvdbSeasonId,
                         tvdbId = tvdbId,
