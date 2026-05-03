@@ -11,7 +11,14 @@ import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import com.google.gson.reflect.TypeToken
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -36,7 +43,10 @@ class TvMazeRepository @Inject constructor(
     private val gson = Gson()
     private val cacheFile = File(context.cacheDir, "tvmaze_cache.json")
     private val cache = mutableMapOf<String, CacheEntry>()
+    private val cacheMutex = Mutex()
     private var cacheLoaded = false
+    private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var pendingWriteJob: Job? = null
 
     /**
      * Looks up a show by its TVDB series ID and returns the associated IMDB ID if available.
@@ -56,14 +66,13 @@ class TvMazeRepository @Inject constructor(
             lookupShow("imdb", imdbId, "https://api.tvmaze.com/lookup/shows?imdb=$imdbId")
         }
 
-    private fun lookupShow(provider: String, id: String, url: String): TvMazeShow? {
+    private suspend fun lookupShow(provider: String, id: String, url: String): TvMazeShow? {
         val cacheKey = "$provider:$id"
-        loadCacheIfNeeded()
+        cacheMutex.withLock { loadCacheIfNeeded() }
 
-        val cached = cache[cacheKey]
-        if (cached != null && !cached.isExpired()) {
-            return cached.show
-        }
+        cacheMutex.withLock { cache[cacheKey] }
+            ?.takeUnless { it.isExpired() }
+            ?.let { return it.show }
 
         return try {
             val request = Request.Builder().url(url).build()
@@ -108,17 +117,26 @@ class TvMazeRepository @Inject constructor(
         }
     }
 
-    private fun updateCache(key: String, show: TvMazeShow?) {
-        cache[key] = CacheEntry(show, System.currentTimeMillis())
-        try {
-            cacheFile.writeText(gson.toJson(cache))
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to save TVMaze cache", e)
+    private suspend fun updateCache(key: String, show: TvMazeShow?) {
+        cacheMutex.withLock {
+            cache[key] = CacheEntry(show, System.currentTimeMillis())
+        }
+        // Debounce disk writes: cancel the pending write and schedule a new one after a short delay
+        pendingWriteJob?.cancel()
+        pendingWriteJob = ioScope.launch {
+            delay(WRITE_DEBOUNCE_MS)
+            val snapshot = cacheMutex.withLock { cache.toMap() }
+            try {
+                cacheFile.writeText(gson.toJson(snapshot))
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to save TVMaze cache", e)
+            }
         }
     }
 
     companion object {
         private const val TAG = "TvMazeRepository"
         private const val CACHE_TTL_MS = 7L * 24 * 60 * 60 * 1000 // 7 days
+        private const val WRITE_DEBOUNCE_MS = 500L
     }
 }
