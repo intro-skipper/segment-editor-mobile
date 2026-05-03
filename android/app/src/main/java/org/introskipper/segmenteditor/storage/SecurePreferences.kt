@@ -203,6 +203,16 @@ class SecurePreferences(context: Context) {
     fun getDisableSkipMeSegments(): Boolean {
         return sharedPreferences.getBoolean(KEY_DISABLE_SKIPME_SEGMENTS, true)
     }
+
+    // ========== External Metadata Settings ==========
+
+    fun saveAnimeIdsLastModified(lastModified: String) {
+        sharedPreferences.edit { putString(KEY_ANIME_IDS_LAST_MODIFIED, lastModified) }
+    }
+
+    fun getAnimeIdsLastModified(): String? {
+        return sharedPreferences.getString(KEY_ANIME_IDS_LAST_MODIFIED, null)
+    }
     
     // ========== Utility Methods ==========
     
@@ -251,5 +261,8 @@ class SecurePreferences(context: Context) {
         private const val KEY_PREFER_DIRECT_PLAY = "prefer_direct_play"
         private const val KEY_PREFER_LOCAL_PREVIEWS = "prefer_local_previews"
         private const val KEY_DISABLE_SKIPME_SEGMENTS = "disable_skipme_segments"
+
+        // External Metadata keys
+        private const val KEY_ANIME_IDS_LAST_MODIFIED = "anime_ids_last_modified"
     }
 }

@@ -21,6 +21,7 @@ import org.introskipper.segmenteditor.api.SkipMeApiService
 import org.introskipper.segmenteditor.data.local.AppDatabase
 import org.introskipper.segmenteditor.data.local.MetadataSubmissionDao
 import org.introskipper.segmenteditor.data.local.SubmissionDao
+import org.introskipper.segmenteditor.data.repository.AnimeIdsRepository
 import org.introskipper.segmenteditor.data.repository.AuthRepository
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
@@ -161,5 +162,15 @@ object AppModule {
     @Provides
     fun provideMetadataSubmissionDao(database: AppDatabase): MetadataSubmissionDao {
         return database.metadataSubmissionDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideAnimeIdsRepository(
+        @ApplicationContext context: Context,
+        httpClient: OkHttpClient,
+        securePreferences: SecurePreferences
+    ): AnimeIdsRepository {
+        return AnimeIdsRepository(context, httpClient, securePreferences)
     }
 }

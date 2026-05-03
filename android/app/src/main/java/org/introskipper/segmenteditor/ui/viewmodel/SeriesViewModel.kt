@@ -141,7 +141,7 @@ class SeriesViewModel @Inject constructor(
                 
                 if (seasonsResult.isSuccessful) {
                     seasonsResult.body()?.items?.forEach { season ->
-                        seasonTvdbIds[season.id] = season.providerIds?.get("Tvdb")?.toIntOrNull()
+                        seasonTvdbIds[season.id] = season.getTvdbId()
                         season.indexNumber?.let { num -> seasonIdsByNumber[num] = season.id }
                     }
                 }
@@ -260,10 +260,10 @@ class SeriesViewModel @Inject constructor(
             val currentState = _uiState.value as? SeriesUiState.Success ?: run { onComplete(); return@launch }
             
             try {
-                val seriesTvdbId = currentState.series.providerIds?.get("Tvdb")?.toIntOrNull()
-                val seriesTmdbId = currentState.series.providerIds?.get("Tmdb")?.toIntOrNull()
-                val seriesImdbId = currentState.series.providerIds?.get("Imdb")?.takeIf { it.isNotBlank() }
-                val seriesAniListId = currentState.series.providerIds?.get("AniList")?.toIntOrNull()
+                val seriesTvdbId = currentState.series.getTvdbId()
+                val seriesTmdbId = currentState.series.getTmdbId()
+                val seriesImdbId = currentState.series.getImdbId()
+                val seriesAniListId = currentState.series.getAniListId()
 
                 // Group deduplicated items by (season number, tvdb season id)
                 data class SeasonKey(val seasonNumber: Int?, val tvdbSeasonId: Int?)
@@ -274,8 +274,8 @@ class SeriesViewModel @Inject constructor(
                     val episode = episodeWithSegments.episode
                     val segments = episodeWithSegments.segments ?: return@forEach
 
-                    val tvdbEpisodeId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
-                    val imdbEpisodeId = episode.providerIds?.get("Imdb")
+                    val tvdbEpisodeId = episode.getTvdbId()
+                    val imdbEpisodeId = episode.getImdbId()
                     val tvdbSeasonId = currentState.seasonTvdbIds[episode.seasonId ?: ""]
                     val durationMs = episode.runTimeTicks?.div(10_000)
 
@@ -400,17 +400,17 @@ class SeriesViewModel @Inject constructor(
             _uiState.update { currentState.copy(submittingSeasonNumber = seasonNumber) }
             try {
                 val requests = mutableListOf<SkipMeBackfillRequest>()
-                val seriesTmdbId = currentState.series.providerIds?.get("Tmdb")?.toIntOrNull()
-                val seriesTvdbId = currentState.series.providerIds?.get("Tvdb")?.toIntOrNull()
-                val seriesAniListId = currentState.series.providerIds?.get("AniList")?.toIntOrNull()
+                val seriesTmdbId = currentState.series.getTmdbId()
+                val seriesTvdbId = currentState.series.getTvdbId()
+                val seriesAniListId = currentState.series.getAniListId()
 
                 episodes.forEach { episodeWithSegments ->
                     val episode = episodeWithSegments.episode
-                    val tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+                    val tvdbId = episode.getTvdbId()
                     val tvdbSeasonId = currentState.seasonTvdbIds[episode.seasonId ?: ""]
                     val aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null
-                    val imdbId = episode.providerIds?.get("Imdb")
-                    val imdbSeriesId = currentState.series.providerIds?.get("Imdb")
+                    val imdbId = episode.getImdbId()
+                    val imdbSeriesId = currentState.series.getImdbId()
 
                     // Check for duplicates
                     val existing = metadataSubmissionDao.getSubmission(
@@ -490,19 +490,19 @@ class SeriesViewModel @Inject constructor(
             _uiState.update { currentState.copy(isSharing = true) }
             try {
                 val requests = mutableListOf<SkipMeBackfillRequest>()
-                val seriesTmdbId = currentState.series.providerIds?.get("Tmdb")?.toIntOrNull()
-                val seriesTvdbId = currentState.series.providerIds?.get("Tvdb")?.toIntOrNull()
-                val seriesAniListId = currentState.series.providerIds?.get("AniList")?.toIntOrNull()
-                val imdbSeriesId = currentState.series.providerIds?.get("Imdb")
+                val seriesTmdbId = currentState.series.getTmdbId()
+                val seriesTvdbId = currentState.series.getTvdbId()
+                val seriesAniListId = currentState.series.getAniListId()
+                val imdbSeriesId = currentState.series.getImdbId()
 
                 currentState.episodesBySeason.values.flatten().forEach { episodeWithSegments ->
                     val episode = episodeWithSegments.episode
                     if ((episode.parentIndexNumber ?: 0) == 0) return@forEach
                     
-                    val tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+                    val tvdbId = episode.getTvdbId()
                     val tvdbSeasonId = currentState.seasonTvdbIds[episode.seasonId ?: ""]
                     val aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null
-                    val imdbId = episode.providerIds?.get("Imdb")
+                    val imdbId = episode.getImdbId()
 
                     // Check for duplicates
                     val existing = metadataSubmissionDao.getSubmission(
@@ -587,7 +587,7 @@ class SeriesViewModel @Inject constructor(
                 } ?: throw Exception("Could not read file")
                 
                 val importData = json.decodeFromString<ImportJson>(content)
-                val seriesImdbId = currentState.series.providerIds?.get("Imdb")
+                val seriesImdbId = currentState.series.getImdbId()
                 
                 var successCount = 0
                 var failCount = 0

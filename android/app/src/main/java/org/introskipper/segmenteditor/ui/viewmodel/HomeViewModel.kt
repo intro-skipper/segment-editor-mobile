@@ -262,20 +262,20 @@ class HomeViewModel @Inject constructor(
                             val seasons = mediaRepository.getSeasons(item.id, userId, fields = listOf("ProviderIds"))
                             if (seasons.isSuccessful) {
                                 seasons.body()?.items?.forEach { 
-                                    seasonTvdbIds[it.id] = it.providerIds?.get("Tvdb")?.toIntOrNull()
+                                    seasonTvdbIds[it.id] = it.getTvdbId()
                                 }
                             }
 
-                            val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
-                            val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
-                            val seriesImdbId = series.providerIds?.get("Imdb")?.takeIf { it.isNotBlank() }
-                            val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
+                            val seriesTmdbId = series.getTmdbId()
+                            val seriesTvdbId = series.getTvdbId()
+                            val seriesImdbId = series.getImdbId()
+                            val seriesAniListId = series.getAniListId()
 
                             episodes.body()?.items?.filter { (it.parentIndexNumber ?: 0) != 0 }?.forEach { episode ->
-                                val tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+                                val tvdbId = episode.getTvdbId()
                                 val tvdbSeasonId = seasonTvdbIds[episode.seasonId ?: ""]
                                 val aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null
-                                val imdbId = episode.providerIds?.get("Imdb")
+                                val imdbId = episode.getImdbId()
 
                                 // Check for duplicates
                                 val existing = metadataSubmissionDao.getSubmission(
@@ -323,16 +323,16 @@ class HomeViewModel @Inject constructor(
                             fields = listOf("ProviderIds", "ParentIndexNumber", "IndexNumber", "SeriesId", "SeasonId")
                         )
                         if (episodes.isSuccessful) {
-                            val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
-                            val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
-                            val seriesImdbId = series.providerIds?.get("Imdb")?.takeIf { it.isNotBlank() }
-                            val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
-                            val seasonTvdbId = season.providerIds?.get("Tvdb")?.toIntOrNull()
+                            val seriesTmdbId = series.getTmdbId()
+                            val seriesTvdbId = series.getTvdbId()
+                            val seriesImdbId = series.getImdbId()
+                            val seriesAniListId = series.getAniListId()
+                            val seasonTvdbId = season.getTvdbId()
 
                             episodes.body()?.items?.forEach { episode ->
-                                val tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+                                val tvdbId = episode.getTvdbId()
                                 val aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null
-                                val imdbId = episode.providerIds?.get("Imdb")
+                                val imdbId = episode.getImdbId()
 
                                 // Check for duplicates
                                 val existing = metadataSubmissionDao.getSubmission(
@@ -371,8 +371,8 @@ class HomeViewModel @Inject constructor(
                     }
                     "Movie" -> {
                         val movie = jellyfinRepository.getMediaItem(item.id)
-                        val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull()
-                        val imdbId = movie.providerIds?.get("Imdb")
+                        val tmdbId = movie.getTmdbId()
+                        val imdbId = movie.getImdbId()
 
                         // Check for duplicates
                         val existing = metadataSubmissionDao.getSubmission(
@@ -464,12 +464,12 @@ class HomeViewModel @Inject constructor(
                             .filter { (it.parentIndexNumber ?: 0) != 0 }
 
                         val seasonsResponse = mediaRepository.getSeasons(item.id, userId, fields = listOf("ProviderIds"))
-                        val seasonTvdbIds = seasonsResponse.body()?.items?.associate { it.id to it.providerIds?.get("Tvdb")?.toIntOrNull() } ?: emptyMap()
+                        val seasonTvdbIds = seasonsResponse.body()?.items?.associate { it.id to it.getTvdbId() } ?: emptyMap()
 
-                        val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
-                        val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
-                        val seriesImdbId = series.providerIds?.get("Imdb")?.takeIf { it.isNotBlank() }
-                        val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
+                        val seriesTvdbId = series.getTvdbId()
+                        val seriesTmdbId = series.getTmdbId()
+                        val seriesImdbId = series.getImdbId()
+                        val seriesAniListId = series.getAniListId()
 
                         val (seasonRequests, duplicates) = buildSeasonRequestsWithDuplicates(
                             episodes = episodes,
@@ -541,11 +541,11 @@ class HomeViewModel @Inject constructor(
                         }
 
                         val episodes = episodesResponse.body()?.items ?: emptyList()
-                        val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
-                        val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
-                        val seriesImdbId = series.providerIds?.get("Imdb")?.takeIf { it.isNotBlank() }
-                        val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
-                        val seasonTvdbId = season.providerIds?.get("Tvdb")?.toIntOrNull()
+                        val seriesTvdbId = series.getTvdbId()
+                        val seriesTmdbId = series.getTmdbId()
+                        val seriesImdbId = series.getImdbId()
+                        val seriesAniListId = series.getAniListId()
+                        val seasonTvdbId = season.getTvdbId()
 
                         val (seasonRequests, duplicates) = buildSeasonRequestsWithDuplicates(
                             episodes = episodes,
@@ -605,8 +605,8 @@ class HomeViewModel @Inject constructor(
                         val segmentResult = segmentRepository.getSegmentsResult(item.id)
                         val segments = segmentResult.getOrNull() ?: emptyList()
 
-                        val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull()
-                        val imdbId = movie.providerIds?.get("Imdb")
+                        val tmdbId = movie.getTmdbId()
+                        val imdbId = movie.getImdbId()
                         val durationMs = movie.runTimeTicks?.div(10_000)
 
                         if ((tmdbId == null && imdbId == null) || durationMs == null || durationMs <= 0 || segments.isEmpty()) {
@@ -705,8 +705,8 @@ class HomeViewModel @Inject constructor(
         for (episode in episodes) {
             val segmentResult = segmentRepository.getSegmentsResult(episode.id)
             val segments = segmentResult.getOrNull() ?: continue
-            val tvdbEpisodeId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
-            val imdbEpisodeId = episode.providerIds?.get("Imdb")
+            val tvdbEpisodeId = episode.getTvdbId()
+            val imdbEpisodeId = episode.getImdbId()
             val durationMs = episode.runTimeTicks?.div(10_000) ?: continue
             if (durationMs <= 0) continue
 

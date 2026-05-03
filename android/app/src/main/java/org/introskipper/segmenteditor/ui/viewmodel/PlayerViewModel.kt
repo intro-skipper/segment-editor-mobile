@@ -42,6 +42,7 @@ import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
 import org.introskipper.segmenteditor.data.model.Submission
 import org.introskipper.segmenteditor.data.model.UpdateUserItemDataDto
 import org.introskipper.segmenteditor.data.model.filterSkipMe
+import org.introskipper.segmenteditor.data.repository.AnimeIdsRepository
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
@@ -65,6 +66,7 @@ class PlayerViewModel @Inject constructor(
     private val skipMeApiService: SkipMeApiService,
     private val submissionDao: SubmissionDao,
     private val translationService: TranslationService,
+    private val animeIdsRepository: AnimeIdsRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -166,8 +168,8 @@ class PlayerViewModel @Inject constructor(
                             MediaItemType.EPISODE -> loadExtraMetadataForSharing(mediaItem)
                             MediaItemType.MOVIE -> _uiState.update { state ->
                                 state.copy(
-                                    seriesTmdbId = mediaItem.providerIds?.get("Tmdb")?.toIntOrNull(),
-                                    seriesImdbId = mediaItem.providerIds?.get("Imdb")?.takeIf { it.isNotBlank() }
+                                    seriesTmdbId = mediaItem.getTmdbId(),
+                                    seriesImdbId = mediaItem.getImdbId()
                                 )
                             }
                             MediaItemType.SEASON, MediaItemType.SERIES, MediaItemType.UNKNOWN -> Log.w(TAG, "Unsupported media item type for sharing metadata: ${mediaItem.type}")
@@ -217,11 +219,11 @@ class PlayerViewModel @Inject constructor(
 
                 _uiState.update { state ->
                     state.copy(
-                        seriesTmdbId = series?.providerIds?.get("Tmdb")?.toIntOrNull(),
-                        seriesImdbId = series?.providerIds?.get("Imdb")?.takeIf { it.isNotBlank() },
-                        seriesTvdbId = series?.providerIds?.get("Tvdb")?.toIntOrNull(),
-                        seasonTvdbId = season?.providerIds?.get("Tvdb")?.toIntOrNull(),
-                        seriesAniListId = series?.providerIds?.get("AniList")?.toIntOrNull()
+                        seriesTmdbId = series?.getTmdbId(),
+                        seriesImdbId = series?.getImdbId(),
+                        seriesTvdbId = series?.getTvdbId(),
+                        seasonTvdbId = season?.getTvdbId(),
+                        seriesAniListId = series?.getAniListId()
                     )
                 }
             } catch (e: Exception) {
@@ -339,7 +341,7 @@ class PlayerViewModel @Inject constructor(
 
         val segments = state.segments
         val durationMs = state.duration
-        val nearEndThresholdMs = 5_000L   // within 5 s of episode end → credits "reach the end"
+        val nearEndThresholdMs = 5_000L   // within 5 s of episode end \u2192 credits "reach the end"
         val fallbackOffsetMs = 10_000L    // 10 s before end
 
         // Find the Outro segment closest to the end of the episode
@@ -351,18 +353,18 @@ class PlayerViewModel @Inject constructor(
         val outroStartMs = outro?.let { it.startTicks / 10_000L }
 
         val triggerMs: Long = when {
-            // Case 1 – credits run to the end: show card at start of credits
+            // Case 1 \u2013 credits run to the end: show card at start of credits
             outroEndMs != null && outroStartMs != null && (durationMs - outroEndMs) <= nearEndThresholdMs -> {
                 outroStartMs
             }
-            // Case 2 – preview segment exists after credits: show card at start of preview
+            // Case 2 \u2013 preview segment exists after credits: show card at start of preview
             outroEndMs != null -> {
                 val preview = segments
                     .filter { SegmentType.fromString(it.type) == SegmentType.PREVIEW }
                     .firstOrNull { it.startTicks / 10_000L >= outroEndMs }
                 preview?.let { it.startTicks / 10_000L } ?: (durationMs - fallbackOffsetMs).coerceAtLeast(0L)
             }
-            // Case 3 – fallback: 10 s before end
+            // Case 3 \u2013 fallback: 10 s before end
             else -> (durationMs - fallbackOffsetMs).coerceAtLeast(0L)
         }
 
@@ -860,6 +862,12 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    fun findUsages(symbol: String, contextSnippet: String, contextFile: String) {
+        _uiState.update {
+            it.copy(capturedStartTime = null, capturedEndTime = null)
+        }
+    }
+
     fun clearCapturedTimes() {
         _uiState.update {
             it.copy(capturedStartTime = null, capturedEndTime = null)
@@ -1109,12 +1117,35 @@ class PlayerViewModel @Inject constructor(
             }
 
             val state = _uiState.value
-            val tmdbId = state.seriesTmdbId
-            val imdbSeriesId = state.seriesImdbId
-            val imdbId = mediaItem?.providerIds?.get("Imdb")
-            val tvdbSeasonId = state.seasonTvdbId
-            val tvdbId = mediaItem?.providerIds?.get("Tvdb")?.toIntOrNull()
-            val aniListId = state.seriesAniListId
+            var tmdbId = state.seriesTmdbId
+            var imdbSeriesId = state.seriesImdbId
+            var imdbId = mediaItem?.getImdbId()
+            var tvdbSeasonId = state.seasonTvdbId
+            var tvdbId = mediaItem?.getTvdbId()
+            var aniListId = state.seriesAniListId
+
+            // Try to augment missing IDs for anime using the cached mapping
+            if (tmdbId != null || tvdbId != null || aniListId != null || imdbSeriesId != null || imdbId != null) {
+                val providerToQuery = when {
+                    tvdbId != null -> "tvdb" to tvdbId
+                    tmdbId != null -> "tmdb" to tmdbId
+                    aniListId != null -> "anilist" to aniListId
+                    imdbSeriesId != null -> "imdb" to imdbSeriesId
+                    imdbId != null -> "imdb" to imdbId
+                    else -> null
+                }
+
+                if (providerToQuery != null) {
+                    val mapping = animeIdsRepository.findIds(providerToQuery.first, providerToQuery.second)
+                    if (mapping != null) {
+                        Log.d(TAG, "Found ID mappings for anime: $mapping")
+                        if (tmdbId == null) tmdbId = (mapping["themoviedb_id"] as? Number)?.toInt()
+                        if (tvdbId == null) tvdbId = (mapping["thetvdb_id"] as? Number)?.toInt()
+                        if (aniListId == null) aniListId = (mapping["anilist_id"] as? Number)?.toInt()
+                        if (imdbSeriesId == null) imdbSeriesId = mapping["imdb_id"] as? String
+                    }
+                }
+            }
 
             if (tmdbId == null && tvdbId == null && aniListId == null && imdbSeriesId == null) {
                 Log.w(TAG, "Skipping SkipMe.db share: no series-level TMDB, IMDB, TVDB, or AniList ID available")

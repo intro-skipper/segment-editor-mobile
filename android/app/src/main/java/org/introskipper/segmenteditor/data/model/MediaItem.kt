@@ -120,6 +120,29 @@ data class MediaItem(
     val itemType: MediaItemType get() = MediaItemType.fromTypeName(type)
 
     /**
+     * Gets the TMDB ID for the item.
+     * Jellyfin uses "Tmdb" in the API, but some plugins or UI references might use "TheMovieDb" 
+     * or "TheMovieDb Movie Id".
+     */
+    fun getTmdbId(): Int? = 
+        (providerIds?.get("Tmdb") ?: providerIds?.get("TheMovieDb") ?: providerIds?.get("TheMovieDb Movie Id"))?.toIntOrNull()
+
+    /**
+     * Gets the IMDb ID for the item.
+     */
+    fun getImdbId(): String? = providerIds?.get("Imdb")?.takeIf { it.isNotBlank() }
+
+    /**
+     * Gets the TVDB ID for the item.
+     */
+    fun getTvdbId(): Int? = providerIds?.get("Tvdb")?.toIntOrNull()
+
+    /**
+     * Gets the AniList ID for the item.
+     */
+    fun getAniListId(): Int? = providerIds?.get("AniList")?.toIntOrNull()
+
+    /**
      * Gets the runtime in seconds
      */
     fun getRuntimeSeconds(): Double? = runTimeTicks?.let { it / 10_000_000.0 }

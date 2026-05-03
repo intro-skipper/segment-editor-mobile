@@ -250,10 +250,10 @@ class LibraryViewModel @Inject constructor(
             allSeries.map { series ->
                 async {
                     semaphore.withPermit {
-                        val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
-                        val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
-                        val seriesImdbId = series.providerIds?.get("Imdb")?.takeIf { it.isNotBlank() }
-                        val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
+                        val seriesTvdbId = series.getTvdbId()
+                        val seriesTmdbId = series.getTmdbId()
+                        val seriesImdbId = series.getImdbId()
+                        val seriesAniListId = series.getAniListId()
 
                         val episodesResponse = mediaRepository.getEpisodes(
                             seriesId = series.id,
@@ -264,7 +264,7 @@ class LibraryViewModel @Inject constructor(
 
                         val seasonsResponse = mediaRepository.getSeasons(series.id, userId, fields = listOf("ProviderIds"))
                         val seasonTvdbIds = seasonsResponse.body()?.items
-                            ?.associate { it.id to it.providerIds?.get("Tvdb")?.toIntOrNull() } ?: emptyMap()
+                            ?.associate { it.id to it.getTvdbId() } ?: emptyMap()
 
                         val episodes = (episodesResponse.body()?.items ?: emptyList())
                             .filter { (it.parentIndexNumber ?: 0) != 0 }
@@ -349,8 +349,8 @@ class LibraryViewModel @Inject constructor(
             allMovies.map { movie ->
                 async {
                     semaphore.withPermit {
-                        val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull()
-                        val imdbId = movie.providerIds?.get("Imdb")
+                        val tmdbId = movie.getTmdbId()
+                        val imdbId = movie.getImdbId()
                         if (tmdbId == null && imdbId == null) return@withPermit emptyList()
                         val durationMs = movie.runTimeTicks?.div(10_000) ?: return@withPermit emptyList()
                         if (durationMs <= 0) return@withPermit emptyList()
@@ -443,10 +443,10 @@ class LibraryViewModel @Inject constructor(
 
         allSeries.forEachIndexed { seriesIndex, series ->
             val requests = run {
-                val seriesTmdbId = series.providerIds?.get("Tmdb")?.toIntOrNull()
-                val seriesTvdbId = series.providerIds?.get("Tvdb")?.toIntOrNull()
-                val seriesImdbId = series.providerIds?.get("Imdb")?.takeIf { it.isNotBlank() }
-                val seriesAniListId = series.providerIds?.get("AniList")?.toIntOrNull()
+                val seriesTmdbId = series.getTmdbId()
+                val seriesTvdbId = series.getTvdbId()
+                val seriesImdbId = series.getImdbId()
+                val seriesAniListId = series.getAniListId()
 
                 val episodesResponse = mediaRepository.getEpisodes(
                     seriesId = series.id,
@@ -457,15 +457,15 @@ class LibraryViewModel @Inject constructor(
 
                 val seasonsResponse = mediaRepository.getSeasons(series.id, userId, fields = listOf("ProviderIds"))
                 val seasonTvdbIds = seasonsResponse.body()?.items
-                    ?.associate { it.id to it.providerIds?.get("Tvdb")?.toIntOrNull() } ?: emptyMap()
+                    ?.associate { it.id to it.getTvdbId() } ?: emptyMap()
 
                 (episodesResponse.body()?.items ?: emptyList())
                     .filter { (it.parentIndexNumber ?: 0) != 0 }
                     .mapNotNull { episode ->
-                        val tvdbId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
+                        val tvdbId = episode.getTvdbId()
                         val tvdbSeasonId = seasonTvdbIds[episode.seasonId ?: ""]
                         val aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null
-                        val imdbId = episode.providerIds?.get("Imdb")
+                        val imdbId = episode.getImdbId()
 
                         // Check for duplicates
                         val existing = metadataSubmissionDao.getSubmission(
@@ -546,8 +546,8 @@ class LibraryViewModel @Inject constructor(
 
         val allMovies = moviesResponse.body()?.items ?: emptyList()
         val requests = allMovies.mapNotNull { movie ->
-            val tmdbId = movie.providerIds?.get("Tmdb")?.toIntOrNull()
-            val imdbId = movie.providerIds?.get("Imdb")
+            val tmdbId = movie.getTmdbId()
+            val imdbId = movie.getImdbId()
             if (tmdbId == null && imdbId == null) return@mapNotNull null
 
             // Check for duplicates
@@ -581,8 +581,8 @@ class LibraryViewModel @Inject constructor(
                     // Find the original movie ID for the local store
                     // This is slightly inefficient but the number of chunks should be small
                     val originalMovie = allMovies.find { 
-                        it.providerIds?.get("Tmdb")?.toIntOrNull() == request.tmdbId && 
-                        it.providerIds?.get("Imdb") == request.imdbId 
+                        it.getTmdbId() == request.tmdbId && 
+                        it.getImdbId() == request.imdbId 
                     }
                     
                     if (originalMovie != null) {
@@ -684,8 +684,8 @@ class LibraryViewModel @Inject constructor(
             async {
                 semaphore.withPermit {
                     val segments = segmentRepository.getSegmentsResult(episode.id).getOrNull() ?: return@withPermit null
-                    val tvdbEpisodeId = episode.providerIds?.get("Tvdb")?.toIntOrNull()
-                    val imdbEpisodeId = episode.providerIds?.get("Imdb")
+                    val tvdbEpisodeId = episode.getTvdbId()
+                    val imdbEpisodeId = episode.getImdbId()
                     val durationMs = episode.runTimeTicks?.div(10_000) ?: return@withPermit null
                     if (durationMs <= 0) return@withPermit null
 
