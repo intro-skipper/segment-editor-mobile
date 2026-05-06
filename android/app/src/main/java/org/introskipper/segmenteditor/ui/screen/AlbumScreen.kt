@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
@@ -39,6 +40,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import my.nanihadesuka.compose.LazyColumnScrollbar
+import my.nanihadesuka.compose.ScrollbarSettings
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.component.MediaHeader
@@ -125,68 +128,79 @@ fun AlbumScreen(
                     }
                 }
                 is AlbumUiState.Success -> {
-                    LazyColumn(
+                    val listState = rememberLazyListState()
+                    LazyColumnScrollbar(
+                        state = listState,
+                        settings = ScrollbarSettings.Default.copy(
+                            thumbUnselectedColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                            thumbSelectedColor = MaterialTheme.colorScheme.primary
+                        ),
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        // Album header
-                        item {
-                            val album = state.album
-                            val imageUrl = album.getPrimaryImageTag()?.let { tag ->
-                                "$serverUrl/Items/${album.id}/Images/Primary?maxWidth=300&tag=$tag&quality=90"
-                            }
-                            val backdropUrl = album.backdropImageTags?.firstOrNull()?.let { tag ->
-                                "$serverUrl/Items/${album.id}/Images/Backdrop/0?maxWidth=800"
-                            }
-
-                            MediaHeader(
-                                title = album.name ?: translatedString(R.string.player_unknown),
-                                subtitle = buildString {
-                                    album.albumArtist?.let { append(it) }
-                                    album.productionYear?.let {
-                                        if (isNotEmpty()) append(" • ")
-                                        append(it.toString())
-                                    }
-                                    val trackCount = state.tracks.size
-                                    if (trackCount > 0) {
-                                        if (isNotEmpty()) append(" • ")
-                                        append("$trackCount tracks")
-                                    }
-                                },
-                                imageUrl = imageUrl,
-                                backdropUrl = backdropUrl
-                            )
-                        }
-
-                        // Tracks
-                        if (state.tracks.isEmpty()) {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            // Album header
                             item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(32.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = translatedString(R.string.album_no_tracks),
-                                        style = MaterialTheme.typography.bodyLarge
+                                val album = state.album
+                                val imageUrl = album.getPrimaryImageTag()?.let { tag ->
+                                    "$serverUrl/Items/${album.id}/Images/Primary?maxWidth=300&tag=$tag&quality=90"
+                                }
+                                val backdropUrl = album.backdropImageTags?.firstOrNull()?.let { tag ->
+                                    "$serverUrl/Items/${album.id}/Images/Backdrop/0?maxWidth=800"
+                                }
+
+                                MediaHeader(
+                                    title = album.name ?: translatedString(R.string.player_unknown),
+                                    subtitle = buildString {
+                                        album.albumArtist?.let { append(it) }
+                                        album.productionYear?.let {
+                                            if (isNotEmpty()) append(" • ")
+                                            append(it.toString())
+                                        }
+                                        val trackCount = state.tracks.size
+                                        if (trackCount > 0) {
+                                            if (isNotEmpty()) append(" • ")
+                                            append("$trackCount tracks")
+                                        }
+                                    },
+                                    imageUrl = imageUrl,
+                                    backdropUrl = backdropUrl
+                                )
+                            }
+
+                            // Tracks
+                            if (state.tracks.isEmpty()) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(32.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = translatedString(R.string.album_no_tracks),
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                    }
+                                }
+                            } else {
+                                items(state.tracks) { track ->
+                                    TrackCard(
+                                        track = track,
+                                        onClick = {
+                                            navController.navigate("player/${track.track.id}")
+                                        },
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                                     )
                                 }
                             }
-                        } else {
-                            items(state.tracks) { track ->
-                                TrackCard(
-                                    track = track,
-                                    onClick = {
-                                        navController.navigate("player/${track.track.id}")
-                                    },
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
 
-                        // Bottom padding
-                        item {
-                            Spacer(modifier = Modifier.height(16.dp))
+                            // Bottom padding
+                            item {
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
                         }
                     }
                 }

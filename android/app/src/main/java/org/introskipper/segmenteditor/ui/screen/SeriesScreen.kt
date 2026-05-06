@@ -10,6 +10,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +24,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
@@ -56,10 +59,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import my.nanihadesuka.compose.LazyColumnScrollbar
+import my.nanihadesuka.compose.ScrollbarSettings
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.component.EpisodeCard
@@ -295,6 +301,11 @@ fun SeriesScreen(
                 }
             }
 
+            val scrollbarSettings = ScrollbarSettings.Default.copy(
+                thumbUnselectedColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                thumbSelectedColor = MaterialTheme.colorScheme.primary
+            )
+
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
                 onRefresh = {
@@ -494,131 +505,169 @@ fun SeriesScreen(
                                 }
                                 
                                 // Episodes for selected season
-                                LazyColumn(
-                                    modifier = Modifier
-                                        .weight(1f)
+                                val listState = rememberLazyListState()
+                                LazyColumnScrollbar(
+                                    state = listState,
+                                    settings = scrollbarSettings,
+                                    indicatorContent = { index, isThumbSelected ->
+                                        if (isThumbSelected) {
+                                            val episode = selectedEpisodes.getOrNull(index)
+                                            val text = episode?.episode?.indexNumber?.toString() ?: ""
+                                            if (text.isNotEmpty()) {
+                                                ScrollbarIndicator(text)
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f)
                                 ) {
-                                    items(selectedEpisodes) { episode ->
-                                        EpisodeCard(
-                                            episode = episode,
-                                            serverUrl = serverUrl,
-                                            onClick = {
-                                                navController.navigate(Screen.Player.createRoute(episode.episode.id, trackProgress = trackProgress))
-                                            },
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                        )
-                                    }
-                                    
-                                    // Bottom padding
-                                    item {
-                                        Spacer(modifier = Modifier.height(16.dp))
+                                    LazyColumn(
+                                        state = listState,
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
+                                        items(selectedEpisodes) { episode ->
+                                            EpisodeCard(
+                                                episode = episode,
+                                                serverUrl = serverUrl,
+                                                onClick = {
+                                                    navController.navigate(Screen.Player.createRoute(episode.episode.id, trackProgress = trackProgress))
+                                                },
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                            )
+                                        }
+                                        
+                                        // Bottom padding
+                                        item {
+                                            Spacer(modifier = Modifier.height(16.dp))
+                                        }
                                     }
                                 }
                             } else {
                                 // Single season - no tabs needed
-                                LazyColumn(
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    // Single season header
-                                    item {
-                                        var showSeasonShareDialog by remember { mutableStateOf(false) }
-                                        val seasonNumber = selectedSeasonNumber ?: 1
-
-                                        Surface(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(vertical = 8.dp)
-                                                .combinedClickable(
-                                                    onClick = { },
-                                                    onLongClick = { showSeasonShareDialog = true }
-                                                ),
-                                            color = MaterialTheme.colorScheme.secondaryContainer
-                                        ) {
-                                            Box {
-                                                Row(
-                                                    modifier = Modifier.padding(12.dp),
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Text(
-                                                        text = state.seasonNames[selectedSeasonNumber] ?: translatedString(R.string.series_season_format, seasonNumber),
-                                                        style = MaterialTheme.typography.titleMedium,
-                                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                        modifier = Modifier.weight(1f)
-                                                    )
-                                                    if (state.submittingSeasonNumber == seasonNumber) {
-                                                        WavyCircularProgressIndicator(
-                                                            size = 16.dp,
-                                                            strokeWidth = 2.dp,
-                                                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                                                        )
-                                                    }
-                                                }
-
-                                                if (showSeasonShareDialog) {
-                                                    AlertDialog(
-                                                        onDismissRequest = { showSeasonShareDialog = false },
-                                                        icon = {
-                                                            Icon(
-                                                                imageVector = Icons.Default.Share,
-                                                                contentDescription = null,
-                                                                tint = MaterialTheme.colorScheme.primary
-                                                            )
-                                                        },
-                                                        title = { 
-                                                            val seriesName = state.series.name ?: ""
-                                                            val seasonName = state.seasonNames[seasonNumber] ?: translatedString(R.string.series_season_format, seasonNumber)
-                                                            Text(
-                                                                text = if (seriesName.isNotEmpty()) "$seriesName - $seasonName" else seasonName,
-                                                                style = MaterialTheme.typography.headlineSmall
-                                                            )
-                                                        },
-                                                        text = {
-                                                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                                Button(
-                                                                    onClick = {
-                                                                        viewModel.shareSeasonSegments(seasonNumber)
-                                                                        showSeasonShareDialog = false
-                                                                    },
-                                                                    modifier = Modifier.fillMaxWidth()
-                                                                ) {
-                                                                    Text(translatedString(R.string.share_segments))
-                                                                }
-                                                                Button(
-                                                                    onClick = {
-                                                                        viewModel.submitSeasonMetadata(seasonNumber)
-                                                                        showSeasonShareDialog = false
-                                                                    },
-                                                                    modifier = Modifier.fillMaxWidth()
-                                                                ) {
-                                                                    Text(translatedString(R.string.share_metadata))
-                                                                }
-                                                            }
-                                                        },
-                                                        confirmButton = {
-                                                            TextButton(onClick = { showSeasonShareDialog = false }) {
-                                                                Text(translatedString(R.string.cancel))
-                                                            }
-                                                        }
-                                                    )
+                                val listState = rememberLazyListState()
+                                LazyColumnScrollbar(
+                                    state = listState,
+                                    settings = scrollbarSettings,
+                                    indicatorContent = { index, isThumbSelected ->
+                                        if (isThumbSelected) {
+                                            // Handle offset for header item
+                                            val episodeIndex = index - 1
+                                            if (episodeIndex >= 0) {
+                                                val episode = selectedEpisodes.getOrNull(episodeIndex)
+                                                val text = episode?.episode?.indexNumber?.toString() ?: ""
+                                                if (text.isNotEmpty()) {
+                                                    ScrollbarIndicator(text)
                                                 }
                                             }
                                         }
-                                    }
-                                    
-                                    items(selectedEpisodes) { episode ->
-                                        EpisodeCard(
-                                            episode = episode,
-                                            serverUrl = serverUrl,
-                                            onClick = {
-                                                navController.navigate(Screen.Player.createRoute(episode.episode.id, trackProgress = trackProgress))
-                                            },
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                        )
-                                    }
-                                    
-                                    // Bottom padding
-                                    item {
-                                        Spacer(modifier = Modifier.height(16.dp))
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    LazyColumn(
+                                        state = listState,
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
+                                        // Single season header
+                                        item {
+                                            var showSeasonShareDialog by remember { mutableStateOf(false) }
+                                            val seasonNumber = selectedSeasonNumber ?: 1
+
+                                            Surface(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(vertical = 8.dp)
+                                                    .combinedClickable(
+                                                        onClick = { },
+                                                        onLongClick = { showSeasonShareDialog = true }
+                                                    ),
+                                                color = MaterialTheme.colorScheme.secondaryContainer
+                                            ) {
+                                                Box {
+                                                    Row(
+                                                        modifier = Modifier.padding(12.dp),
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Text(
+                                                            text = state.seasonNames[selectedSeasonNumber] ?: translatedString(R.string.series_season_format, seasonNumber),
+                                                            style = MaterialTheme.typography.titleMedium,
+                                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                            modifier = Modifier.weight(1f)
+                                                        )
+                                                        if (state.submittingSeasonNumber == seasonNumber) {
+                                                            Spacer(modifier = Modifier.size(8.dp))
+                                                            WavyCircularProgressIndicator(
+                                                                size = 16.dp,
+                                                                strokeWidth = 2.dp,
+                                                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                                                            )
+                                                        }
+                                                    }
+
+                                                    if (showSeasonShareDialog) {
+                                                        AlertDialog(
+                                                            onDismissRequest = { showSeasonShareDialog = false },
+                                                            icon = {
+                                                                Icon(
+                                                                    imageVector = Icons.Default.Share,
+                                                                    contentDescription = null,
+                                                                    tint = MaterialTheme.colorScheme.primary
+                                                                )
+                                                            },
+                                                            title = { 
+                                                                val seriesName = state.series.name ?: ""
+                                                                val seasonName = state.seasonNames[seasonNumber] ?: translatedString(R.string.series_season_format, seasonNumber)
+                                                                Text(
+                                                                    text = if (seriesName.isNotEmpty()) "$seriesName - $seasonName" else seasonName,
+                                                                    style = MaterialTheme.typography.headlineSmall
+                                                                )
+                                                            },
+                                                            text = {
+                                                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                                    Button(
+                                                                        onClick = {
+                                                                            viewModel.shareSeasonSegments(seasonNumber)
+                                                                            showSeasonShareDialog = false
+                                                                        },
+                                                                        modifier = Modifier.fillMaxWidth()
+                                                                    ) {
+                                                                        Text(translatedString(R.string.share_segments))
+                                                                    }
+                                                                    Button(
+                                                                        onClick = {
+                                                                            viewModel.submitSeasonMetadata(seasonNumber)
+                                                                            showSeasonShareDialog = false
+                                                                        },
+                                                                        modifier = Modifier.fillMaxWidth()
+                                                                    ) {
+                                                                        Text(translatedString(R.string.share_metadata))
+                                                                    }
+                                                                }
+                                                            },
+                                                            confirmButton = {
+                                                                TextButton(onClick = { showSeasonShareDialog = false }) {
+                                                                    Text(translatedString(R.string.cancel))
+                                                                }
+                                                            }
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        
+                                        items(selectedEpisodes) { episode ->
+                                            EpisodeCard(
+                                                episode = episode,
+                                                serverUrl = serverUrl,
+                                                onClick = {
+                                                    navController.navigate(Screen.Player.createRoute(episode.episode.id, trackProgress = trackProgress))
+                                                },
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                            )
+                                        }
+                                        
+                                        // Bottom padding
+                                        item {
+                                            Spacer(modifier = Modifier.height(16.dp))
+                                        }
                                     }
                                 }
                             }
@@ -628,6 +677,19 @@ fun SeriesScreen(
             }
         }
     }
+}
+
+@Composable
+private fun ScrollbarIndicator(text: String) {
+    Text(
+        text = text,
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.primaryContainer)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        color = MaterialTheme.colorScheme.onPrimaryContainer,
+        style = MaterialTheme.typography.headlineSmall
+    )
 }
 
 private fun navigateBackFromSeries(navController: NavController) {
