@@ -26,6 +26,7 @@ import org.introskipper.segmenteditor.data.repository.AuthRepository
 import org.introskipper.segmenteditor.data.repository.JellyfinRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.state.AppTheme
+import org.introskipper.segmenteditor.ui.state.BrowseLayout
 import org.introskipper.segmenteditor.ui.state.ExportFormat
 import org.introskipper.segmenteditor.ui.util.UiText
 import org.introskipper.segmenteditor.utils.TranslationService
@@ -42,6 +43,7 @@ data class SettingsUiState(
     val exportFormat: ExportFormat = ExportFormat.JSON,
     val prettyPrintJson: Boolean = true,
     val itemsPerPage: Int = 20,
+    val browseLayout: BrowseLayout = BrowseLayout.CARD,
     val hiddenLibraryIds: Set<String> = emptySet(),
     val availableLibraries: List<LibraryInfo> = emptyList(),
     val isLoadingLibraries: Boolean = false,
@@ -127,6 +129,7 @@ class SettingsViewModel @Inject constructor(
                 exportFormat = securePreferences.getExportFormat(),
                 prettyPrintJson = securePreferences.getPrettyPrintJson(),
                 itemsPerPage = securePreferences.getItemsPerPage(),
+                browseLayout = securePreferences.getBrowseLayout(),
                 hiddenLibraryIds = securePreferences.getHiddenLibraryIds(),
                 currentLocaleName = translationService.getCurrentLocaleName(),
                 serverUrl = securePreferences.getServerUrl() ?: "",
@@ -353,6 +356,11 @@ class SettingsViewModel @Inject constructor(
     fun setItemsPerPage(count: Int) {
         securePreferences.setItemsPerPage(count)
         _uiState.value = _uiState.value.copy(itemsPerPage = count)
+    }
+
+    fun setBrowseLayout(layout: BrowseLayout) {
+        securePreferences.setBrowseLayout(layout)
+        _uiState.value = _uiState.value.copy(browseLayout = layout)
     }
 
     fun toggleLibraryVisibility(libraryId: String) {

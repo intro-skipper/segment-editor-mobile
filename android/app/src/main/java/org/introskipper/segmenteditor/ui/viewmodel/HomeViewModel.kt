@@ -42,6 +42,7 @@ import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
 import org.introskipper.segmenteditor.data.repository.TvMazeRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
+import org.introskipper.segmenteditor.ui.state.BrowseLayout
 import org.introskipper.segmenteditor.ui.util.UiText
 import org.introskipper.segmenteditor.utils.TranslationService
 import javax.inject.Inject
@@ -68,6 +69,9 @@ class HomeViewModel @Inject constructor(
 
     private val _showAllItems = MutableStateFlow(false)
     val showAllItems: StateFlow<Boolean> = _showAllItems
+
+    private val _browseLayout = MutableStateFlow(BrowseLayout.CARD)
+    val browseLayout: StateFlow<BrowseLayout> = _browseLayout
 
     private val _events = MutableSharedFlow<HomeEvent>()
     val events: SharedFlow<HomeEvent> = _events.asSharedFlow()
@@ -105,6 +109,7 @@ class HomeViewModel @Inject constructor(
                 loadMediaItems()
             }
         }
+        _browseLayout.value = securePreferences.getBrowseLayout()
     }
     
     fun setLibraryId(libraryId: String, collectionType: String? = null) {
@@ -174,6 +179,7 @@ class HomeViewModel @Inject constructor(
             _showAllItems.value = false
             loadMediaItems()
         }
+        _browseLayout.value = securePreferences.getBrowseLayout()
     }
 
     private fun loadMediaItems() {

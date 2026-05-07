@@ -38,6 +38,7 @@ data class AppPreferences(
     val showContinueWatching: Boolean = true,
     val showNextUp: Boolean = true,
     val itemsPerPage: Int = 20,
+    val browseLayout: BrowseLayout = BrowseLayout.CARD,
     
     // Video player settings
     val preferredVideoQuality: VideoQuality = VideoQuality.AUTO,
@@ -92,4 +93,12 @@ enum class VideoQuality {
     MEDIUM,
     HIGH,
     ORIGINAL
+}
+
+/**
+ * Browse layout options
+ */
+enum class BrowseLayout {
+    CARD,
+    LIST
 }

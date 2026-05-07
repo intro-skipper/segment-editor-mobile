@@ -70,6 +70,7 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val showAllItems by viewModel.showAllItems.collectAsState()
+    val browseLayout by viewModel.browseLayout.collectAsState()
     val libraryName by viewModel.libraryName.collectAsState()
     val context = LocalContext.current
     
@@ -208,6 +209,7 @@ fun HomeScreen(
                                 showShareDialog = true
                             },
                             submittingItemId = state.submittingItemId,
+                            layout = browseLayout,
                             modifier = Modifier.weight(1f)
                         )
 

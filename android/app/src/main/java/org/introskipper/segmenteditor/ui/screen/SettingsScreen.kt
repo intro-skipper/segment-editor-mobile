@@ -77,6 +77,7 @@ import org.introskipper.segmenteditor.ui.component.settings.SettingItem
 import org.introskipper.segmenteditor.ui.component.settings.SettingsSection
 import org.introskipper.segmenteditor.ui.component.settings.SwitchSettingItem
 import org.introskipper.segmenteditor.ui.state.AppTheme
+import org.introskipper.segmenteditor.ui.state.BrowseLayout
 import org.introskipper.segmenteditor.ui.state.ExportFormat
 import org.introskipper.segmenteditor.ui.viewmodel.SettingsViewModel
 import org.introskipper.segmenteditor.ui.viewmodel.UserInfo
@@ -271,6 +272,17 @@ fun SettingsScreen(
                         ),
                         selectedOption = uiState.itemsPerPage,
                         onOptionSelected = viewModel::setItemsPerPage
+                    )
+
+                    DropdownSettingsItem(
+                        title = translatedString(R.string.settings_browse_layout),
+                        subtitle = translatedString(R.string.settings_browse_layout_subtitle),
+                        options = listOf(
+                            BrowseLayout.CARD to translatedString(R.string.settings_browse_layout_card),
+                            BrowseLayout.LIST to translatedString(R.string.settings_browse_layout_list)
+                        ),
+                        selectedOption = uiState.browseLayout,
+                        onOptionSelected = viewModel::setBrowseLayout
                     )
                 }
             }

@@ -82,6 +82,10 @@
     <string name="settings_section_browsing">Browsing</string>
     <string name="settings_items_per_page">Items Per Page</string>
     <string name="settings_items_per_page_subtitle">Number of items to show per page</string>
+    <string name="settings_browse_layout">Browse Layout</string>
+    <string name="settings_browse_layout_subtitle">Layout for movies and shows</string>
+    <string name="settings_browse_layout_card">Card</string>
+    <string name="settings_browse_layout_list">List</string>
     <string name="settings_show_all">Show All</string>
     <string name="settings_hidden_libraries">Server Libraries</string>
     <string name="settings_hidden_libraries_subtitle">Disabled libraries will be hidden from the home screen</string>

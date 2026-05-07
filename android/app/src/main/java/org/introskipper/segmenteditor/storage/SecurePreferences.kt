@@ -12,6 +12,7 @@ import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import org.introskipper.segmenteditor.ui.state.AppTheme
+import org.introskipper.segmenteditor.ui.state.BrowseLayout
 import org.introskipper.segmenteditor.ui.state.ExportFormat
 
 class SecurePreferences(context: Context) {
@@ -157,6 +158,19 @@ class SecurePreferences(context: Context) {
     fun getItemsPerPage(): Int {
         return sharedPreferences.getInt(KEY_ITEMS_PER_PAGE, 20)
     }
+
+    fun setBrowseLayout(layout: BrowseLayout) {
+        sharedPreferences.edit { putString(KEY_BROWSE_LAYOUT, layout.name) }
+    }
+
+    fun getBrowseLayout(): BrowseLayout {
+        val layoutName = sharedPreferences.getString(KEY_BROWSE_LAYOUT, BrowseLayout.CARD.name)
+        return try {
+            BrowseLayout.valueOf(layoutName ?: BrowseLayout.CARD.name)
+        } catch (e: IllegalArgumentException) {
+            BrowseLayout.CARD
+        }
+    }
     
     fun setHiddenLibraryIds(libraryIds: Set<String>) {
         val userId = getUserId()
@@ -255,6 +269,7 @@ class SecurePreferences(context: Context) {
         
         // Media library keys
         private const val KEY_ITEMS_PER_PAGE = "items_per_page"
+        private const val KEY_BROWSE_LAYOUT = "browse_layout"
         private const val KEY_HIDDEN_LIBRARY_IDS = "hidden_library_ids"
         
         // Video player keys
