@@ -30,6 +30,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
@@ -54,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
@@ -307,7 +310,10 @@ fun SegmentSlider(
                     timeSeconds = localStartSeconds,
                     onTimeChanged = { newTime ->
                         isDraggingStart = true
-                        localStartSeconds = newTime.coerceIn(0.0, localEndSeconds - minGap)
+                        // Clamp to video duration and maintain validity
+                        localStartSeconds = newTime.coerceIn(0.0, runtimeSeconds)
+                            .coerceAtMost(localEndSeconds - minGap)
+                        
                         // Trigger update after direct input
                         val newStartTicks = Segment.secondsToTicks(localStartSeconds)
                         onUpdate(segment.copy(startTicks = newStartTicks))
@@ -322,6 +328,14 @@ fun SegmentSlider(
                     ),
                     onSeek = { onSeekTo(localStartSeconds) },
                     onSetFromPlayer = onSetStartFromPlayer,
+                    onSetToBoundary = {
+                        isDraggingStart = true
+                        localStartSeconds = 0.0
+                        onUpdate(segment.copy(startTicks = 0L))
+                        isDraggingStart = false
+                    },
+                    boundaryIcon = Icons.Default.FastRewind,
+                    boundaryDescription = translatedString(R.string.player_rewind),
                     modifier = Modifier.weight(1f)
                 )
                 
@@ -331,7 +345,10 @@ fun SegmentSlider(
                     timeSeconds = localEndSeconds,
                     onTimeChanged = { newTime ->
                         isDraggingEnd = true
-                        localEndSeconds = newTime.coerceIn(localStartSeconds + minGap, runtimeSeconds)
+                        // Clamp to video duration and maintain validity
+                        localEndSeconds = newTime.coerceIn(0.0, runtimeSeconds)
+                            .coerceAtLeast(localStartSeconds + minGap)
+                        
                         // Trigger update after direct input
                         val newEndTicks = Segment.secondsToTicks(localEndSeconds)
                         onUpdate(segment.copy(endTicks = newEndTicks))
@@ -346,6 +363,14 @@ fun SegmentSlider(
                     ),
                     onSeek = { onSeekTo(localEndSeconds) },
                     onSetFromPlayer = onSetEndFromPlayer,
+                    onSetToBoundary = {
+                        isDraggingEnd = true
+                        localEndSeconds = runtimeSeconds
+                        onUpdate(segment.copy(endTicks = Segment.secondsToTicks(runtimeSeconds)))
+                        isDraggingEnd = false
+                    },
+                    boundaryIcon = Icons.Default.FastForward,
+                    boundaryDescription = translatedString(R.string.player_fast_forward),
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -485,7 +510,10 @@ private fun TimeInputRow(
     onTimeChanged: (Double) -> Unit,
     keyboardActions: KeyboardActions,
     onSeek: () -> Unit,
-    onSetFromPlayer: (() -> Unit)? = null
+    onSetFromPlayer: (() -> Unit)? = null,
+    onSetToBoundary: (() -> Unit)? = null,
+    boundaryIcon: ImageVector? = null,
+    boundaryDescription: String? = null
 ) {
     Row(
         modifier = modifier,
@@ -513,6 +541,21 @@ private fun TimeInputRow(
                 Icon(
                     imageVector = Icons.Default.MyLocation,
                     contentDescription = translatedString(R.string.set_from_player, label),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+
+        // Set to boundary button (0 for start, duration for end)
+        if (onSetToBoundary != null && boundaryIcon != null) {
+            IconButton(
+                onClick = onSetToBoundary,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = boundaryIcon,
+                    contentDescription = boundaryDescription,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(16.dp)
                 )

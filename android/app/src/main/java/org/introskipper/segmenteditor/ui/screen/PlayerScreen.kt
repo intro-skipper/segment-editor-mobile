@@ -398,13 +398,23 @@ fun PlayerScreen(
                                 text = { Text(type.value) },
                                 onClick = {
                                     showFabMenu = false
-                                    val durationSeconds = uiState.duration / 1000.0
+                                    val durationMs = uiState.duration
+                                    val currentPosMs = uiState.currentPosition
+                                    
+                                    val (startMs, endMs) = if (currentPosMs >= durationMs) {
+                                        val s = (durationMs - 1000L).coerceAtLeast(0L)
+                                        s to durationMs
+                                    } else {
+                                        val e = (currentPosMs + 1000L).coerceAtMost(durationMs)
+                                        currentPosMs to e
+                                    }
+
                                     val newSegment = Segment(
                                         id = null,
                                         itemId = itemId,
                                         type = type.value,
-                                        startTicks = 0L,
-                                        endTicks = Segment.secondsToTicks(durationSeconds)
+                                        startTicks = Segment.secondsToTicks(startMs / 1000.0),
+                                        endTicks = Segment.secondsToTicks(endMs / 1000.0)
                                     )
                                     val updated = (editingSegments + newSegment).sortedBy { it.startTicks }
                                     editingSegments = updated
