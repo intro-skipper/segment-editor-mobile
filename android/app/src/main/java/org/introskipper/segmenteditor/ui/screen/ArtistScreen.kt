@@ -101,7 +101,8 @@ fun ArtistScreen(
 
         val scrollbarSettings = ScrollbarSettings.Default.copy(
             thumbUnselectedColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-            thumbSelectedColor = MaterialTheme.colorScheme.primary
+            thumbSelectedColor = MaterialTheme.colorScheme.primary,
+            scrollbarPadding = 0.dp
         )
 
         PullToRefreshBox(
@@ -169,11 +170,15 @@ fun ArtistScreen(
                                 }
                             },
                             imageUrl = imageUrl,
-                            backdropUrl = backdropUrl
+                            backdropUrl = backdropUrl,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                         )
 
                         // Tabs
-                        TabRow(selectedTabIndex = selectedTab.ordinal) {
+                        TabRow(
+                            selectedTabIndex = selectedTab.ordinal,
+                            modifier = Modifier.padding(horizontal = 12.dp)
+                        ) {
                             Tab(
                                 selected = selectedTab == ArtistTab.ALBUMS,
                                 onClick = { selectedTab = ArtistTab.ALBUMS },
@@ -219,7 +224,7 @@ fun ArtistScreen(
                                             state = gridState,
                                             columns = GridCells.Fixed(2),
                                             modifier = Modifier.fillMaxSize(),
-                                            contentPadding = PaddingValues(16.dp),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 16.dp),
                                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                                             verticalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
@@ -270,7 +275,7 @@ fun ArtistScreen(
                                         LazyColumn(
                                             state = listState,
                                             modifier = Modifier.fillMaxSize(),
-                                            contentPadding = PaddingValues(16.dp),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 16.dp),
                                             verticalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
                                             items(state.tracks) { track ->

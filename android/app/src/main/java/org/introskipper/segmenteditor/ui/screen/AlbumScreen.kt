@@ -8,6 +8,7 @@ package org.introskipper.segmenteditor.ui.screen
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -133,13 +134,15 @@ fun AlbumScreen(
                         state = listState,
                         settings = ScrollbarSettings.Default.copy(
                             thumbUnselectedColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                            thumbSelectedColor = MaterialTheme.colorScheme.primary
+                            thumbSelectedColor = MaterialTheme.colorScheme.primary,
+                            scrollbarPadding = 0.dp
                         ),
                         modifier = Modifier.fillMaxSize()
                     ) {
                         LazyColumn(
                             state = listState,
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
                         ) {
                             // Album header
                             item {
@@ -166,7 +169,8 @@ fun AlbumScreen(
                                         }
                                     },
                                     imageUrl = imageUrl,
-                                    backdropUrl = backdropUrl
+                                    backdropUrl = backdropUrl,
+                                    modifier = Modifier.padding(vertical = 8.dp)
                                 )
                             }
 
@@ -192,7 +196,7 @@ fun AlbumScreen(
                                         onClick = {
                                             navController.navigate("player/${track.track.id}")
                                         },
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                                        modifier = Modifier.padding(vertical = 4.dp)
                                     )
                                 }
                             }

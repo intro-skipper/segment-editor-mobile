@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
@@ -61,6 +62,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
+import my.nanihadesuka.compose.LazyColumnScrollbar
+import my.nanihadesuka.compose.ScrollbarSettings
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.ui.component.translatedString
 import org.introskipper.segmenteditor.ui.component.WavyCircularProgressIndicator
@@ -183,63 +186,74 @@ fun LibraryScreen(
                     }
                 }
                 is LibraryUiState.Success -> {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    val listState = rememberLazyListState()
+                    LazyColumnScrollbar(
+                        state = listState,
+                        settings = ScrollbarSettings.Default.copy(
+                            thumbUnselectedColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                            thumbSelectedColor = MaterialTheme.colorScheme.primary,
+                            scrollbarPadding = 0.dp
+                        ),
+                        modifier = Modifier.fillMaxSize()
                     ) {
-                        item {
-                            Text(
-                                text = translatedString(R.string.library_select),
-                                style = MaterialTheme.typography.titleLarge,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 4.dp)
-                            )
-                        }
-                        items(state.libraries.count()) { item ->
-                            val library = state.libraries[item]
-                            val isSharing = state.isSharingLibraryId == library.id
-                            LibraryCard(
-                                library = library,
-                                isSharing = isSharing,
-                                sharingProgress = if (isSharing) state.sharingProgress else null,
-                                onClick = { 
-                                    onLibraryClick(library.id, library.collectionType) 
-                                },
-                                onShareSegments = {
-                                    viewModel.shareLibrarySegments(library.id, library.collectionType)
-                                },
-                                onShareMetadata = {
-                                    viewModel.submitLibraryMetadata(library.id, library.collectionType)
-                                },
-                                getPrimaryImageUrl = { itemId, imageTag -> viewModel.getPrimaryImageUrl(itemId, imageTag) },
-                                onColorSampled = { color ->
-                                    themeState.globalSeedColor = color
-                                }
-                            )
-                        }
-
-                        if (state.continueWatching.isNotEmpty()) {
-                            item { Spacer(modifier = Modifier.height(12.dp)) }
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
                             item {
                                 Text(
-                                    text = translatedString(R.string.library_continue_watching),
+                                    text = translatedString(R.string.library_select),
                                     style = MaterialTheme.typography.titleLarge,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(bottom = 4.dp)
                                 )
                             }
-                            items(state.continueWatching.count()) { item ->
-                                val mediaItem = state.continueWatching[item]
-                                ContinueWatchingCard(
-                                    item = mediaItem,
+                            items(state.libraries.count()) { item ->
+                                val library = state.libraries[item]
+                                val isSharing = state.isSharingLibraryId == library.id
+                                LibraryCard(
+                                    library = library,
+                                    isSharing = isSharing,
+                                    sharingProgress = if (isSharing) state.sharingProgress else null,
+                                    onClick = { 
+                                        onLibraryClick(library.id, library.collectionType) 
+                                    },
+                                    onShareSegments = {
+                                        viewModel.shareLibrarySegments(library.id, library.collectionType)
+                                    },
+                                    onShareMetadata = {
+                                        viewModel.submitLibraryMetadata(library.id, library.collectionType)
+                                    },
                                     getPrimaryImageUrl = { itemId, imageTag -> viewModel.getPrimaryImageUrl(itemId, imageTag) },
-                                    onClick = { onContinueWatchingClick(mediaItem.id) }
+                                    onColorSampled = { color ->
+                                        themeState.globalSeedColor = color
+                                    }
                                 )
+                            }
+
+                            if (state.continueWatching.isNotEmpty()) {
+                                item { Spacer(modifier = Modifier.height(12.dp)) }
+                                item {
+                                    Text(
+                                        text = translatedString(R.string.library_continue_watching),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(bottom = 4.dp)
+                                    )
+                                }
+                                items(state.continueWatching.count()) { item ->
+                                    val mediaItem = state.continueWatching[item]
+                                    ContinueWatchingCard(
+                                        item = mediaItem,
+                                        getPrimaryImageUrl = { itemId, imageTag -> viewModel.getPrimaryImageUrl(itemId, imageTag) },
+                                        onClick = { onContinueWatchingClick(mediaItem.id) }
+                                    )
+                                }
                             }
                         }
                     }

@@ -303,7 +303,8 @@ fun SeriesScreen(
 
             val scrollbarSettings = ScrollbarSettings.Default.copy(
                 thumbUnselectedColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                thumbSelectedColor = MaterialTheme.colorScheme.primary
+                thumbSelectedColor = MaterialTheme.colorScheme.primary,
+                scrollbarPadding = 0.dp
             )
 
             PullToRefreshBox(
@@ -363,9 +364,7 @@ fun SeriesScreen(
                         } ?: emptyList()
                         
                         Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(12.dp)
+                            modifier = Modifier.fillMaxSize()
                         ) {
                             // Series header
                             val series = state.series
@@ -391,7 +390,8 @@ fun SeriesScreen(
                                     }
                                 },
                                 imageUrl = imageUrl,
-                                backdropUrl = backdropUrl
+                                backdropUrl = backdropUrl,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                             )
                             
                             // Season tabs
@@ -412,7 +412,7 @@ fun SeriesScreen(
                                 // Show tabs for multiple seasons
                                 SecondaryScrollableTabRow(
                                     selectedTabIndex = selectedSeasonIndex,
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                                     edgePadding = 8.dp,
                                     containerColor = MaterialTheme.colorScheme.surface,
                                     contentColor = MaterialTheme.colorScheme.primary
@@ -522,7 +522,8 @@ fun SeriesScreen(
                                 ) {
                                     LazyColumn(
                                         state = listState,
-                                        modifier = Modifier.fillMaxSize()
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp)
                                     ) {
                                         items(selectedEpisodes) { episode ->
                                             EpisodeCard(
@@ -531,7 +532,7 @@ fun SeriesScreen(
                                                 onClick = {
                                                     navController.navigate(Screen.Player.createRoute(episode.episode.id, trackProgress = trackProgress))
                                                 },
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                modifier = Modifier.padding(vertical = 4.dp)
                                             )
                                         }
                                         
@@ -564,7 +565,8 @@ fun SeriesScreen(
                                 ) {
                                     LazyColumn(
                                         state = listState,
-                                        modifier = Modifier.fillMaxSize()
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp)
                                     ) {
                                         // Single season header
                                         item {
@@ -660,7 +662,7 @@ fun SeriesScreen(
                                                 onClick = {
                                                     navController.navigate(Screen.Player.createRoute(episode.episode.id, trackProgress = trackProgress))
                                                 },
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                modifier = Modifier.padding(vertical = 4.dp)
                                             )
                                         }
                                         

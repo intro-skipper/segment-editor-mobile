@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -36,7 +37,8 @@ fun MediaGrid(
     val gridState = rememberLazyGridState()
     val scrollbarSettings = ScrollbarSettings.Default.copy(
         thumbUnselectedColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-        thumbSelectedColor = MaterialTheme.colorScheme.primary
+        thumbSelectedColor = MaterialTheme.colorScheme.primary,
+        scrollbarPadding = 0.dp
     )
     
     LazyVerticalGridScrollbar(
@@ -51,12 +53,12 @@ fun MediaGrid(
                 }
             }
         },
-        modifier = modifier
+        modifier = modifier.fillMaxWidth()
     ) {
         LazyVerticalGrid(
             state = gridState,
             columns = GridCells.Adaptive(minSize = 150.dp),
-            contentPadding = PaddingValues(vertical = 8.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxSize()
