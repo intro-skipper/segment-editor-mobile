@@ -17,9 +17,7 @@ data class AppPreferences(
     
     // Playback settings
     val autoPlayNextEpisode: Boolean = true,
-    val skipIntroAutomatically: Boolean = true,
-    val skipCreditsAutomatically: Boolean = false,
-    val showSkipButtons: Boolean = true,
+    val skipBehavior: SkipBehavior = SkipBehavior.SHOW_BUTTON,
     
     // UI settings
     val theme: AppTheme = AppTheme.SYSTEM,
@@ -64,6 +62,15 @@ data class AppPreferences(
     fun isLoggedIn(): Boolean {
         return isConfigured() && userId.isNotBlank()
     }
+}
+
+/**
+ * Behavior for handling segments during playback
+ */
+enum class SkipBehavior {
+    SHOW_BUTTON,
+    AUTO_SKIP,
+    NONE
 }
 
 /**

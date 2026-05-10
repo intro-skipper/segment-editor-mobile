@@ -51,6 +51,7 @@ import org.introskipper.segmenteditor.ui.preview.PreviewLoader
 import org.introskipper.segmenteditor.ui.preview.TrickplayPreviewLoader
 import org.introskipper.segmenteditor.ui.state.PlayerEvent
 import org.introskipper.segmenteditor.ui.state.PlayerUiState
+import org.introskipper.segmenteditor.ui.state.SkipBehavior
 import org.introskipper.segmenteditor.ui.state.TrackInfo
 import org.introskipper.segmenteditor.utils.TranslationService
 import org.introskipper.segmenteditor.utils.getTranslatedString
@@ -75,7 +76,8 @@ class PlayerViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(
         PlayerUiState(
             isFullscreen = savedStateHandle.get<Boolean>("fullscreen") ?: false,
-            trackProgressToServer = savedStateHandle.get<Boolean>("trackProgress") ?: false
+            trackProgressToServer = savedStateHandle.get<Boolean>("trackProgress") ?: false,
+            skipBehavior = securePreferences.getSkipBehavior()
         )
     )
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
@@ -123,7 +125,8 @@ class PlayerViewModel @Inject constructor(
                     trackProgressToServer = trackProgressToServer,
                     resumePositionMs = 0L,
                     showNextUpCard = false,
-                    isFullscreen = initialFullscreen
+                    isFullscreen = initialFullscreen,
+                    skipBehavior = securePreferences.getSkipBehavior()
                 )
             }
 
@@ -700,19 +703,48 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun updatePlaybackState(isPlaying: Boolean, currentPosition: Long, bufferedPosition: Long) {
-        _uiState.update {
-            val shouldShowCard = !it.showNextUpCard &&
-                it.nextUpShowAtMs != null &&
-                it.nextItemId != null &&
-                currentPosition >= it.nextUpShowAtMs
-            it.copy(
+        _uiState.update { state ->
+            val shouldShowCard = !state.showNextUpCard &&
+                state.nextUpShowAtMs != null &&
+                state.nextItemId != null &&
+                currentPosition >= state.nextUpShowAtMs
+            
+            // Handle automatic skip if behavior is set to AUTO_SKIP
+            if (state.skipBehavior == SkipBehavior.AUTO_SKIP) {
+                val currentTicks = currentPosition * 10_000L
+                val activeSegment = state.segments.find { segment ->
+                    currentTicks >= segment.startTicks && currentTicks < segment.endTicks
+                }
+                
+                if (activeSegment != null) {
+                    val endMs = activeSegment.endTicks / 10_000L
+                    Log.d(TAG, "Auto-skipping segment ${activeSegment.type} to ${endMs}ms")
+                    // This is a bit tricky since we can't seek from here directly without player access
+                    // But we can trigger an event or handle it in the UI layer
+                    // For now, let's add a skipRequestedMs to state that UI can react to
+                    return@update state.copy(
+                        isPlaying = isPlaying,
+                        currentPosition = currentPosition,
+                        bufferedPosition = bufferedPosition,
+                        showNextUpCard = if (shouldShowCard) true else state.showNextUpCard,
+                        autoSkipToMs = endMs
+                    )
+                }
+            }
+            
+            state.copy(
                 isPlaying = isPlaying,
                 currentPosition = currentPosition,
                 bufferedPosition = bufferedPosition,
-                showNextUpCard = if (shouldShowCard) true else it.showNextUpCard
+                showNextUpCard = if (shouldShowCard) true else state.showNextUpCard,
+                autoSkipToMs = null
             )
         }
         maybeReportWatchProgress(isPlaying = isPlaying, positionMs = currentPosition)
+    }
+
+    fun clearAutoSkip() {
+        _uiState.update { it.copy(autoSkipToMs = null) }
     }
 
     fun handlePlaybackEnded() {

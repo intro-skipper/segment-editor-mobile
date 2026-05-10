@@ -59,6 +59,11 @@
     <string name="settings_prefer_direct_play_subtitle">Play media directly without transcoding</string>
     <string name="settings_autoplay_next">Auto-play Next Episode</string>
     <string name="settings_autoplay_next_subtitle">Automatically play the next episode</string>
+    <string name="settings_skip_behavior">Segment Skip Behavior</string>
+    <string name="settings_skip_behavior_subtitle">How segments should be handled during playback</string>
+    <string name="settings_skip_behavior_show_button">Display skip button</string>
+    <string name="settings_skip_behavior_auto_skip">Automatically skip</string>
+    <string name="settings_skip_behavior_none">Default playback only</string>
     <string name="settings_prefer_local_previews">Bypass Trickplay</string>
     <string name="settings_prefer_local_previews_subtitle">Use native scrubber frame extraction</string>
     <string name="settings_preview_disabled">🚫 Disabled</string>

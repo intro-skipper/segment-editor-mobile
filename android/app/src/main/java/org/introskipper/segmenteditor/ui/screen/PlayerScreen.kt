@@ -170,6 +170,14 @@ fun PlayerScreen(
         }
     }
 
+    // Handle automatic skipping
+    LaunchedEffect(uiState.autoSkipToMs) {
+        uiState.autoSkipToMs?.let { skipToMs ->
+            player?.seekTo(skipToMs)
+            viewModel.clearAutoSkip()
+        }
+    }
+
     // Clean up preview loader on dispose
     DisposableEffect(previewLoader) {
         onDispose {

@@ -21,7 +21,7 @@ android {
         applicationId "org.introskipper.segmenteditor"
         minSdk = 30
         targetSdk = 36
-        versionName = "1.1.2"
+        versionName = "1.1.3"
         versionCode = versionName.replace(".","").toInteger()
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

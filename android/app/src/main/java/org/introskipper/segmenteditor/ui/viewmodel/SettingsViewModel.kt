@@ -28,6 +28,7 @@ import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.state.AppTheme
 import org.introskipper.segmenteditor.ui.state.BrowseLayout
 import org.introskipper.segmenteditor.ui.state.ExportFormat
+import org.introskipper.segmenteditor.ui.state.SkipBehavior
 import org.introskipper.segmenteditor.ui.util.UiText
 import org.introskipper.segmenteditor.utils.TranslationService
 import javax.inject.Inject
@@ -38,6 +39,7 @@ data class SettingsUiState(
     val isDownloadingModel: Boolean = false,
     val preferDirectPlay: Boolean = true,
     val autoPlayNextEpisode: Boolean = true,
+    val skipBehavior: SkipBehavior = SkipBehavior.SHOW_BUTTON,
     val preferLocalPreviews: Boolean = false,
     val disableSkipMeSegments: Boolean = true,
     val exportFormat: ExportFormat = ExportFormat.JSON,
@@ -124,6 +126,7 @@ class SettingsViewModel @Inject constructor(
                 dynamicTranslationEnabled = securePreferences.isDynamicTranslationEnabled(),
                 preferDirectPlay = securePreferences.getPreferDirectPlay(),
                 autoPlayNextEpisode = securePreferences.getAutoPlayNextEpisode(),
+                skipBehavior = securePreferences.getSkipBehavior(),
                 preferLocalPreviews = securePreferences.getPreferLocalPreviews(),
                 disableSkipMeSegments = securePreferences.getDisableSkipMeSegments(),
                 exportFormat = securePreferences.getExportFormat(),
@@ -331,6 +334,11 @@ class SettingsViewModel @Inject constructor(
     fun setAutoPlayNextEpisode(enabled: Boolean) {
         securePreferences.setAutoPlayNextEpisode(enabled)
         _uiState.value = _uiState.value.copy(autoPlayNextEpisode = enabled)
+    }
+
+    fun setSkipBehavior(behavior: SkipBehavior) {
+        securePreferences.setSkipBehavior(behavior)
+        _uiState.value = _uiState.value.copy(skipBehavior = behavior)
     }
 
     fun setPreferLocalPreviews(prefer: Boolean) {

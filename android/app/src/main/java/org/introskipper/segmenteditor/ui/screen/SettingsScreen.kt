@@ -79,6 +79,7 @@ import org.introskipper.segmenteditor.ui.component.settings.SwitchSettingItem
 import org.introskipper.segmenteditor.ui.state.AppTheme
 import org.introskipper.segmenteditor.ui.state.BrowseLayout
 import org.introskipper.segmenteditor.ui.state.ExportFormat
+import org.introskipper.segmenteditor.ui.state.SkipBehavior
 import org.introskipper.segmenteditor.ui.viewmodel.SettingsViewModel
 import org.introskipper.segmenteditor.ui.viewmodel.UserInfo
 import org.introskipper.segmenteditor.ui.component.translatedString
@@ -302,6 +303,18 @@ fun SettingsScreen(
                         subtitle = translatedString(R.string.settings_autoplay_next_subtitle),
                         checked = uiState.autoPlayNextEpisode,
                         onCheckedChange = viewModel::setAutoPlayNextEpisode
+                    )
+
+                    DropdownSettingsItem(
+                        title = translatedString(R.string.settings_skip_behavior),
+                        subtitle = translatedString(R.string.settings_skip_behavior_subtitle),
+                        options = listOf(
+                            SkipBehavior.SHOW_BUTTON to translatedString(R.string.settings_skip_behavior_show_button),
+                            SkipBehavior.AUTO_SKIP to translatedString(R.string.settings_skip_behavior_auto_skip),
+                            SkipBehavior.NONE to translatedString(R.string.settings_skip_behavior_none)
+                        ),
+                        selectedOption = uiState.skipBehavior,
+                        onOptionSelected = viewModel::setSkipBehavior
                     )
 
                     SwitchSettingItem(

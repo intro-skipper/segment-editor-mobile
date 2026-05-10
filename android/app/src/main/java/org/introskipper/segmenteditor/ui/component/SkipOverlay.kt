@@ -33,6 +33,7 @@ import androidx.media3.common.Player
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.ui.state.PlayerUiState
+import org.introskipper.segmenteditor.ui.state.SkipBehavior
 
 /**
  * Overlay that displays a "Skip" button when the player is within a defined segment.
@@ -43,6 +44,8 @@ fun SkipOverlay(
     uiState: PlayerUiState,
     modifier: Modifier = Modifier
 ) {
+    if (uiState.skipBehavior == SkipBehavior.NONE) return
+
     var activeSegment by remember { mutableStateOf<Segment?>(null) }
     
     // Periodically check if we are in a segment
@@ -63,7 +66,7 @@ fun SkipOverlay(
 
     Box(modifier = modifier.fillMaxSize()) {
         AnimatedVisibility(
-            visible = activeSegment != null,
+            visible = activeSegment != null && uiState.skipBehavior == SkipBehavior.SHOW_BUTTON,
             enter = fadeIn() + slideInHorizontally(initialOffsetX = { it }),
             exit = fadeOut() + slideOutHorizontally(targetOffsetX = { it }),
             modifier = Modifier

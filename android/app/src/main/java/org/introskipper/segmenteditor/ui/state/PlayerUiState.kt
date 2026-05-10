@@ -37,6 +37,8 @@ data class PlayerUiState(
     
     // Playback settings
     val playbackSpeed: Float = 1.0f,
+    val skipBehavior: SkipBehavior = SkipBehavior.SHOW_BUTTON,
+    val autoSkipToMs: Long? = null,
     
     // UI state
     val showControls: Boolean = true,

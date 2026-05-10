@@ -14,6 +14,7 @@ import androidx.security.crypto.MasterKey
 import org.introskipper.segmenteditor.ui.state.AppTheme
 import org.introskipper.segmenteditor.ui.state.BrowseLayout
 import org.introskipper.segmenteditor.ui.state.ExportFormat
+import org.introskipper.segmenteditor.ui.state.SkipBehavior
 
 class SecurePreferences(context: Context) {
     private val masterKey = MasterKey.Builder(context)
@@ -101,6 +102,19 @@ class SecurePreferences(context: Context) {
     
     fun getAutoPlayNextEpisode(): Boolean {
         return sharedPreferences.getBoolean(KEY_AUTO_PLAY_NEXT, false)
+    }
+
+    fun setSkipBehavior(behavior: SkipBehavior) {
+        sharedPreferences.edit { putString(KEY_SKIP_BEHAVIOR, behavior.name) }
+    }
+
+    fun getSkipBehavior(): SkipBehavior {
+        val behaviorName = sharedPreferences.getString(KEY_SKIP_BEHAVIOR, SkipBehavior.SHOW_BUTTON.name)
+        return try {
+            SkipBehavior.valueOf(behaviorName ?: SkipBehavior.SHOW_BUTTON.name)
+        } catch (e: IllegalArgumentException) {
+            SkipBehavior.SHOW_BUTTON
+        }
     }
 
     // ========== UI Settings ==========
@@ -258,6 +272,7 @@ class SecurePreferences(context: Context) {
         
         // Playback keys
         private const val KEY_AUTO_PLAY_NEXT = "auto_play_next"
+        private const val KEY_SKIP_BEHAVIOR = "skip_behavior"
         
         // UI keys
         private const val KEY_THEME = "theme"
