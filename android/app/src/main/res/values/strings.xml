@@ -134,8 +134,11 @@
     <string name="auth_api_key_help">You can generate an API key from your Jellyfin dashboard under Settings > Dashboard > API Keys.</string>
     <string name="auth_signed_in_as">Signed in as %1$s</string>
     <string name="auth_connected_to">Connected to %1$s</string>
+    <string name="auth_select_user_title">Select a Jellyfin user</string>
+    <string name="auth_select_user_subtitle">Choose the user profile to use with this API key.</string>
+    <string name="auth_select_user_required">Select a user to continue.</string>
     <string name="auth_authenticating">Authenticating…</string>
-    <string name="auth_error_not_authenticated">User not authenticated</string>
+    <string name="auth_error_not_authenticated">Please select a Jellyfin user to continue.</string>
 
     <!-- Server Entry Screen -->
     <string name="server_url">Server URL</string>

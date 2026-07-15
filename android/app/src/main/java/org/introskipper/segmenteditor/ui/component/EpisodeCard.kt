@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -72,7 +71,16 @@ fun EpisodeCard(
                     .align(Alignment.CenterVertically),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Episode number and title
+                // Episode title
+                Text(
+                    text = episode.episode.name ?: translatedString(R.string.player_unknown),
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                // Season, episode number, and duration
                 val episodeLabel = buildString {
                     if (episode.episode.parentIndexNumber != null) {
                         append("S${episode.episode.parentIndexNumber}")
@@ -82,48 +90,25 @@ fun EpisodeCard(
                     }
                 }
 
-                if (episodeLabel.isNotEmpty()) {
-                    Text(
-                        text = episodeLabel,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                val durationLabel = episode.episode.getRuntimeSeconds()?.let { seconds ->
+                    translatedString(R.string.episode_duration_minutes, (seconds / 60).toInt())
                 }
+                val metadata = listOfNotNull(episodeLabel.takeIf { it.isNotEmpty() }, durationLabel)
+                    .joinToString(" · ")
 
-                Text(
-                    text = episode.episode.name ?: translatedString(R.string.player_unknown),
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                // Duration
-                episode.episode.getRuntimeSeconds()?.let { seconds ->
-                    val minutes = (seconds / 60).toInt()
+                if (metadata.isNotEmpty()) {
                     Text(
-                        text = translatedString(R.string.episode_duration_minutes, minutes),
-                        style = MaterialTheme.typography.bodySmall,
+                        text = metadata,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            }
 
-            // Segment count badge
-            Column(
-                modifier = Modifier.align(Alignment.CenterVertically),
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                SegmentCountBadge(count = episode.segmentCount)
-                
-                if (episode.isLoadingSegments) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+                SegmentTimeline(
+                    segments = episode.segments,
+                    runtimeSeconds = episode.episode.getRuntimeSeconds(),
+                    isLoading = episode.isLoadingSegments || episode.segments == null
+                )
             }
         }
     }

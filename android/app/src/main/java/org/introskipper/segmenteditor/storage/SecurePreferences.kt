@@ -94,6 +94,14 @@ class SecurePreferences(context: Context) {
         return sharedPreferences.getBoolean(KEY_HAS_EXPLICIT_USER_SELECTION, false)
     }
 
+    fun clearUserSelection() {
+        sharedPreferences.edit {
+            remove(KEY_USER_ID)
+                .remove(KEY_USERNAME)
+                .putBoolean(KEY_HAS_EXPLICIT_USER_SELECTION, false)
+        }
+    }
+
     // ========== Playback Settings ==========
     
     fun setAutoPlayNextEpisode(enabled: Boolean) {

@@ -28,7 +28,9 @@ data class AuthState(
     val password: String = "",
     val isAuthenticated: Boolean = false,
     val user: User? = null,
-    val serverName: String = ""
+    val serverName: String = "",
+    val availableUsers: List<User> = emptyList(),
+    val selectedUserId: String? = null
 )
 
 enum class AuthMethod {
@@ -90,29 +92,20 @@ class AuthViewModel(
                 // Save API key first so it's available for the request
                 securePreferences.saveApiKey(apiKey)
                 securePreferences.saveIsApiKeyLogin(true)
-                securePreferences.saveHasExplicitUserSelection(false)
+                securePreferences.clearUserSelection()
                 
                 val result = authRepository.validateApiKeyResult()
                 result.fold(
                     onSuccess = { isValid ->
                         if (isValid) {
-                            // For API-key logins the user will be selected explicitly in Settings.
-                            // Just verify the key works and complete authentication without picking a user.
+                            // API-key authentication is server-level; select the Jellyfin user before continuing.
                             authRepository.getServerInfoResult().fold(
                                 onSuccess = { serverInfo ->
-                                    _state.value = _state.value.copy(
-                                        isLoading = false,
-                                        isAuthenticated = true,
-                                        serverName = serverInfo.serverName
-                                    )
+                                    completeApiKeyAuthentication(serverInfo.serverName)
                                 },
                                 onFailure = {
                                     // Server info failed but key is valid – proceed anyway.
-                                    _state.value = _state.value.copy(
-                                        isLoading = false,
-                                        isAuthenticated = true,
-                                        serverName = ""
-                                    )
+                                    completeApiKeyAuthentication("")
                                 }
                             )
                         } else {
@@ -139,6 +132,44 @@ class AuthViewModel(
                 )
             }
         }
+    }
+
+    private suspend fun completeApiKeyAuthentication(serverName: String) {
+        authRepository.getUsersResult().fold(
+            onSuccess = { users ->
+                if (users.isEmpty()) {
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        error = "No users were found on this server"
+                    )
+                } else {
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        isAuthenticated = true,
+                        serverName = serverName,
+                        availableUsers = users,
+                        selectedUserId = null,
+                        user = null
+                    )
+                }
+            },
+            onFailure = { error ->
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    error = "Failed to load users: ${error.message}"
+                )
+            }
+        )
+    }
+
+    fun selectUser(user: User) {
+        securePreferences.saveUserId(user.id)
+        securePreferences.saveUsername(user.name)
+        securePreferences.saveHasExplicitUserSelection(true)
+        _state.value = _state.value.copy(
+            user = user,
+            selectedUserId = user.id
+        )
     }
     
     private fun authenticateWithCredentials() {
