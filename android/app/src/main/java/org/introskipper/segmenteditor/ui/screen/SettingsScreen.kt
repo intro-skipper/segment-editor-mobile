@@ -219,10 +219,17 @@ fun SettingsScreen(
                     }
 
                     if (uiState.isDownloadingModel) {
+                        Text(
+                            text = translatedString(R.string.settings_downloading_translation_model),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
                         LinearProgressIndicator(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
                         )
                     }
 

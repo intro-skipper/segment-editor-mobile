@@ -53,6 +53,7 @@
     <string name="settings_language_system">System Default</string>
     <string name="settings_dynamic_translation">Dynamic Translation</string>
     <string name="settings_dynamic_translation_subtitle">Use ML Kit to translate UI</string>
+    <string name="settings_downloading_translation_model">Downloading translation model…</string>
 
     <string name="settings_section_playback">Playback</string>
     <string name="settings_prefer_direct_play">Use Direct Play</string>
