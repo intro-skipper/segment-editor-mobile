@@ -360,16 +360,23 @@ fun VideoPlayerWithPreview(
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
+        var hasStopped = false
+        var playWhenReadyBeforeStop = false
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_PAUSE -> { }
 
                 Lifecycle.Event.ON_STOP -> {
+                    playWhenReadyBeforeStop = exoPlayer.playWhenReady
+                    hasStopped = true
                     exoPlayer.playWhenReady = false
                 }
 
                 Lifecycle.Event.ON_START -> {
-                    exoPlayer.playWhenReady = true
+                    if (hasStopped) {
+                        exoPlayer.playWhenReady = playWhenReadyBeforeStop
+                        hasStopped = false
+                    }
                 }
 
                 Lifecycle.Event.ON_RESUME -> { }

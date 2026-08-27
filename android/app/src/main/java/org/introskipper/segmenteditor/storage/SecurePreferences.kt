@@ -15,6 +15,7 @@ import org.introskipper.segmenteditor.ui.state.AppTheme
 import org.introskipper.segmenteditor.ui.state.BrowseLayout
 import org.introskipper.segmenteditor.ui.state.ExportFormat
 import org.introskipper.segmenteditor.ui.state.SkipBehavior
+import org.introskipper.segmenteditor.ui.state.WatchProgressMode
 
 class SecurePreferences(context: Context) {
     private val masterKey = MasterKey.Builder(context)
@@ -122,6 +123,19 @@ class SecurePreferences(context: Context) {
             SkipBehavior.valueOf(behaviorName ?: SkipBehavior.SHOW_BUTTON.name)
         } catch (e: IllegalArgumentException) {
             SkipBehavior.SHOW_BUTTON
+        }
+    }
+
+    fun setWatchProgressMode(mode: WatchProgressMode) {
+        sharedPreferences.edit { putString(KEY_WATCH_PROGRESS_MODE, mode.name) }
+    }
+
+    fun getWatchProgressMode(): WatchProgressMode {
+        val modeName = sharedPreferences.getString(KEY_WATCH_PROGRESS_MODE, WatchProgressMode.CONTINUE_WATCHING.name)
+        return try {
+            WatchProgressMode.valueOf(modeName ?: WatchProgressMode.CONTINUE_WATCHING.name)
+        } catch (_: IllegalArgumentException) {
+            WatchProgressMode.CONTINUE_WATCHING
         }
     }
 
@@ -281,6 +295,7 @@ class SecurePreferences(context: Context) {
         // Playback keys
         private const val KEY_AUTO_PLAY_NEXT = "auto_play_next"
         private const val KEY_SKIP_BEHAVIOR = "skip_behavior"
+        private const val KEY_WATCH_PROGRESS_MODE = "watch_progress_mode"
         
         // UI keys
         private const val KEY_THEME = "theme"

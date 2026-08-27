@@ -29,6 +29,7 @@ import org.introskipper.segmenteditor.ui.state.AppTheme
 import org.introskipper.segmenteditor.ui.state.BrowseLayout
 import org.introskipper.segmenteditor.ui.state.ExportFormat
 import org.introskipper.segmenteditor.ui.state.SkipBehavior
+import org.introskipper.segmenteditor.ui.state.WatchProgressMode
 import org.introskipper.segmenteditor.ui.util.UiText
 import org.introskipper.segmenteditor.utils.TranslationService
 import javax.inject.Inject
@@ -40,6 +41,7 @@ data class SettingsUiState(
     val preferDirectPlay: Boolean = true,
     val autoPlayNextEpisode: Boolean = true,
     val skipBehavior: SkipBehavior = SkipBehavior.SHOW_BUTTON,
+    val watchProgressMode: WatchProgressMode = WatchProgressMode.CONTINUE_WATCHING,
     val preferLocalPreviews: Boolean = false,
     val disableSkipMeSegments: Boolean = true,
     val exportFormat: ExportFormat = ExportFormat.JSON,
@@ -127,6 +129,7 @@ class SettingsViewModel @Inject constructor(
                 preferDirectPlay = securePreferences.getPreferDirectPlay(),
                 autoPlayNextEpisode = securePreferences.getAutoPlayNextEpisode(),
                 skipBehavior = securePreferences.getSkipBehavior(),
+                watchProgressMode = securePreferences.getWatchProgressMode(),
                 preferLocalPreviews = securePreferences.getPreferLocalPreviews(),
                 disableSkipMeSegments = securePreferences.getDisableSkipMeSegments(),
                 exportFormat = securePreferences.getExportFormat(),
@@ -339,6 +342,11 @@ class SettingsViewModel @Inject constructor(
     fun setSkipBehavior(behavior: SkipBehavior) {
         securePreferences.setSkipBehavior(behavior)
         _uiState.value = _uiState.value.copy(skipBehavior = behavior)
+    }
+
+    fun setWatchProgressMode(mode: WatchProgressMode) {
+        securePreferences.setWatchProgressMode(mode)
+        _uiState.value = _uiState.value.copy(watchProgressMode = mode)
     }
 
     fun setPreferLocalPreviews(prefer: Boolean) {

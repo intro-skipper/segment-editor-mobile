@@ -60,7 +60,7 @@ data class PlayerUiState(
     val nextUpShowAtMs: Long? = null,
     val showNextUpCard: Boolean = false,
 
-    // Server watch tracking (enabled only for continue-watching launch)
+    // Server watch tracking
     val trackProgressToServer: Boolean = false,
     val resumePositionMs: Long = 0L,
 

@@ -18,6 +18,7 @@ data class AppPreferences(
     // Playback settings
     val autoPlayNextEpisode: Boolean = true,
     val skipBehavior: SkipBehavior = SkipBehavior.SHOW_BUTTON,
+    val watchProgressMode: WatchProgressMode = WatchProgressMode.CONTINUE_WATCHING,
     
     // UI settings
     val theme: AppTheme = AppTheme.SYSTEM,
@@ -70,6 +71,12 @@ data class AppPreferences(
 enum class SkipBehavior {
     SHOW_BUTTON,
     AUTO_SKIP,
+    NONE
+}
+
+enum class WatchProgressMode {
+    ALL_PLAYBACK,
+    CONTINUE_WATCHING,
     NONE
 }
 

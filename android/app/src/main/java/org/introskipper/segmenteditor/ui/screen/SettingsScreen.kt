@@ -80,6 +80,7 @@ import org.introskipper.segmenteditor.ui.state.AppTheme
 import org.introskipper.segmenteditor.ui.state.BrowseLayout
 import org.introskipper.segmenteditor.ui.state.ExportFormat
 import org.introskipper.segmenteditor.ui.state.SkipBehavior
+import org.introskipper.segmenteditor.ui.state.WatchProgressMode
 import org.introskipper.segmenteditor.ui.viewmodel.SettingsViewModel
 import org.introskipper.segmenteditor.ui.viewmodel.UserInfo
 import org.introskipper.segmenteditor.ui.component.translatedString
@@ -322,6 +323,17 @@ fun SettingsScreen(
                         ),
                         selectedOption = uiState.skipBehavior,
                         onOptionSelected = viewModel::setSkipBehavior
+                    )
+
+                    DropdownSettingsItem(
+                        title = translatedString(R.string.settings_watch_progress_mode),
+                        options = listOf(
+                            WatchProgressMode.ALL_PLAYBACK to translatedString(R.string.settings_watch_progress_mode_all),
+                            WatchProgressMode.CONTINUE_WATCHING to translatedString(R.string.settings_watch_progress_mode_continue),
+                            WatchProgressMode.NONE to translatedString(R.string.settings_watch_progress_mode_none)
+                        ),
+                        selectedOption = uiState.watchProgressMode,
+                        onOptionSelected = viewModel::setWatchProgressMode
                     )
 
                     SwitchSettingItem(

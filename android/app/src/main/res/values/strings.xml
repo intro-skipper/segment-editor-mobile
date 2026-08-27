@@ -65,6 +65,10 @@
     <string name="settings_skip_behavior_show_button">Display skip button</string>
     <string name="settings_skip_behavior_auto_skip">Automatically skip</string>
     <string name="settings_skip_behavior_none">Default playback only</string>
+    <string name="settings_watch_progress_mode">Jellyfin Progress Reporting</string>
+    <string name="settings_watch_progress_mode_all">All Playback</string>
+    <string name="settings_watch_progress_mode_continue">Continue Watching</string>
+    <string name="settings_watch_progress_mode_none">No Reporting</string>
     <string name="settings_prefer_local_previews">Bypass Trickplay</string>
     <string name="settings_prefer_local_previews_subtitle">Use native scrubber frame extraction</string>
     <string name="settings_preview_disabled">🚫 Disabled</string>

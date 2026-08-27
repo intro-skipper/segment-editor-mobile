@@ -29,8 +29,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AspectRatio
+import androidx.compose.material.icons.filled.CropFree
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Pause
@@ -150,7 +152,11 @@ fun MediaControls(
                     onClick = { viewModel.nextContentScale() },
                 ) {
                     Icon(
-                        imageVector = Icons.Default.AspectRatio,
+                        imageVector = when (uiState.playerContentScale) {
+                            androidx.compose.ui.layout.ContentScale.FillBounds -> Icons.Default.AspectRatio
+                            androidx.compose.ui.layout.ContentScale.Crop -> Icons.Default.CropFree
+                            else -> Icons.Default.FitScreen
+                        },
                         contentDescription = "Next content scale",
                         tint = Color.White
                     )
