@@ -86,7 +86,9 @@ class PlayerViewModel @Inject constructor(
     private fun isProgressTrackingEnabled(requested: Boolean): Boolean =
         when (securePreferences.getWatchProgressMode()) {
             WatchProgressMode.ALL_PLAYBACK -> requested
-            WatchProgressMode.CONTINUE_WATCHING -> requested && continueWatchingLaunch
+            // The preference controls the launch default. Once the player is open,
+            // the switch is a per-session override and must remain user-toggleable.
+            WatchProgressMode.CONTINUE_WATCHING -> requested
             WatchProgressMode.NONE -> false
         }
 
