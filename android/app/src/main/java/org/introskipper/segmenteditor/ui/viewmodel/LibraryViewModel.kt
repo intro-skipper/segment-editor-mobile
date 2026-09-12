@@ -97,6 +97,47 @@ class LibraryViewModel @Inject constructor(
         )
     }
 
+    fun markContinueWatchingAsWatched(itemId: String) {
+        val userId = securePreferences.getUserId() ?: run {
+            viewModelScope.launch {
+                _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.auth_error_not_authenticated)))
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                val response = mediaRepository.markItemPlayed(itemId = itemId, userId = userId)
+                if (response.isSuccessful) {
+                    _uiState.update { state ->
+                        (state as? LibraryUiState.Success)?.let { success ->
+                            success.copy(
+                                continueWatching = success.continueWatching.filterNot { it.id == itemId }
+                            )
+                        } ?: state
+                    }
+                    // Reconcile the optimistic removal with Jellyfin so the
+                    // Continue Watching section reflects the server state.
+                    refreshIfLibrariesChanged()
+                    _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.library_marked_watched)))
+                } else {
+                    _events.emit(
+                        LibraryEvent.ShowToast(
+                            UiText.StringResource(R.string.library_mark_watched_failed, response.code())
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("LibraryViewModel", "Failed to mark item as watched", e)
+                _events.emit(
+                    LibraryEvent.ShowToast(
+                        UiText.StringResource(R.string.library_mark_watched_failed_generic)
+                    )
+                )
+            }
+        }
+    }
+
     private fun loadLibraries() {
         viewModelScope.launch {
             _uiState.value = LibraryUiState.Loading

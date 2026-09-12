@@ -29,6 +29,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -251,7 +253,8 @@ fun LibraryScreen(
                                     ContinueWatchingCard(
                                         item = mediaItem,
                                         getPrimaryImageUrl = { itemId, imageTag -> viewModel.getPrimaryImageUrl(itemId, imageTag) },
-                                        onClick = { onContinueWatchingClick(mediaItem.id) }
+                                        onClick = { onContinueWatchingClick(mediaItem.id) },
+                                        onMarkWatched = { viewModel.markContinueWatchingAsWatched(mediaItem.id) }
                                     )
                                 }
                             }
@@ -289,59 +292,79 @@ private fun ContinueWatchingCard(
     item: ContinueWatchingItem,
     getPrimaryImageUrl: (String, String) -> String,
     onClick: () -> Unit,
+    onMarkWatched: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val imageUrl = item.primaryImageTag?.let { getPrimaryImageUrl(item.id, it) }
+    var showContextMenu by remember { mutableStateOf(false) }
     val subtitle = if (item.seasonNumber != null && item.episodeNumber != null) {
         "${item.seriesName ?: item.name} • S${item.seasonNumber}E${item.episodeNumber}"
     } else {
         item.seriesName ?: item.type ?: ""
     }
 
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .combinedClickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Row(
+    Box(modifier = modifier.fillMaxWidth()) {
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = { showContextMenu = true }
+                ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         ) {
-            if (imageUrl != null) {
-                AsyncImage(
-                    model = imageUrl,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .width(96.dp)
-                        .height(56.dp),
-                    contentScale = ContentScale.Crop
-                )
-            }
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = item.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (subtitle.isNotBlank()) {
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (imageUrl != null) {
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .width(96.dp)
+                            .height(56.dp),
+                        contentScale = ContentScale.Crop
                     )
                 }
-                LinearProgressIndicator(
-                    progress = { item.progress },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = item.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (subtitle.isNotBlank()) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    LinearProgressIndicator(
+                        progress = { item.progress },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
+        }
+
+        DropdownMenu(
+            expanded = showContextMenu,
+            onDismissRequest = { showContextMenu = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text(translatedString(R.string.library_mark_watched)) },
+                onClick = {
+                    showContextMenu = false
+                    onMarkWatched()
+                }
+            )
         }
     }
 }

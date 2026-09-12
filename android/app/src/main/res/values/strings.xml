@@ -206,6 +206,10 @@
     <!-- Library Screen -->
     <string name="library_select">Select Library</string>
     <string name="library_continue_watching">Continue Watching</string>
+    <string name="library_mark_watched">Mark as watched</string>
+    <string name="library_marked_watched">Marked as watched</string>
+    <string name="library_mark_watched_failed">Could not mark as watched (HTTP %1$d)</string>
+    <string name="library_mark_watched_failed_generic">Could not mark as watched</string>
     <string name="library_no_libraries">No libraries found</string>
     <string name="library_type_format">(%1$s)</string>
     <string name="library_unknown">Unknown Library</string>

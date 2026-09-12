@@ -105,6 +105,7 @@ class PlayerViewModel @Inject constructor(
     private var saveJob: Job? = null
     private var lastProgressReportAtMs: Long = 0L
     private var hasMarkedPlayedForCurrentItem: Boolean = false
+    private var hasHandledPlaybackEnded: Boolean = false
 
     // Get the preferDirectPlay setting (when true, use direct play instead of HLS)
     fun shouldUseDirectPlay(): Boolean {
@@ -132,6 +133,7 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             lastProgressReportAtMs = 0L
             hasMarkedPlayedForCurrentItem = false
+            hasHandledPlaybackEnded = false
             // Clear old state when loading new item to prevent state pollution
             _uiState.update {
                 it.copy(
@@ -773,29 +775,41 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun handlePlaybackEnded() {
+        if (hasHandledPlaybackEnded) return
+        hasHandledPlaybackEnded = true
+
         val uiState = _uiState.value
         val nextId = uiState.nextItemId
         val autoPlayEnabled = securePreferences.getAutoPlayNextEpisode()
-        reportWatchProgress(
+        val progressJob = reportWatchProgress(
             positionMs = uiState.duration,
             isPaused = true,
             force = true,
             markPlayedIfComplete = true
         )
-        
-        Log.d(TAG, "Playback ended. nextItemId=$nextId, autoPlayEnabled=$autoPlayEnabled")
-        
-        if (autoPlayEnabled && nextId != null) {
-            _events.value = PlayerEvent.NavigateToPlayer(
-                itemId = nextId,
-                trackProgressToServer = uiState.trackProgressToServer,
-                fullscreen = uiState.isFullscreen
-            )
-        } else if (uiState.mediaItem?.itemType == MediaItemType.MOVIE) {
-            // For movies, stay on the player screen instead of returning to menu
-            _uiState.update { it.copy(showControls = true, isPlaying = false) }
-        } else {
-            _events.value = PlayerEvent.PlaybackEnded
+
+        viewModelScope.launch {
+            // The player destination is replaced immediately after this event is
+            // consumed. Wait for the final progress request so the current item is
+            // marked watched before its ViewModel is cleared.
+            progressJob?.join()
+
+            Log.d(TAG, "Playback ended. nextItemId=$nextId, autoPlayEnabled=$autoPlayEnabled")
+
+            if (autoPlayEnabled && nextId != null) {
+                _events.value = PlayerEvent.NavigateToPlayer(
+                    itemId = nextId,
+                    // Carry the user's current choice into both manual Next Up and
+                    // automatic transitions.
+                    trackProgressToServer = uiState.trackProgressToServer,
+                    fullscreen = uiState.isFullscreen
+                )
+            } else if (uiState.mediaItem?.itemType == MediaItemType.MOVIE) {
+                // For movies, stay on the player screen instead of returning to menu
+                _uiState.update { it.copy(showControls = true, isPlaying = false) }
+            } else {
+                _events.value = PlayerEvent.PlaybackEnded
+            }
         }
     }
 
@@ -821,14 +835,14 @@ class PlayerViewModel @Inject constructor(
         isPaused: Boolean,
         force: Boolean,
         markPlayedIfComplete: Boolean
-    ) {
+    ): Job? {
         val currentState = _uiState.value
-        val mediaItem = currentState.mediaItem ?: return
-        if (!isProgressTrackingEnabled(currentState.trackProgressToServer)) return
-        val userId = securePreferences.getUserId() ?: return
+        val mediaItem = currentState.mediaItem ?: return null
+        if (!isProgressTrackingEnabled(currentState.trackProgressToServer)) return null
+        val userId = securePreferences.getUserId() ?: return null
         if (!force &&
             System.currentTimeMillis() - lastProgressReportAtMs < WATCH_PROGRESS_REPORT_INTERVAL_MS
-        ) return
+        ) return null
 
         val safePositionMs = positionMs.coerceAtLeast(0L)
         val durationMs = currentState.duration.coerceAtLeast(0L)
@@ -840,7 +854,7 @@ class PlayerViewModel @Inject constructor(
         val isComplete = durationMs > 0L && playedPercentage >= WATCH_COMPLETION_PERCENT
 
         lastProgressReportAtMs = System.currentTimeMillis()
-        viewModelScope.launch {
+        return viewModelScope.launch {
             try {
                 if (markPlayedIfComplete && isComplete) {
                     // Content is complete: register completion with the server.
