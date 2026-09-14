@@ -258,6 +258,29 @@ fun LibraryScreen(
                                     )
                                 }
                             }
+
+                            if (state.nextUp.isNotEmpty()) {
+                                item { Spacer(modifier = Modifier.height(12.dp)) }
+                                item {
+                                    Text(
+                                        text = translatedString(R.string.library_next_up),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(bottom = 4.dp)
+                                    )
+                                }
+                                items(state.nextUp.count()) { item ->
+                                    val mediaItem = state.nextUp[item]
+                                    ContinueWatchingCard(
+                                        item = mediaItem,
+                                        showProgress = false,
+                                        getPrimaryImageUrl = { itemId, imageTag -> viewModel.getPrimaryImageUrl(itemId, imageTag) },
+                                        onClick = { onContinueWatchingClick(mediaItem.id) },
+                                        onMarkWatched = { viewModel.markContinueWatchingAsWatched(mediaItem.id) }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -293,6 +316,7 @@ private fun ContinueWatchingCard(
     getPrimaryImageUrl: (String, String) -> String,
     onClick: () -> Unit,
     onMarkWatched: () -> Unit,
+    showProgress: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val imageUrl = item.primaryImageTag?.let { getPrimaryImageUrl(item.id, it) }
@@ -346,10 +370,12 @@ private fun ContinueWatchingCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    LinearProgressIndicator(
-                        progress = { item.progress },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    if (showProgress) {
+                        LinearProgressIndicator(
+                            progress = { item.progress },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
         }

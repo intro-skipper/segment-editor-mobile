@@ -161,13 +161,15 @@ class LibraryViewModel @Inject constructor(
                     }
 
                 val continueWatching = fetchContinueWatching(libraryList)
+                val nextUp = fetchNextUp(libraryList)
                 
                 _uiState.value = if (libraryList.isEmpty()) {
                     LibraryUiState.Empty
                 } else {
                     LibraryUiState.Success(
                         libraries = libraryList,
-                        continueWatching = continueWatching
+                        continueWatching = continueWatching,
+                        nextUp = nextUp
                     )
                 }
             } catch (e: Exception) {
@@ -231,9 +233,58 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    private suspend fun fetchNextUp(libraryList: List<Library>): List<ContinueWatchingItem> {
+        return if (
+            !securePreferences.getIsApiKeyLogin() || securePreferences.getHasExplicitUserSelection()
+        ) {
+            val userId = securePreferences.getUserId()
+            if (userId != null && libraryList.isNotEmpty()) {
+                coroutineScope {
+                    libraryList
+                        .map { library ->
+                            async {
+                                runCatching {
+                                    mediaRepository.getNextUp(
+                                        userId = userId,
+                                        limit = 20,
+                                        parentId = library.id
+                                    )
+                                }.getOrNull()
+                                    ?.takeIf { it.isSuccessful }
+                                    ?.body()
+                                    ?.items
+                                    ?: emptyList()
+                            }
+                        }
+                        .awaitAll()
+                }
+                    .flatten()
+                    .distinctBy { it.id }
+                    .sortedByDescending { it.userData?.lastPlayedDate }
+                    .map { item ->
+                        ContinueWatchingItem(
+                            id = item.id,
+                            name = item.name ?: "Unknown",
+                            type = item.type,
+                            seriesName = item.seriesName,
+                            seasonNumber = item.parentIndexNumber,
+                            episodeNumber = item.indexNumber,
+                            primaryImageTag = item.imageTags?.get("Primary"),
+                            playbackPositionTicks = 0L,
+                            runTimeTicks = item.runTimeTicks ?: 0L
+                        )
+                    }
+            } else {
+                emptyList()
+            }
+        } else {
+            emptyList()
+        }
+    }
+
     /**
      * Refreshes the library list only if the user or hidden libraries have changed.
-     * Always refreshes the Continue Watching section if the UI state is Success.
+     * Always refreshes the Continue Watching and Next Up sections if the UI state is Success.
      */
     fun refreshIfLibrariesChanged() {
         val currentHidden = hiddenLibraryIds
@@ -248,13 +299,17 @@ class LibraryViewModel @Inject constructor(
                 viewModelScope.launch {
                     try {
                         val updatedContinueWatching = fetchContinueWatching(currentState.libraries)
+                        val updatedNextUp = fetchNextUp(currentState.libraries)
                         _uiState.update { state ->
                             if (state is LibraryUiState.Success) {
-                                state.copy(continueWatching = updatedContinueWatching)
+                                state.copy(
+                                    continueWatching = updatedContinueWatching,
+                                    nextUp = updatedNextUp
+                                )
                             } else state
                         }
                     } catch (e: Exception) {
-                        Log.e("LibraryViewModel", "Failed to refresh continue watching", e)
+                        Log.e("LibraryViewModel", "Failed to refresh continue watching and next up", e)
                     }
                 }
             }
@@ -830,6 +885,7 @@ sealed class LibraryUiState {
     data class Success(
         val libraries: List<Library>,
         val continueWatching: List<ContinueWatchingItem> = emptyList(),
+        val nextUp: List<ContinueWatchingItem> = emptyList(),
         val isSharingLibraryId: String? = null,
         val sharingProgress: Float? = null
     ) : LibraryUiState()

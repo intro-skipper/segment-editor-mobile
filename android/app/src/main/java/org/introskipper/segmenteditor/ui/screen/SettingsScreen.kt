@@ -314,6 +314,17 @@ fun SettingsScreen(
                     )
 
                     DropdownSettingsItem(
+                        title = translatedString(R.string.settings_watch_progress_mode),
+                        options = listOf(
+                            WatchProgressMode.ALL_PLAYBACK to translatedString(R.string.settings_watch_progress_mode_all),
+                            WatchProgressMode.CONTINUE_WATCHING to translatedString(R.string.settings_watch_progress_mode_continue),
+                            WatchProgressMode.NONE to translatedString(R.string.settings_watch_progress_mode_none)
+                        ),
+                        selectedOption = uiState.watchProgressMode,
+                        onOptionSelected = viewModel::setWatchProgressMode
+                    )
+
+                    DropdownSettingsItem(
                         title = translatedString(R.string.settings_skip_behavior),
                         subtitle = translatedString(R.string.settings_skip_behavior_subtitle),
                         options = listOf(
@@ -323,17 +334,6 @@ fun SettingsScreen(
                         ),
                         selectedOption = uiState.skipBehavior,
                         onOptionSelected = viewModel::setSkipBehavior
-                    )
-
-                    DropdownSettingsItem(
-                        title = translatedString(R.string.settings_watch_progress_mode),
-                        options = listOf(
-                            WatchProgressMode.ALL_PLAYBACK to translatedString(R.string.settings_watch_progress_mode_all),
-                            WatchProgressMode.CONTINUE_WATCHING to translatedString(R.string.settings_watch_progress_mode_continue),
-                            WatchProgressMode.NONE to translatedString(R.string.settings_watch_progress_mode_none)
-                        ),
-                        selectedOption = uiState.watchProgressMode,
-                        onOptionSelected = viewModel::setWatchProgressMode
                     )
 
                     SwitchSettingItem(

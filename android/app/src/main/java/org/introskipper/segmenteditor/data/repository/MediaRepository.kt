@@ -195,9 +195,14 @@ class MediaRepository(
     /**
      * Gets next up episodes for TV shows
      */
-    suspend fun getNextUp(userId: String, limit: Int = 20): Response<ItemsResponse> {
+    suspend fun getNextUp(
+        userId: String,
+        limit: Int = 20,
+        parentId: String? = null
+    ): Response<ItemsResponse> {
         return getItems(
             userId = userId,
+            parentId = parentId,
             includeItemTypes = listOf("Episode"),
             filters = listOf("IsNotFolder"),
             recursive = true,

@@ -83,15 +83,6 @@ class PlayerViewModel @Inject constructor(
             WatchProgressMode.NONE -> false
         }
 
-    private fun isProgressTrackingEnabled(requested: Boolean): Boolean =
-        when (securePreferences.getWatchProgressMode()) {
-            WatchProgressMode.ALL_PLAYBACK -> requested
-            // The preference controls the launch default. Once the player is open,
-            // the switch is a per-session override and must remain user-toggleable.
-            WatchProgressMode.CONTINUE_WATCHING -> requested
-            WatchProgressMode.NONE -> false
-        }
-
     private val _uiState = MutableStateFlow(
         PlayerUiState(
             isFullscreen = savedStateHandle.get<Boolean>("fullscreen") ?: false,
@@ -110,14 +101,6 @@ class PlayerViewModel @Inject constructor(
     // Get the preferDirectPlay setting (when true, use direct play instead of HLS)
     fun shouldUseDirectPlay(): Boolean {
         return securePreferences.getPreferDirectPlay()
-    }
-
-    fun setTrackProgress(enabled: Boolean) {
-        _uiState.update {
-            it.copy(
-                trackProgressToServer = isProgressTrackingEnabled(enabled)
-            )
-        }
     }
 
     private val _events = MutableStateFlow<PlayerEvent?>(null)
@@ -799,8 +782,7 @@ class PlayerViewModel @Inject constructor(
             if (autoPlayEnabled && nextId != null) {
                 _events.value = PlayerEvent.NavigateToPlayer(
                     itemId = nextId,
-                    // Carry the user's current choice into both manual Next Up and
-                    // automatic transitions.
+                    // Carry the launch context into the next player instance.
                     trackProgressToServer = uiState.trackProgressToServer,
                     fullscreen = uiState.isFullscreen
                 )
@@ -815,7 +797,7 @@ class PlayerViewModel @Inject constructor(
 
     fun flushWatchProgress(positionMs: Long? = null) {
         val currentState = _uiState.value
-        if (!isProgressTrackingEnabled(currentState.trackProgressToServer)) return
+        if (!currentState.trackProgressToServer) return
         reportWatchProgress(
             positionMs = positionMs ?: currentState.currentPosition,
             isPaused = true,
@@ -826,7 +808,7 @@ class PlayerViewModel @Inject constructor(
 
     private fun maybeReportWatchProgress(isPlaying: Boolean, positionMs: Long) {
         val currentState = _uiState.value
-        if (!isProgressTrackingEnabled(currentState.trackProgressToServer) || !isPlaying) return
+        if (!currentState.trackProgressToServer || !isPlaying) return
         reportWatchProgress(positionMs = positionMs, isPaused = false, force = false, markPlayedIfComplete = false)
     }
 
@@ -838,7 +820,7 @@ class PlayerViewModel @Inject constructor(
     ): Job? {
         val currentState = _uiState.value
         val mediaItem = currentState.mediaItem ?: return null
-        if (!isProgressTrackingEnabled(currentState.trackProgressToServer)) return null
+        if (!currentState.trackProgressToServer) return null
         val userId = securePreferences.getUserId() ?: return null
         if (!force &&
             System.currentTimeMillis() - lastProgressReportAtMs < WATCH_PROGRESS_REPORT_INTERVAL_MS
