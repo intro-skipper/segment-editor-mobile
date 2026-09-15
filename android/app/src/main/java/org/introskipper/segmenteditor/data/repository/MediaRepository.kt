@@ -204,7 +204,7 @@ class MediaRepository(
             userId = userId,
             parentId = parentId,
             includeItemTypes = listOf("Episode"),
-            filters = listOf("IsNotFolder"),
+            filters = listOf("IsUnplayed", "IsNotFolder"),
             recursive = true,
             limit = limit,
             sortBy = "DatePlayed",

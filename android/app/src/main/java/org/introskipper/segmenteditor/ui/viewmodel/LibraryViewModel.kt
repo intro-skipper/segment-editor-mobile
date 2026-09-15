@@ -116,9 +116,12 @@ class LibraryViewModel @Inject constructor(
                             )
                         } ?: state
                     }
-                    // Reconcile the optimistic removal with Jellyfin so the
-                    // Continue Watching section reflects the server state.
-                    refreshIfLibrariesChanged()
+                    // Reconcile both watch lists with Jellyfin before finishing
+                    // the action so Next Up is refreshed at the same time.
+                    val currentState = _uiState.value
+                    if (currentState is LibraryUiState.Success) {
+                        refreshWatchLists(currentState.libraries)
+                    }
                     _events.emit(LibraryEvent.ShowToast(UiText.StringResource(R.string.library_marked_watched)))
                 } else {
                     _events.emit(
@@ -298,21 +301,25 @@ class LibraryViewModel @Inject constructor(
             if (currentState is LibraryUiState.Success) {
                 viewModelScope.launch {
                     try {
-                        val updatedContinueWatching = fetchContinueWatching(currentState.libraries)
-                        val updatedNextUp = fetchNextUp(currentState.libraries)
-                        _uiState.update { state ->
-                            if (state is LibraryUiState.Success) {
-                                state.copy(
-                                    continueWatching = updatedContinueWatching,
-                                    nextUp = updatedNextUp
-                                )
-                            } else state
-                        }
+                        refreshWatchLists(currentState.libraries)
                     } catch (e: Exception) {
                         Log.e("LibraryViewModel", "Failed to refresh continue watching and next up", e)
                     }
                 }
             }
+        }
+    }
+
+    private suspend fun refreshWatchLists(libraries: List<Library>) {
+        val updatedContinueWatching = fetchContinueWatching(libraries)
+        val updatedNextUp = fetchNextUp(libraries)
+        _uiState.update { state ->
+            if (state is LibraryUiState.Success) {
+                state.copy(
+                    continueWatching = updatedContinueWatching,
+                    nextUp = updatedNextUp
+                )
+            } else state
         }
     }
 
