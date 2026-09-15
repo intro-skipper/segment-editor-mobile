@@ -71,6 +71,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -85,11 +86,15 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.PlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.MediaItem
 import org.introskipper.segmenteditor.data.model.Segment
@@ -123,6 +128,8 @@ fun PlayerScreen(
     val uiState by viewModel.uiState.collectAsState()
     val events by viewModel.events.collectAsState()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val coroutineScope = rememberCoroutineScope()
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     
     // Determine if we should use direct play (no HLS transcoding)
@@ -130,6 +137,16 @@ fun PlayerScreen(
     var useDirectPlay by remember(itemId) { mutableStateOf(viewModel.shouldUseDirectPlay()) }
     var showDirectPlayFailedDialog by remember(itemId) { mutableStateOf(false) }
     var hasShownErrorDialog by remember(itemId) { mutableStateOf(false) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshWatchProgressSetting()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     
     // Stream URL with track parameters built in (changes when tracks or mode changes)
     val streamUrl = remember(uiState.mediaItem, useDirectPlay, uiState.selectedAudioTrack, uiState.selectedSubtitleTrack) {
@@ -357,7 +374,9 @@ fun PlayerScreen(
 
     // Mirror the back-icon behavior for the device back button.
     BackHandler {
-        navigateBack(navController, uiState.mediaItem, viewModel, player?.currentPosition)
+        coroutineScope.launch {
+            navigateBack(navController, uiState.mediaItem, viewModel, player?.currentPosition)
+        }
     }
 
     Scaffold(
@@ -367,7 +386,9 @@ fun PlayerScreen(
                     title = { Text(uiState.mediaItem?.name ?: translatedString(R.string.player_title)) },
                     navigationIcon = {
                         IconButton(onClick = { 
-                            navigateBack(navController, uiState.mediaItem, viewModel, player?.currentPosition)
+                            coroutineScope.launch {
+                                navigateBack(navController, uiState.mediaItem, viewModel, player?.currentPosition)
+                            }
                         }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, translatedString(R.string.back))
                         }
@@ -895,7 +916,7 @@ private fun NextUpCard(
     }
 }
 
-private fun navigateBack(
+suspend fun navigateBack(
     navController: NavController,
     mediaItem: MediaItem?,
     viewModel: PlayerViewModel,

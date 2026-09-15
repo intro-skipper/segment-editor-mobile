@@ -103,6 +103,11 @@ class PlayerViewModel @Inject constructor(
         return securePreferences.getPreferDirectPlay()
     }
 
+    fun refreshWatchProgressSetting() {
+        val shouldTrackProgress = isProgressTrackingEnabledForLaunch(continueWatchingLaunch)
+        _uiState.update { it.copy(trackProgressToServer = shouldTrackProgress) }
+    }
+
     private val _events = MutableStateFlow<PlayerEvent?>(null)
     val events: StateFlow<PlayerEvent?> = _events.asStateFlow()
 
@@ -764,18 +769,16 @@ class PlayerViewModel @Inject constructor(
         val uiState = _uiState.value
         val nextId = uiState.nextItemId
         val autoPlayEnabled = securePreferences.getAutoPlayNextEpisode()
-        val progressJob = reportWatchProgress(
-            positionMs = uiState.duration,
-            isPaused = true,
-            force = true,
-            markPlayedIfComplete = true
-        )
-
         viewModelScope.launch {
             // The player destination is replaced immediately after this event is
-            // consumed. Wait for the final progress request so the current item is
-            // marked watched before its ViewModel is cleared.
-            progressJob?.join()
+            // consumed. Complete the final progress request first so the current
+            // item is updated before its ViewModel is cleared.
+            reportWatchProgress(
+                positionMs = uiState.duration,
+                isPaused = true,
+                force = true,
+                markPlayedIfComplete = true
+            )
 
             Log.d(TAG, "Playback ended. nextItemId=$nextId, autoPlayEnabled=$autoPlayEnabled")
 
@@ -795,7 +798,7 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun flushWatchProgress(positionMs: Long? = null) {
+    suspend fun flushWatchProgress(positionMs: Long? = null) {
         val currentState = _uiState.value
         if (!currentState.trackProgressToServer) return
         reportWatchProgress(
@@ -809,22 +812,29 @@ class PlayerViewModel @Inject constructor(
     private fun maybeReportWatchProgress(isPlaying: Boolean, positionMs: Long) {
         val currentState = _uiState.value
         if (!currentState.trackProgressToServer || !isPlaying) return
-        reportWatchProgress(positionMs = positionMs, isPaused = false, force = false, markPlayedIfComplete = false)
+        viewModelScope.launch {
+            reportWatchProgress(
+                positionMs = positionMs,
+                isPaused = false,
+                force = false,
+                markPlayedIfComplete = false
+            )
+        }
     }
 
-    private fun reportWatchProgress(
+    private suspend fun reportWatchProgress(
         positionMs: Long,
         isPaused: Boolean,
         force: Boolean,
         markPlayedIfComplete: Boolean
-    ): Job? {
+    ) {
         val currentState = _uiState.value
-        val mediaItem = currentState.mediaItem ?: return null
-        if (!currentState.trackProgressToServer) return null
-        val userId = securePreferences.getUserId() ?: return null
+        val mediaItem = currentState.mediaItem ?: return
+        if (!currentState.trackProgressToServer) return
+        val userId = securePreferences.getUserId() ?: return
         if (!force &&
             System.currentTimeMillis() - lastProgressReportAtMs < WATCH_PROGRESS_REPORT_INTERVAL_MS
-        ) return null
+        ) return
 
         val safePositionMs = positionMs.coerceAtLeast(0L)
         val durationMs = currentState.duration.coerceAtLeast(0L)
@@ -836,29 +846,34 @@ class PlayerViewModel @Inject constructor(
         val isComplete = durationMs > 0L && playedPercentage >= WATCH_COMPLETION_PERCENT
 
         lastProgressReportAtMs = System.currentTimeMillis()
-        return viewModelScope.launch {
-            try {
-                if (markPlayedIfComplete && isComplete) {
-                    // Content is complete: register completion with the server.
-                    // Do not save the end-position; markItemPlayed handles completion.
-                    if (!hasMarkedPlayedForCurrentItem) {
-                        mediaRepository.markItemPlayed(itemId = mediaItem.id, userId = userId)
+        try {
+            if (markPlayedIfComplete && isComplete) {
+                // Content is complete: register completion with the server.
+                // Do not save the end-position; markItemPlayed handles completion.
+                if (!hasMarkedPlayedForCurrentItem) {
+                    val response = mediaRepository.markItemPlayed(itemId = mediaItem.id, userId = userId)
+                    if (response.isSuccessful) {
                         hasMarkedPlayedForCurrentItem = true
+                    } else {
+                        Log.w(TAG, "Failed to mark ${mediaItem.id} played: HTTP ${response.code()}")
                     }
-                } else {
-                    // Content is still in progress: save current position for resumption.
-                    mediaRepository.updateUserItemData(
-                        itemId = mediaItem.id,
-                        userId = userId,
-                        data = UpdateUserItemDataDto(
-                            playbackPositionTicks = safePositionMs * 10_000L,
-                            playedPercentage = playedPercentage
-                        )
-                    )
                 }
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to report watch progress for ${mediaItem.id}", e)
+            } else {
+                // Content is still in progress: save current position for resumption.
+                val response = mediaRepository.updateUserItemData(
+                    itemId = mediaItem.id,
+                    userId = userId,
+                    data = UpdateUserItemDataDto(
+                        playbackPositionTicks = safePositionMs * 10_000L,
+                        playedPercentage = playedPercentage
+                    )
+                )
+                if (!response.isSuccessful) {
+                    Log.w(TAG, "Failed to save progress for ${mediaItem.id}: HTTP ${response.code()}")
+                }
             }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to report watch progress for ${mediaItem.id}", e)
         }
     }
 
