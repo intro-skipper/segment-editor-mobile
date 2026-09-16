@@ -97,10 +97,15 @@ class PlayerViewModel @Inject constructor(
     private var lastProgressReportAtMs: Long = 0L
     private var hasMarkedPlayedForCurrentItem: Boolean = false
     private var hasHandledPlaybackEnded: Boolean = false
+    private var directPlayTracksInitialized: Boolean = false
 
     // Get the preferDirectPlay setting (when true, use direct play instead of HLS)
     fun shouldUseDirectPlay(): Boolean {
         return securePreferences.getPreferDirectPlay()
+    }
+
+    fun preferredAudioLanguage(): String? {
+        return securePreferences.getPreferredAudioLanguage().takeIf { it.isNotBlank() }
     }
 
     fun refreshWatchProgressSetting() {
@@ -122,6 +127,7 @@ class PlayerViewModel @Inject constructor(
             lastProgressReportAtMs = 0L
             hasMarkedPlayedForCurrentItem = false
             hasHandledPlaybackEnded = false
+            directPlayTracksInitialized = false
             // Clear old state when loading new item to prevent state pollution
             _uiState.update {
                 it.copy(
@@ -488,7 +494,9 @@ class PlayerViewModel @Inject constructor(
             it.copy(
                 audioTracks = audioTracks,
                 subtitleTracks = subtitleTracks,
-                selectedAudioTrack = defaultAudioIndex,
+                // Direct play resolves tracks from ExoPlayer, whose order can differ
+                // from the Jellyfin metadata order. HLS can use the metadata index.
+                selectedAudioTrack = if (shouldUseDirectPlay()) null else defaultAudioIndex,
                 selectedSubtitleTrack = defaultSubtitleIndex
             )
         }
@@ -555,12 +563,19 @@ class PlayerViewModel @Inject constructor(
         // For HLS: keep Jellyfin tracks (they come from API), only use ExoPlayer as fallback
         if (useDirectPlay) {
             // Direct play: tracks are in the media file, use what ExoPlayer found
-            // Keep an explicit in-player selection when tracks change; otherwise apply
-            // the configured language to the initial track list.
+            // Resolve the configured language against ExoPlayer's actual formats on
+            // the first track update. Later updates preserve explicit user changes.
             val currentAudioIndex = _uiState.value.selectedAudioTrack
-            val defaultAudioIndex = currentAudioIndex?.takeIf { index ->
-                exoAudioTracks.any { it.relativeIndex == index }
-            } ?: preferredAudioTrackIndex(exoAudioTracks)
+            val defaultAudioIndex = if (!directPlayTracksInitialized) {
+                preferredAudioTrackIndex(exoAudioTracks)
+            } else {
+                currentAudioIndex?.takeIf { index ->
+                    exoAudioTracks.any { it.relativeIndex == index }
+                } ?: preferredAudioTrackIndex(exoAudioTracks)
+            }
+            if (exoAudioTracks.isNotEmpty()) {
+                directPlayTracksInitialized = true
+            }
             val defaultSubtitleIndex = exoSubtitleTracks.firstOrNull { it.isDefault }?.relativeIndex
 
             Log.d(TAG, "Direct play mode: using ExoPlayer tracks, defaultAudio=$defaultAudioIndex, defaultSubtitle=$defaultSubtitleIndex")
@@ -625,7 +640,14 @@ class PlayerViewModel @Inject constructor(
                             // Preserve current selections (same relativeIndex should work for both sources)
                             // Audio: current selection (if valid) \u2192 default track \u2192 first track \u2192 null
                             // Subtitle: current selection (if valid) \u2192 null (subtitles are optional)
-                            val preservedAudioSelection = state.selectedAudioTrack?.takeIf { current ->
+                            val currentAudioTrack = state.selectedAudioTrack?.let { current ->
+                                state.audioTracks.firstOrNull { it.relativeIndex == current }
+                            }
+                            val preservedAudioSelection = currentAudioTrack?.language?.let { language ->
+                                jellyfinAudioTracks.firstOrNull {
+                                    canonicalLanguage(it.language) == canonicalLanguage(language)
+                                }?.relativeIndex
+                            } ?: state.selectedAudioTrack?.takeIf { current ->
                                 jellyfinAudioTracks.any { it.relativeIndex == current }
                             } ?: preferredAudioTrackIndex(jellyfinAudioTracks)
 
@@ -645,10 +667,13 @@ class PlayerViewModel @Inject constructor(
                         } else {
                             // Fallback to ExoPlayer tracks if Jellyfin metadata not available
                             Log.w(TAG, "HLS mode: no mediaStreams, using ExoPlayer tracks")
+                            val preservedAudioSelection = state.selectedAudioTrack?.takeIf { current ->
+                                exoAudioTracks.any { it.relativeIndex == current }
+                            } ?: preferredAudioTrackIndex(exoAudioTracks)
                             state.copy(
                                 audioTracks = exoAudioTracks,
                                 subtitleTracks = exoSubtitleTracks,
-                                selectedAudioTrack = preferredAudioTrackIndex(exoAudioTracks),
+                                selectedAudioTrack = preservedAudioSelection,
                                 selectedSubtitleTrack = state.selectedSubtitleTrack
                             )
                         }

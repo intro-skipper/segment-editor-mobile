@@ -315,13 +315,18 @@ fun SettingsScreen(
                         onOptionSelected = viewModel::setPreferredAudioLanguage
                     )
 
-                    SwitchSettingItem(
-                        title = translatedString(R.string.settings_prefer_direct_play),
-                        subtitle = translatedString(R.string.settings_prefer_direct_play_subtitle),
-                        checked = uiState.preferDirectPlay,
-                        onCheckedChange = viewModel::setPreferDirectPlay
+                    DropdownSettingsItem(
+                        title = translatedString(R.string.settings_skip_behavior),
+                        subtitle = translatedString(R.string.settings_skip_behavior_subtitle),
+                        options = listOf(
+                            SkipBehavior.SHOW_BUTTON to translatedString(R.string.settings_skip_behavior_show_button),
+                            SkipBehavior.AUTO_SKIP to translatedString(R.string.settings_skip_behavior_auto_skip),
+                            SkipBehavior.NONE to translatedString(R.string.settings_skip_behavior_none)
+                        ),
+                        selectedOption = uiState.skipBehavior,
+                        onOptionSelected = viewModel::setSkipBehavior
                     )
-                    
+
                     SwitchSettingItem(
                         title = translatedString(R.string.settings_autoplay_next),
                         checked = uiState.autoPlayNextEpisode,
@@ -339,16 +344,11 @@ fun SettingsScreen(
                         onOptionSelected = viewModel::setWatchProgressMode
                     )
 
-                    DropdownSettingsItem(
-                        title = translatedString(R.string.settings_skip_behavior),
-                        subtitle = translatedString(R.string.settings_skip_behavior_subtitle),
-                        options = listOf(
-                            SkipBehavior.SHOW_BUTTON to translatedString(R.string.settings_skip_behavior_show_button),
-                            SkipBehavior.AUTO_SKIP to translatedString(R.string.settings_skip_behavior_auto_skip),
-                            SkipBehavior.NONE to translatedString(R.string.settings_skip_behavior_none)
-                        ),
-                        selectedOption = uiState.skipBehavior,
-                        onOptionSelected = viewModel::setSkipBehavior
+                    SwitchSettingItem(
+                        title = translatedString(R.string.settings_prefer_direct_play),
+                        subtitle = translatedString(R.string.settings_prefer_direct_play_subtitle),
+                        checked = uiState.preferDirectPlay,
+                        onCheckedChange = viewModel::setPreferDirectPlay
                     )
 
                     SwitchSettingItem(
