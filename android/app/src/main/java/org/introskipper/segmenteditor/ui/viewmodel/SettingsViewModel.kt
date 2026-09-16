@@ -42,6 +42,7 @@ data class SettingsUiState(
     val autoPlayNextEpisode: Boolean = true,
     val skipBehavior: SkipBehavior = SkipBehavior.SHOW_BUTTON,
     val watchProgressMode: WatchProgressMode = WatchProgressMode.CONTINUE_WATCHING,
+    val preferredAudioLanguage: String = "",
     val preferLocalPreviews: Boolean = false,
     val disableSkipMeSegments: Boolean = true,
     val exportFormat: ExportFormat = ExportFormat.JSON,
@@ -130,6 +131,7 @@ class SettingsViewModel @Inject constructor(
                 autoPlayNextEpisode = securePreferences.getAutoPlayNextEpisode(),
                 skipBehavior = securePreferences.getSkipBehavior(),
                 watchProgressMode = securePreferences.getWatchProgressMode(),
+                preferredAudioLanguage = securePreferences.getPreferredAudioLanguage(),
                 preferLocalPreviews = securePreferences.getPreferLocalPreviews(),
                 disableSkipMeSegments = securePreferences.getDisableSkipMeSegments(),
                 exportFormat = securePreferences.getExportFormat(),
@@ -347,6 +349,11 @@ class SettingsViewModel @Inject constructor(
     fun setWatchProgressMode(mode: WatchProgressMode) {
         securePreferences.setWatchProgressMode(mode)
         _uiState.value = _uiState.value.copy(watchProgressMode = mode)
+    }
+
+    fun setPreferredAudioLanguage(language: String) {
+        securePreferences.setPreferredAudioLanguage(language)
+        _uiState.value = _uiState.value.copy(preferredAudioLanguage = language)
     }
 
     fun setPreferLocalPreviews(prefer: Boolean) {

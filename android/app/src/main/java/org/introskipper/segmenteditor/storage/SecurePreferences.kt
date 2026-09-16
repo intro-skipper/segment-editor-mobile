@@ -139,6 +139,14 @@ class SecurePreferences(context: Context) {
         }
     }
 
+    fun setPreferredAudioLanguage(language: String) {
+        sharedPreferences.edit { putString(KEY_PREFERRED_AUDIO_LANGUAGE, language) }
+    }
+
+    fun getPreferredAudioLanguage(): String {
+        return sharedPreferences.getString(KEY_PREFERRED_AUDIO_LANGUAGE, "") ?: ""
+    }
+
     // ========== UI Settings ==========
     
     fun setTheme(theme: AppTheme) {
@@ -296,6 +304,7 @@ class SecurePreferences(context: Context) {
         private const val KEY_AUTO_PLAY_NEXT = "auto_play_next"
         private const val KEY_SKIP_BEHAVIOR = "skip_behavior"
         private const val KEY_WATCH_PROGRESS_MODE = "watch_progress_mode"
+        private const val KEY_PREFERRED_AUDIO_LANGUAGE = "preferred_audio_language"
         
         // UI keys
         private const val KEY_THEME = "theme"

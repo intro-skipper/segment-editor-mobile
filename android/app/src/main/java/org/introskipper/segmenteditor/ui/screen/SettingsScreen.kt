@@ -193,7 +193,6 @@ fun SettingsScreen(
                 SettingsSection(title = translatedString(R.string.settings_section_appearance)) {
                     DropdownSettingsItem(
                         title = translatedString(R.string.settings_theme),
-                        subtitle = translatedString(R.string.settings_theme_subtitle),
                         options = listOf(
                             AppTheme.LIGHT to translatedString(R.string.settings_theme_light),
                             AppTheme.DARK to translatedString(R.string.settings_theme_dark),
@@ -270,7 +269,6 @@ fun SettingsScreen(
                 SettingsSection(title = translatedString(R.string.settings_section_browsing)) {
                     DropdownSettingsItem(
                         title = translatedString(R.string.settings_items_per_page),
-                        subtitle = translatedString(R.string.settings_items_per_page_subtitle),
                         options = listOf(
                             10 to "10",
                             20 to "20",
@@ -285,7 +283,6 @@ fun SettingsScreen(
 
                     DropdownSettingsItem(
                         title = translatedString(R.string.settings_browse_layout),
-                        subtitle = translatedString(R.string.settings_browse_layout_subtitle),
                         options = listOf(
                             BrowseLayout.CARD to translatedString(R.string.settings_browse_layout_card),
                             BrowseLayout.LIST to translatedString(R.string.settings_browse_layout_list)
@@ -299,6 +296,25 @@ fun SettingsScreen(
             // Playback Section
             item {
                 SettingsSection(title = translatedString(R.string.settings_section_playback)) {
+                    DropdownSettingsItem(
+                        title = translatedString(R.string.settings_preferred_audio_language),
+                        options = listOf(
+                            "" to translatedString(R.string.settings_audio_language_default),
+                            "eng" to translatedString(R.string.settings_audio_language_english),
+                            "spa" to translatedString(R.string.settings_audio_language_spanish),
+                            "fra" to translatedString(R.string.settings_audio_language_french),
+                            "deu" to translatedString(R.string.settings_audio_language_german),
+                            "ita" to translatedString(R.string.settings_audio_language_italian),
+                            "por" to translatedString(R.string.settings_audio_language_portuguese),
+                            "rus" to translatedString(R.string.settings_audio_language_russian),
+                            "jpn" to translatedString(R.string.settings_audio_language_japanese),
+                            "kor" to translatedString(R.string.settings_audio_language_korean),
+                            "zho" to translatedString(R.string.settings_audio_language_chinese)
+                        ),
+                        selectedOption = uiState.preferredAudioLanguage,
+                        onOptionSelected = viewModel::setPreferredAudioLanguage
+                    )
+
                     SwitchSettingItem(
                         title = translatedString(R.string.settings_prefer_direct_play),
                         subtitle = translatedString(R.string.settings_prefer_direct_play_subtitle),
@@ -308,7 +324,6 @@ fun SettingsScreen(
                     
                     SwitchSettingItem(
                         title = translatedString(R.string.settings_autoplay_next),
-                        subtitle = translatedString(R.string.settings_autoplay_next_subtitle),
                         checked = uiState.autoPlayNextEpisode,
                         onCheckedChange = viewModel::setAutoPlayNextEpisode
                     )

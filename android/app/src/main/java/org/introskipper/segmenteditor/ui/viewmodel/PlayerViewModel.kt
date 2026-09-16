@@ -409,6 +409,35 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    private fun canonicalLanguage(language: String?): String? {
+        val baseLanguage = language?.trim()?.lowercase()?.replace('_', '-')?.substringBefore('-')
+            ?: return null
+        return when (baseLanguage) {
+            "en", "eng" -> "eng"
+            "es", "spa" -> "spa"
+            "fr", "fra", "fre" -> "fra"
+            "de", "deu", "ger" -> "deu"
+            "it", "ita" -> "ita"
+            "pt", "por" -> "por"
+            "ru", "rus" -> "rus"
+            "ja", "jpn" -> "jpn"
+            "ko", "kor" -> "kor"
+            "zh", "zho", "chi" -> "zho"
+            else -> baseLanguage
+        }
+    }
+
+    private fun preferredAudioTrackIndex(audioTracks: List<TrackInfo>): Int? {
+        if (audioTracks.isEmpty()) return null
+
+        val preferredLanguage = canonicalLanguage(securePreferences.getPreferredAudioLanguage())
+        return audioTracks.firstOrNull {
+            preferredLanguage != null && canonicalLanguage(it.language) == preferredLanguage
+        }?.relativeIndex
+            ?: audioTracks.firstOrNull { it.isDefault }?.relativeIndex
+            ?: audioTracks.firstOrNull()?.relativeIndex
+    }
+
     private fun extractTracksFromMediaStreams(mediaStreams: List<MediaStream>?) {
         if (mediaStreams == null) {
             Log.d(TAG, "No media streams available")
@@ -445,11 +474,7 @@ class PlayerViewModel @Inject constructor(
 
         // Find the default track relativeIndex or use the first track if tracks exist
         // Use relativeIndex for consistency across both HLS and Direct Play modes
-        val defaultAudioIndex = if (audioTracks.isEmpty()) {
-            null
-        } else {
-            audioTracks.firstOrNull { it.isDefault }?.relativeIndex ?: audioTracks.firstOrNull()?.relativeIndex
-        }
+        val defaultAudioIndex = preferredAudioTrackIndex(audioTracks)
         val defaultSubtitleIndex = subtitleTracks.firstOrNull { it.isDefault }?.relativeIndex
         
         audioTracks.forEach { track ->
@@ -530,7 +555,12 @@ class PlayerViewModel @Inject constructor(
         // For HLS: keep Jellyfin tracks (they come from API), only use ExoPlayer as fallback
         if (useDirectPlay) {
             // Direct play: tracks are in the media file, use what ExoPlayer found
-            val defaultAudioIndex = exoAudioTracks.firstOrNull { it.isDefault }?.relativeIndex
+            // Keep an explicit in-player selection when tracks change; otherwise apply
+            // the configured language to the initial track list.
+            val currentAudioIndex = _uiState.value.selectedAudioTrack
+            val defaultAudioIndex = currentAudioIndex?.takeIf { index ->
+                exoAudioTracks.any { it.relativeIndex == index }
+            } ?: preferredAudioTrackIndex(exoAudioTracks)
             val defaultSubtitleIndex = exoSubtitleTracks.firstOrNull { it.isDefault }?.relativeIndex
 
             Log.d(TAG, "Direct play mode: using ExoPlayer tracks, defaultAudio=$defaultAudioIndex, defaultSubtitle=$defaultSubtitleIndex")
@@ -595,17 +625,9 @@ class PlayerViewModel @Inject constructor(
                             // Preserve current selections (same relativeIndex should work for both sources)
                             // Audio: current selection (if valid) \u2192 default track \u2192 first track \u2192 null
                             // Subtitle: current selection (if valid) \u2192 null (subtitles are optional)
-                            val preservedAudioSelection = state.selectedAudioTrack?.let { current ->
-                                // Keep current if within bounds, otherwise try fallbacks
-                                if (current < jellyfinAudioTracks.size) {
-                                    current
-                                } else {
-                                    // Current selection invalid, use default or first track
-                                    jellyfinAudioTracks.firstOrNull { it.isDefault }?.relativeIndex
-                                        ?: jellyfinAudioTracks.firstOrNull()?.relativeIndex
-                                }
-                            } ?: jellyfinAudioTracks.firstOrNull { it.isDefault }?.relativeIndex
-                                ?: jellyfinAudioTracks.firstOrNull()?.relativeIndex
+                            val preservedAudioSelection = state.selectedAudioTrack?.takeIf { current ->
+                                jellyfinAudioTracks.any { it.relativeIndex == current }
+                            } ?: preferredAudioTrackIndex(jellyfinAudioTracks)
 
                             val preservedSubtitleSelection = state.selectedSubtitleTrack?.let { current ->
                                 // Keep current if within bounds, otherwise clear (subtitles are optional)
@@ -626,7 +648,7 @@ class PlayerViewModel @Inject constructor(
                             state.copy(
                                 audioTracks = exoAudioTracks,
                                 subtitleTracks = exoSubtitleTracks,
-                                selectedAudioTrack = state.selectedAudioTrack ?: exoAudioTracks.firstOrNull()?.relativeIndex,
+                                selectedAudioTrack = preferredAudioTrackIndex(exoAudioTracks),
                                 selectedSubtitleTrack = state.selectedSubtitleTrack
                             )
                         }
@@ -638,8 +660,7 @@ class PlayerViewModel @Inject constructor(
                         state.copy(
                             audioTracks = exoAudioTracks,
                             subtitleTracks = exoSubtitleTracks,
-                            selectedAudioTrack = exoAudioTracks.firstOrNull { it.isDefault }?.relativeIndex
-                                ?: exoAudioTracks.firstOrNull()?.relativeIndex,
+                            selectedAudioTrack = preferredAudioTrackIndex(exoAudioTracks),
                             selectedSubtitleTrack = exoSubtitleTracks.firstOrNull { it.isDefault }?.relativeIndex
                         )
                     }
