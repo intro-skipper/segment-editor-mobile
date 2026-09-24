@@ -68,6 +68,7 @@ import my.nanihadesuka.compose.LazyColumnScrollbar
 import my.nanihadesuka.compose.ScrollbarSettings
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.storage.SecurePreferences
+import org.introskipper.segmenteditor.data.export.shareExport
 import org.introskipper.segmenteditor.ui.component.EpisodeCard
 import org.introskipper.segmenteditor.ui.component.MediaHeader
 import org.introskipper.segmenteditor.ui.component.WavyCircularProgressIndicator
@@ -112,6 +113,7 @@ fun SeriesScreen(
                 is SeriesEvent.ShowToast -> {
                     Toast.makeText(context, event.message.asString(context), Toast.LENGTH_SHORT).show()
                 }
+                is SeriesEvent.ShareExport -> context.shareExport(event.file)
             }
         }
     }
@@ -480,15 +482,6 @@ fun SeriesScreen(
                                                                     ) {
                                                                         Text(translatedString(R.string.share_segments))
                                                                     }
-                                                                    Button(
-                                                                        onClick = {
-                                                                            viewModel.submitSeasonMetadata(seasonNumber)
-                                                                            showSeasonShareDialog = false
-                                                                        },
-                                                                        modifier = Modifier.fillMaxWidth()
-                                                                    ) {
-                                                                        Text(translatedString(R.string.share_metadata))
-                                                                    }
                                                                 }
                                                             },
                                                             confirmButton = {
@@ -632,15 +625,6 @@ fun SeriesScreen(
                                                                         modifier = Modifier.fillMaxWidth()
                                                                     ) {
                                                                         Text(translatedString(R.string.share_segments))
-                                                                    }
-                                                                    Button(
-                                                                        onClick = {
-                                                                            viewModel.submitSeasonMetadata(seasonNumber)
-                                                                            showSeasonShareDialog = false
-                                                                        },
-                                                                        modifier = Modifier.fillMaxWidth()
-                                                                    ) {
-                                                                        Text(translatedString(R.string.share_metadata))
                                                                     }
                                                                 }
                                                             },

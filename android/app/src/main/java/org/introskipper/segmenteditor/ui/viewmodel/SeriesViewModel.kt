@@ -25,21 +25,14 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.api.JellyfinApiService
-import org.introskipper.segmenteditor.api.SkipMeApiService
-import org.introskipper.segmenteditor.data.local.MetadataSubmissionDao
-import org.introskipper.segmenteditor.data.local.SubmissionDao
-import org.introskipper.segmenteditor.data.model.MetadataSubmission
+import org.introskipper.segmenteditor.data.export.SegmentExportItem
+import org.introskipper.segmenteditor.data.export.SegmentExporter
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.SegmentCreateRequest
 import org.introskipper.segmenteditor.data.model.filterSkipMe
 import org.introskipper.segmenteditor.data.model.SegmentType
-import org.introskipper.segmenteditor.data.model.SkipMeBackfillRequest
-import org.introskipper.segmenteditor.data.model.SkipMeSeasonItem
-import org.introskipper.segmenteditor.data.model.SkipMeSeasonSubmitRequest
-import org.introskipper.segmenteditor.data.model.Submission
 import org.introskipper.segmenteditor.data.repository.MediaRepository
 import org.introskipper.segmenteditor.data.repository.SegmentRepository
-import org.introskipper.segmenteditor.data.repository.TvMazeRepository
 import org.introskipper.segmenteditor.storage.SecurePreferences
 import org.introskipper.segmenteditor.ui.state.EpisodeWithSegments
 import org.introskipper.segmenteditor.ui.state.SeriesEvent
@@ -69,10 +62,7 @@ class SeriesViewModel @Inject constructor(
     private val mediaRepository: MediaRepository,
     private val segmentRepository: SegmentRepository,
     private val securePreferences: SecurePreferences,
-    private val skipMeApiService: SkipMeApiService,
-    private val submissionDao: SubmissionDao,
-    private val metadataSubmissionDao: MetadataSubmissionDao,
-    private val tvMazeRepository: TvMazeRepository,
+    private val segmentExporter: SegmentExporter,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -221,393 +211,62 @@ class SeriesViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Shares all segments for the specified season to SkipMe.db
-     */
+    /** Exports all segments for the specified season using the configured format. */
     fun shareSeasonSegments(seasonNumber: Int) {
         val currentState = _uiState.value
         if (currentState !is SeriesUiState.Success) return
 
         val episodes = currentState.episodesBySeason[seasonNumber] ?: return
         _uiState.update { currentState.copy(isSharing = true, submittingSeasonNumber = seasonNumber) }
-        shareEpisodes(episodes, hideAfterSuccess = false) {
-             _uiState.update { (it as? SeriesUiState.Success)?.copy(isSharing = false, submittingSeasonNumber = null) ?: it }
+        exportEpisodes(episodes, "${currentState.series.name.orEmpty()}_season_$seasonNumber") {
+            _uiState.update { (it as? SeriesUiState.Success)?.copy(isSharing = false, submittingSeasonNumber = null) ?: it }
         }
     }
 
-    /**
-     * Shares all segments for all seasons (excluding specials) to SkipMe.db
-     */
+    /** Exports all segments for all seasons (excluding specials). */
     fun shareEntireSeries() {
         val currentState = _uiState.value
         if (currentState !is SeriesUiState.Success) return
 
         val allEpisodes = currentState.episodesBySeason
-            .filter { it.key != 0 } // Exclude specials
+            .filter { it.key != 0 }
             .values
             .flatten()
-        
+
         _uiState.update { currentState.copy(isSharing = true) }
-        shareEpisodes(allEpisodes, hideAfterSuccess = true) {
-             _uiState.update { (it as? SeriesUiState.Success)?.copy(isSharing = false) ?: it }
+        exportEpisodes(allEpisodes, currentState.series.name.orEmpty()) {
+            _uiState.update { (it as? SeriesUiState.Success)?.copy(isSharing = false) ?: it }
         }
     }
 
-    private fun shareEpisodes(
-        episodes: List<EpisodeWithSegments>, 
-        hideAfterSuccess: Boolean,
+    private fun exportEpisodes(
+        episodes: List<EpisodeWithSegments>,
+        title: String,
         onComplete: () -> Unit
     ) {
         viewModelScope.launch {
-            val currentState = _uiState.value as? SeriesUiState.Success ?: run { onComplete(); return@launch }
-            
+            val currentState = _uiState.value as? SeriesUiState.Success ?: run {
+                onComplete()
+                return@launch
+            }
+
             try {
-                var seriesTvdbId = currentState.series.getTvdbId()
-                val seriesTmdbId = currentState.series.getTmdbId()
-                var seriesImdbId = currentState.series.getImdbId()
-                val seriesAniListId = currentState.series.getAniListId()
-
-                // Try TVMaze to fill any missing series-level IDs
-                if (seriesImdbId == null) {
-                    seriesTvdbId?.let { id ->
-                        tvMazeRepository.lookupByTvdbId(id)?.imdbId?.also { seriesImdbId = it }
-                    }
-                } else if (seriesTvdbId == null) {
-                    seriesImdbId?.let { id ->
-                        tvMazeRepository.lookupByImdbId(id)?.tvdbId?.also { seriesTvdbId = it }
+                val exportItems = episodes.flatMap { episodeWithSegments ->
+                    episodeWithSegments.segments.orEmpty().map { segment ->
+                        SegmentExportItem.from(segment, episodeWithSegments.episode, currentState.series)
                     }
                 }
-
-                // Group deduplicated items by (season number, tvdb season id)
-                data class SeasonKey(val seasonNumber: Int?, val tvdbSeasonId: Int?)
-                val itemsBySeason = mutableMapOf<SeasonKey, MutableSet<SkipMeSeasonItem>>()
-                var totalDuplicates = 0
-
-                episodes.forEach { episodeWithSegments ->
-                    val episode = episodeWithSegments.episode
-                    val segments = episodeWithSegments.segments ?: return@forEach
-
-                    val tvdbEpisodeId = episode.getTvdbId()
-                    val imdbEpisodeId = episode.getImdbId()
-                    val tvdbSeasonId = currentState.seasonTvdbIds[episode.seasonId ?: ""]
-                    val durationMs = episode.runTimeTicks?.div(10_000)
-
-                    if ((seriesTmdbId != null || seriesTvdbId != null || seriesImdbId != null || seriesAniListId != null) && durationMs != null && durationMs > 0) {
-                        segments.forEach { segment ->
-                            val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType()
-                            if (skipMeType == null) return@forEach
-
-                            val startMs = segment.startTicks / 10_000
-                            val endMs = segment.endTicks / 10_000
-                            if (startMs < 0 || endMs <= startMs || endMs > durationMs) {
-                                return@forEach
-                            }
-
-                            // Filter local duplicates
-                            if (submissionDao.isDuplicate(
-                                    segmentType = skipMeType,
-                                    durationMs = durationMs,
-                                    startMs = startMs,
-                                    endMs = endMs,
-                                    tvdbId = tvdbEpisodeId,
-                                    imdbId = imdbEpisodeId,
-                                    tmdbId = seriesTmdbId,
-                                    imdbSeriesId = seriesImdbId,
-                                    aniListId = seriesAniListId,
-                                    season = episode.parentIndexNumber,
-                                    episode = episode.indexNumber
-                                )) {
-                                totalDuplicates++
-                                return@forEach
-                            }
-
-                            val key = SeasonKey(episode.parentIndexNumber, tvdbSeasonId)
-                            itemsBySeason.getOrPut(key) { mutableSetOf() }.add(
-                                SkipMeSeasonItem(
-                                    tvdbId = tvdbEpisodeId,
-                                    imdbId = imdbEpisodeId,
-                                    episode = episode.indexNumber,
-                                    segment = skipMeType,
-                                    durationMs = durationMs,
-                                    startMs = startMs,
-                                    endMs = endMs
-                                )
-                            )
-                        }
-                    }
-                }
-
-                if (itemsBySeason.isEmpty()) {
-                    if (totalDuplicates > 0) {
-                        _events.emit(SeriesEvent.ShowToast(UiText.DynamicString(context.getTranslatedString(R.string.share_duplicates, totalDuplicates))))
-                    } else {
-                        _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_no_segments_found)))
-                    }
+                if (exportItems.isEmpty()) {
+                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.export_no_segments)))
                     return@launch
                 }
 
-                val seasonRequests = itemsBySeason.map { (key, items) ->
-                    SkipMeSeasonSubmitRequest(
-                        tvdbSeriesId = seriesTvdbId,
-                        tvdbSeasonId = key.tvdbSeasonId,
-                        tmdbId = seriesTmdbId,
-                        imdbSeriesId = seriesImdbId,
-                        aniListId = if (key.seasonNumber == 1) seriesAniListId else null,
-                        season = key.seasonNumber,
-                        items = items.toList()
-                    )
-                }
-
-                val response = skipMeApiService.submitSeason(seasonRequests)
-                if (response.isSuccessful) {
-                    val count = response.body()?.submitted ?: 0
-                    
-                    // Log all successfully submitted segments to local store
-                    seasonRequests.forEach { seasonRequest ->
-                        seasonRequest.items.forEach { item ->
-                            submissionDao.insert(Submission(
-                                tmdbId = seasonRequest.tmdbId,
-                                imdbId = item.imdbId,
-                                tvdbSeriesId = seasonRequest.tvdbSeriesId,
-                                tvdbSeasonId = seasonRequest.tvdbSeasonId,
-                                tvdbId = item.tvdbId,
-                                aniListId = seasonRequest.aniListId,
-                                segmentType = item.segment,
-                                season = seasonRequest.season,
-                                episode = item.episode,
-                                durationMs = item.durationMs,
-                                startMs = item.startMs,
-                                endMs = item.endMs
-                            ))
-                        }
-                    }
-
-                    val successMsg = if (totalDuplicates > 0) {
-                        "${context.getTranslatedString(R.string.share_success_collection, count)}\n${context.getTranslatedString(R.string.share_duplicates, totalDuplicates)}"
-                    } else {
-                        context.getTranslatedString(R.string.share_success_collection, count)
-                    }
-                    _events.emit(SeriesEvent.ShowToast(UiText.DynamicString(successMsg)))
-
-                    if (hideAfterSuccess) {
-                        _uiState.update { (it as SeriesUiState.Success).copy(isShared = true) }
-                    }
-                } else {
-                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_failed_http, response.code())))
-                }
+                _events.emit(SeriesEvent.ShareExport(segmentExporter.export(exportItems, title)))
             } catch (e: Exception) {
-                Log.e("SeriesViewModel", "Error sharing segments", e)
-                val message = e.message ?: "Unknown error"
-                _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.share_failed_collection_generic, message)))
+                Log.e("SeriesViewModel", "Error exporting segments", e)
+                _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.export_failed)))
             } finally {
                 onComplete()
-            }
-        }
-    }
-
-    fun submitSeasonMetadata(seasonNumber: Int) {
-        viewModelScope.launch {
-            val currentState = _uiState.value as? SeriesUiState.Success ?: return@launch
-            val episodes = currentState.episodesBySeason[seasonNumber] ?: return@launch
-            
-            _uiState.update { currentState.copy(submittingSeasonNumber = seasonNumber) }
-            try {
-                val requests = mutableListOf<SkipMeBackfillRequest>()
-                val seriesTmdbId = currentState.series.getTmdbId()
-                var seriesTvdbId = currentState.series.getTvdbId()
-                val seriesAniListId = currentState.series.getAniListId()
-                var seriesImdbId = currentState.series.getImdbId()
-
-                // Try TVMaze to fill any missing series-level IDs
-                if (seriesImdbId == null) {
-                    seriesTvdbId?.let { id ->
-                        tvMazeRepository.lookupByTvdbId(id)?.imdbId?.also { seriesImdbId = it }
-                    }
-                } else if (seriesTvdbId == null) {
-                    seriesImdbId?.let { id ->
-                        tvMazeRepository.lookupByImdbId(id)?.tvdbId?.also { seriesTvdbId = it }
-                    }
-                }
-
-                episodes.forEach { episodeWithSegments ->
-                    val episode = episodeWithSegments.episode
-                    val tvdbId = episode.getTvdbId()
-                    val tvdbSeasonId = currentState.seasonTvdbIds[episode.seasonId ?: ""]
-                    val aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null
-                    val imdbId = episode.getImdbId()
-                    val imdbSeriesId = seriesImdbId
-
-                    // Check for duplicates
-                    val existing = metadataSubmissionDao.getSubmission(
-                        seriesId = currentState.series.id,
-                        seasonNumber = episode.parentIndexNumber ?: 0,
-                        episodeNumber = episode.indexNumber ?: 0
-                    )
-
-                    if (existing != null && 
-                        existing.tmdbId == seriesTmdbId &&
-                        existing.imdbId == imdbId &&
-                        existing.tvdbId == tvdbId &&
-                        existing.tvdbSeriesId == seriesTvdbId &&
-                        existing.tvdbSeasonId == tvdbSeasonId &&
-                        existing.imdbSeriesId == imdbSeriesId &&
-                        existing.aniListId == aniListId
-                    ) {
-                        return@forEach // Skip duplicate
-                    }
-
-                    requests.add(
-                        SkipMeBackfillRequest(
-                            tvdbId = tvdbId,
-                            tmdbId = seriesTmdbId,
-                            imdbId = imdbId,
-                            tvdbSeasonId = tvdbSeasonId,
-                            tvdbSeriesId = seriesTvdbId,
-                            imdbSeriesId = imdbSeriesId,
-                            aniListId = aniListId,
-                            season = episode.parentIndexNumber,
-                            episode = episode.indexNumber
-                        )
-                    )
-                }
-
-                if (requests.isEmpty()) {
-                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_no_identifiers)))
-                    return@launch
-                }
-
-                val response = skipMeApiService.backfill(requests)
-                if (response.isSuccessful) {
-                    val updatedCount = response.body()?.updated ?: 0
-                    
-                    // Update local store
-                    requests.forEach { request ->
-                        metadataSubmissionDao.insert(MetadataSubmission(
-                            seriesId = currentState.series.id,
-                            seasonNumber = request.season ?: 0,
-                            episodeNumber = request.episode ?: 0,
-                            tmdbId = request.tmdbId,
-                            imdbId = request.imdbId,
-                            tvdbId = request.tvdbId,
-                            tvdbSeriesId = request.tvdbSeriesId,
-                            tvdbSeasonId = request.tvdbSeasonId,
-                            imdbSeriesId = request.imdbSeriesId,
-                            aniListId = request.aniListId
-                        ))
-                    }
-
-                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_success, updatedCount)))
-                } else {
-                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_http, response.code())))
-                }
-            } catch (e: Exception) {
-                Log.e("SeriesViewModel", "Error submitting metadata", e)
-                _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_generic, e.message ?: "")))
-            } finally {
-                _uiState.update { (it as? SeriesUiState.Success)?.copy(submittingSeasonNumber = null) ?: it }
-            }
-        }
-    }
-
-    fun submitSeriesMetadata() {
-        viewModelScope.launch {
-            val currentState = _uiState.value as? SeriesUiState.Success ?: return@launch
-            _uiState.update { currentState.copy(isSharing = true) }
-            try {
-                val requests = mutableListOf<SkipMeBackfillRequest>()
-                val seriesTmdbId = currentState.series.getTmdbId()
-                var seriesTvdbId = currentState.series.getTvdbId()
-                val seriesAniListId = currentState.series.getAniListId()
-                var imdbSeriesId = currentState.series.getImdbId()
-
-                // Try TVMaze to fill any missing series-level IDs
-                if (imdbSeriesId == null) {
-                    seriesTvdbId?.let { id ->
-                        tvMazeRepository.lookupByTvdbId(id)?.imdbId?.also { imdbSeriesId = it }
-                    }
-                } else if (seriesTvdbId == null) {
-                    imdbSeriesId?.let { id ->
-                        tvMazeRepository.lookupByImdbId(id)?.tvdbId?.also { seriesTvdbId = it }
-                    }
-                }
-
-                currentState.episodesBySeason.values.flatten().forEach { episodeWithSegments ->
-                    val episode = episodeWithSegments.episode
-                    if ((episode.parentIndexNumber ?: 0) == 0) return@forEach
-                    
-                    val tvdbId = episode.getTvdbId()
-                    val tvdbSeasonId = currentState.seasonTvdbIds[episode.seasonId ?: ""]
-                    val aniListId = if (episode.parentIndexNumber == 1) seriesAniListId else null
-                    val imdbId = episode.getImdbId()
-
-                    // Check for duplicates
-                    val existing = metadataSubmissionDao.getSubmission(
-                        seriesId = currentState.series.id,
-                        seasonNumber = episode.parentIndexNumber ?: 0,
-                        episodeNumber = episode.indexNumber ?: 0
-                    )
-
-                    if (existing != null && 
-                        existing.tmdbId == seriesTmdbId &&
-                        existing.imdbId == imdbId &&
-                        existing.tvdbId == tvdbId &&
-                        existing.tvdbSeriesId == seriesTvdbId &&
-                        existing.tvdbSeasonId == tvdbSeasonId &&
-                        existing.imdbSeriesId == imdbSeriesId &&
-                        existing.aniListId == aniListId
-                    ) {
-                        return@forEach // Skip duplicate
-                    }
-
-                    requests.add(
-                        SkipMeBackfillRequest(
-                            tvdbId = tvdbId,
-                            tmdbId = seriesTmdbId,
-                            imdbId = imdbId,
-                            tvdbSeasonId = tvdbSeasonId,
-                            tvdbSeriesId = seriesTvdbId,
-                            imdbSeriesId = imdbSeriesId,
-                            aniListId = aniListId,
-                            season = episode.parentIndexNumber,
-                            episode = episode.indexNumber
-                        )
-                    )
-                }
-
-                if (requests.isEmpty()) {
-                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_no_identifiers)))
-                    return@launch
-                }
-
-                val response = skipMeApiService.backfill(requests)
-                if (response.isSuccessful) {
-                    val updatedCount = response.body()?.updated ?: 0
-                    
-                    // Update local store
-                    requests.forEach { request ->
-                        metadataSubmissionDao.insert(MetadataSubmission(
-                            seriesId = currentState.series.id,
-                            seasonNumber = request.season ?: 0,
-                            episodeNumber = request.episode ?: 0,
-                            tmdbId = request.tmdbId,
-                            imdbId = request.imdbId,
-                            tvdbId = request.tvdbId,
-                            tvdbSeriesId = request.tvdbSeriesId,
-                            tvdbSeasonId = request.tvdbSeasonId,
-                            imdbSeriesId = request.imdbSeriesId,
-                            aniListId = request.aniListId
-                        ))
-                    }
-
-                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_success, updatedCount)))
-                } else {
-                    _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_http, response.code())))
-                }
-            } catch (e: Exception) {
-                Log.e("SeriesViewModel", "Error submitting metadata", e)
-                _events.emit(SeriesEvent.ShowToast(UiText.StringResource(R.string.backfill_failed_generic, e.message ?: "")))
-            } finally {
-                _uiState.update { (it as? SeriesUiState.Success)?.copy(isSharing = false) ?: it }
             }
         }
     }

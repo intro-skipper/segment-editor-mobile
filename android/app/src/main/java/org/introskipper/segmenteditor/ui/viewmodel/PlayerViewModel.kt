@@ -30,16 +30,14 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import org.introskipper.segmenteditor.R
-import org.introskipper.segmenteditor.api.SkipMeApiService
 import org.introskipper.segmenteditor.api.JellyfinApiService
-import org.introskipper.segmenteditor.data.local.SubmissionDao
+import org.introskipper.segmenteditor.data.export.SegmentExportItem
+import org.introskipper.segmenteditor.data.export.SegmentExporter
 import org.introskipper.segmenteditor.data.model.MediaItem
 import org.introskipper.segmenteditor.data.model.MediaItemType
 import org.introskipper.segmenteditor.data.model.MediaStream
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.SegmentType
-import org.introskipper.segmenteditor.data.model.SkipMeSubmitRequest
-import org.introskipper.segmenteditor.data.model.Submission
 import org.introskipper.segmenteditor.data.model.UpdateUserItemDataDto
 import org.introskipper.segmenteditor.data.model.filterSkipMe
 import org.introskipper.segmenteditor.data.repository.AnimeIdsRepository
@@ -66,8 +64,7 @@ class PlayerViewModel @Inject constructor(
     private val securePreferences: SecurePreferences,
     private val httpClient: OkHttpClient,
     private val jellyfinApiService: JellyfinApiService,
-    private val skipMeApiService: SkipMeApiService,
-    private val submissionDao: SubmissionDao,
+    private val segmentExporter: SegmentExporter,
     private val translationService: TranslationService,
     private val animeIdsRepository: AnimeIdsRepository,
     private val tvMazeRepository: TvMazeRepository,
@@ -191,14 +188,14 @@ class PlayerViewModel @Inject constructor(
                         
                         // If it's an episode, load its series and season info for sharing
                         when (mediaItem.itemType) {
-                            MediaItemType.EPISODE -> loadExtraMetadataForSharing(mediaItem)
+                            MediaItemType.EPISODE -> loadExtraMetadataForExport(mediaItem)
                             MediaItemType.MOVIE -> _uiState.update { state ->
                                 state.copy(
                                     seriesTmdbId = mediaItem.getTmdbId(),
                                     seriesImdbId = mediaItem.getImdbId()
                                 )
                             }
-                            MediaItemType.SEASON, MediaItemType.SERIES, MediaItemType.UNKNOWN -> Log.w(TAG, "Unsupported media item type for sharing metadata: ${mediaItem.type}")
+                            MediaItemType.SEASON, MediaItemType.SERIES, MediaItemType.UNKNOWN -> Log.w(TAG, "Unsupported media item type for export metadata: ${mediaItem.type}")
                         }
                     },
                     onFailure = { error ->
@@ -226,9 +223,9 @@ class PlayerViewModel @Inject constructor(
     }
 
     /**
-     * Loads series and season metadata to get TMDB series ID and TVDB season ID
+     * Loads series and season metadata to include provider IDs in an export.
      */
-    private fun loadExtraMetadataForSharing(episode: MediaItem) {
+    private fun loadExtraMetadataForExport(episode: MediaItem) {
         val seriesId = episode.seriesId ?: return
         val seasonId = episode.seasonId ?: return
         val userId = securePreferences.getUserId() ?: return
@@ -253,7 +250,7 @@ class PlayerViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to load extra metadata for sharing", e)
+                Log.w(TAG, "Failed to load extra metadata for export", e)
             }
         }
     }
@@ -1218,172 +1215,30 @@ class PlayerViewModel @Inject constructor(
         onPreviewsRequested(streamUrl)
     }
 
-    /**
-     * Submits a segment to SkipMe.db using the series-level TMDB ID and
-     * episode-level TVDB season/episode IDs.
-     * Unsupported segment types (Commercial, Unknown) are silently ignored.
-     */
+    /** Exports a segment using the user's configured format and opens the share sheet. */
     fun shareSegment(segment: Segment, mediaItem: MediaItem?) {
         viewModelScope.launch {
-            val skipMeType = SegmentType.fromString(segment.type)?.toSkipMeSegmentType()
-            if (skipMeType == null) {
-                Log.d(TAG, "Skipping SkipMe.db share: segment type '${segment.type}' is not supported")
-                _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_unsupported_type))
+            if (mediaItem == null) {
+                _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.export_no_segments))
                 return@launch
             }
 
             val state = _uiState.value
-            var tmdbId = state.seriesTmdbId
-            var imdbSeriesId = state.seriesImdbId
-            var imdbId = mediaItem?.getImdbId()
-            var tvdbSeasonId = state.seasonTvdbId
-            var tvdbId = mediaItem?.getTvdbId()
-            var aniListId = state.seriesAniListId
-            var tvdbSeriesId = state.seriesTvdbId
-
-            // Try to augment missing IDs for anime using the cached mapping
-            if (tmdbId != null || tvdbId != null || aniListId != null || imdbSeriesId != null || imdbId != null) {
-                val providerToQuery = when {
-                    tvdbId != null -> "tvdb" to tvdbId
-                    tmdbId != null -> "tmdb" to tmdbId
-                    aniListId != null -> "anilist" to aniListId
-                    imdbSeriesId != null -> "imdb" to imdbSeriesId
-                    imdbId != null -> "imdb" to imdbId
-                    else -> null
-                }
-
-                if (providerToQuery != null) {
-                    val mapping = animeIdsRepository.findIds(providerToQuery.first, providerToQuery.second)
-                    if (mapping != null) {
-                        Log.d(TAG, "Found ID mappings for anime: $mapping")
-                        if (tmdbId == null) tmdbId = (mapping["themoviedb_id"] as? Number)?.toInt()
-                        // thetvdb_id from anime mapping is the series-level ID
-                        if (tvdbSeriesId == null) tvdbSeriesId = (mapping["thetvdb_id"] as? Number)?.toInt()
-                        if (aniListId == null) aniListId = (mapping["anilist_id"] as? Number)?.toInt()
-                        // imdb_id from anime mapping is the series-level ID
-                        if (imdbSeriesId == null) imdbSeriesId = mapping["imdb_id"] as? String
-                    }
-                }
-            }
-
-            // Try TVMaze to fill any remaining missing series-level IDs
-            if (imdbSeriesId == null) {
-                tvdbSeriesId?.let { id ->
-                    tvMazeRepository.lookupByTvdbId(id)?.imdbId?.also { imdbSeriesId = it }
-                }
-            } else if (tvdbSeriesId == null) {
-                imdbSeriesId?.let { id ->
-                    tvMazeRepository.lookupByImdbId(id)?.tvdbId?.also { tvdbSeriesId = it }
-                }
-            }
-
-            if (tmdbId == null && tvdbSeriesId == null && aniListId == null && imdbSeriesId == null) {
-                Log.w(TAG, "Skipping SkipMe.db share: no series-level TMDB, IMDB, TVDB, or AniList ID available")
-                _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_no_ids))
-                return@launch
-            }
-
-            val durationMs = mediaItem?.runTimeTicks?.div(10_000)
-            if (durationMs == null || durationMs <= 0) {
-                Log.w(
-                    TAG,
-                    "Skipping SkipMe.db share: episode duration is ${durationMs ?: "unknown or non-positive"}"
-                )
-                _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_no_duration))
-                return@launch
-            }
-
-            val startMs = segment.startTicks / 10_000
-            val endMs = segment.endTicks / 10_000
-
-            if (startMs >= endMs) {
-                Log.w(
-                    TAG,
-                    "Skipping SkipMe.db share: invalid segment timing (startMs=$startMs, endMs=$endMs)"
-                )
-                _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_invalid_timing))
-                return@launch
-            }
-
-            if (endMs > durationMs) {
-                Log.w(
-                    TAG,
-                    "Skipping SkipMe.db share: segment end ($endMs ms) exceeds episode duration ($durationMs ms)"
-                )
-                _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_exceeds_duration))
-                return@launch
-            }
-
-            val season = mediaItem.parentIndexNumber
-            val episode = mediaItem.indexNumber
-
-            // Check for local duplicate using improved ID matching logic
-            val isDuplicate = submissionDao.isDuplicate(
-                segmentType = skipMeType,
-                durationMs = durationMs,
-                startMs = startMs,
-                endMs = endMs,
-                tvdbId = tvdbId,
-                imdbId = imdbId,
-                tmdbId = tmdbId,
-                imdbSeriesId = imdbSeriesId,
-                aniListId = aniListId,
-                season = season,
-                episode = episode
-            )
-
-            if (isDuplicate) {
-                _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_already_submitted))
-                return@launch
-            }
-
-            val request = SkipMeSubmitRequest(
-                tmdbId = tmdbId,
-                imdbSeriesId = imdbSeriesId,
-                imdbId = imdbId,
-                tvdbSeriesId = tvdbSeriesId,
-                tvdbSeasonId = tvdbSeasonId,
-                tvdbId = tvdbId,
-                aniListId = if (mediaItem.parentIndexNumber == 1) aniListId else null,
-                segment = skipMeType,
-                season = season,
-                episode = episode,
-                durationMs = durationMs,
-                startMs = startMs,
-                endMs = endMs
-            )
-
             try {
-                val response = skipMeApiService.submitSegment(request)
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    Log.d(TAG, "SkipMe.db share accepted: id=${body?.submission?.id}, status=${body?.submission?.status}")
-                    
-                    // Log to local store
-                    submissionDao.insert(Submission(
-                        tmdbId = tmdbId,
-                        imdbId = imdbId,
-                        tvdbSeriesId = tvdbSeriesId,
-                        imdbSeriesId = imdbSeriesId,
-                        tvdbSeasonId = tvdbSeasonId,
-                        tvdbId = tvdbId,
-                        aniListId = if (mediaItem.parentIndexNumber == 1) aniListId else null,
-                        segmentType = skipMeType,
-                        season = season,
-                        episode = episode,
-                        durationMs = durationMs,
-                        startMs = startMs,
-                        endMs = endMs
-                    ))
-
-                    _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_success))
-                } else {
-                    Log.w(TAG, "SkipMe.db share failed: HTTP ${response.code()}")
-                    _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_failed_http, response.code()))
-                }
+                val item = SegmentExportItem.from(
+                    segment = segment,
+                    mediaItem = mediaItem,
+                    seriesTmdbId = state.seriesTmdbId,
+                    seriesImdbId = state.seriesImdbId,
+                    seriesTvdbId = state.seriesTvdbId,
+                    seriesAniListId = state.seriesAniListId
+                )
+                _events.value = PlayerEvent.ShareExport(
+                    segmentExporter.export(listOf(item), mediaItem.name ?: "segment")
+                )
             } catch (e: Exception) {
-                Log.e(TAG, "SkipMe.db share error", e)
-                _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.share_failed_generic))
+                Log.e(TAG, "Segment export failed", e)
+                _events.value = PlayerEvent.ShowToast(translationService.getString(R.string.export_failed))
             }
         }
     }

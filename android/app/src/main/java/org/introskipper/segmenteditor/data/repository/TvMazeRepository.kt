@@ -78,7 +78,7 @@ class TvMazeRepository @Inject constructor(
             val request = Request.Builder().url(url).build()
             httpClient.newCall(request).execute().use { response ->
                 if (response.code == 404) {
-                    // Not found — cache null so we don't retry on every submission
+                    // Not found — cache null so we don't retry on every lookup
                     updateCache(cacheKey, null)
                     return@use null
                 }

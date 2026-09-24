@@ -67,6 +67,7 @@ import coil.compose.AsyncImage
 import my.nanihadesuka.compose.LazyColumnScrollbar
 import my.nanihadesuka.compose.ScrollbarSettings
 import org.introskipper.segmenteditor.R
+import org.introskipper.segmenteditor.data.export.shareExport
 import org.introskipper.segmenteditor.ui.component.translatedString
 import org.introskipper.segmenteditor.ui.component.WavyCircularProgressIndicator
 import org.introskipper.segmenteditor.ui.state.ThemeState
@@ -103,6 +104,7 @@ fun LibraryScreen(
                 is LibraryEvent.ShowToast -> {
                     Toast.makeText(context, event.message.asString(context), Toast.LENGTH_SHORT).show()
                 }
+                is LibraryEvent.ShareExport -> context.shareExport(event.file)
             }
         }
     }
@@ -226,9 +228,6 @@ fun LibraryScreen(
                                     },
                                     onShareSegments = {
                                         viewModel.shareLibrarySegments(library.id, library.collectionType)
-                                    },
-                                    onShareMetadata = {
-                                        viewModel.submitLibraryMetadata(library.id, library.collectionType)
                                     },
                                     getPrimaryImageUrl = { itemId, imageTag -> viewModel.getPrimaryImageUrl(itemId, imageTag) },
                                     onColorSampled = { color ->
@@ -402,7 +401,6 @@ private fun LibraryCard(
     sharingProgress: Float?,
     onClick: () -> Unit,
     onShareSegments: () -> Unit,
-    onShareMetadata: () -> Unit,
     getPrimaryImageUrl: (String, String) -> String,
     onColorSampled: (Int?) -> Unit,
     modifier: Modifier = Modifier
@@ -535,15 +533,6 @@ private fun LibraryCard(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(translatedString(R.string.share_segments))
-                    }
-                    Button(
-                        onClick = {
-                            onShareMetadata()
-                            showShareDialog = false
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(translatedString(R.string.share_metadata))
                     }
                 }
             },

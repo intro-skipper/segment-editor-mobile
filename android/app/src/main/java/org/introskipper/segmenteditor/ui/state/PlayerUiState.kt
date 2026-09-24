@@ -8,6 +8,7 @@ package org.introskipper.segmenteditor.ui.state
 import androidx.compose.ui.layout.ContentScale
 import org.introskipper.segmenteditor.data.model.MediaItem
 import org.introskipper.segmenteditor.data.model.Segment
+import org.introskipper.segmenteditor.data.export.SegmentExportFile
 
 data class PlayerUiState(
     val isLoading: Boolean = true,
@@ -94,4 +95,5 @@ sealed class PlayerEvent {
         val fullscreen: Boolean = false
     ) : PlayerEvent()
     data class ShowToast(val message: String) : PlayerEvent()
+    data class ShareExport(val file: SegmentExportFile) : PlayerEvent()
 }

@@ -37,15 +37,4 @@ enum class SegmentType(val value: String, val apiValue: Int) {
         }
     }
 
-    /**
-     * Maps this Jellyfin segment type to the corresponding SkipMe.db segment type string.
-     * Returns null for types that are not supported by the SkipMe.db API.
-     */
-    fun toSkipMeSegmentType(): String? = when (this) {
-        INTRO -> "intro"
-        RECAP -> "recap"
-        OUTRO -> "credits"
-        PREVIEW -> "preview"
-        COMMERCIAL, UNKNOWN -> null
-    }
 }

@@ -7,6 +7,7 @@ package org.introskipper.segmenteditor.ui.state
 
 import org.introskipper.segmenteditor.data.model.MediaItem
 import org.introskipper.segmenteditor.data.model.Segment
+import org.introskipper.segmenteditor.data.export.SegmentExportFile
 import org.introskipper.segmenteditor.ui.util.UiText
 
 sealed class SeriesUiState {
@@ -34,4 +35,5 @@ data class EpisodeWithSegments(
 
 sealed class SeriesEvent {
     data class ShowToast(val message: UiText) : SeriesEvent()
+    data class ShareExport(val file: SegmentExportFile) : SeriesEvent()
 }

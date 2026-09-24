@@ -96,6 +96,7 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.R
+import org.introskipper.segmenteditor.data.export.shareExport
 import org.introskipper.segmenteditor.data.model.MediaItem
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.SegmentType
@@ -181,6 +182,10 @@ fun PlayerScreen(
             is PlayerEvent.ShowToast -> {
                 viewModel.clearEvent()
                 Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+            }
+            is PlayerEvent.ShareExport -> {
+                viewModel.clearEvent()
+                context.shareExport(event.file)
             }
             else -> {}
         }

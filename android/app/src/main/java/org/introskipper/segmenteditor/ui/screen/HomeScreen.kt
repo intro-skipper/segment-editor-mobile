@@ -47,6 +47,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.model.JellyfinMediaItem
 import org.introskipper.segmenteditor.data.model.isContainerType
+import org.introskipper.segmenteditor.data.export.shareExport
 import org.introskipper.segmenteditor.ui.component.MediaGrid
 import org.introskipper.segmenteditor.ui.component.PaginationControls
 import org.introskipper.segmenteditor.ui.component.SearchBar
@@ -100,6 +101,7 @@ fun HomeScreen(
                 is HomeEvent.ShowToast -> {
                     Toast.makeText(context, event.message.asString(context), Toast.LENGTH_SHORT).show()
                 }
+                is HomeEvent.ShareExport -> context.shareExport(event.file)
             }
         }
     }
@@ -239,15 +241,6 @@ fun HomeScreen(
                                             modifier = Modifier.fillMaxWidth()
                                         ) {
                                             Text(translatedString(R.string.share_segments))
-                                        }
-                                        Button(
-                                            onClick = {
-                                                viewModel.submitMetadata(selectedItem!!)
-                                                showShareDialog = false
-                                            },
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Text(translatedString(R.string.share_metadata))
                                         }
                                     }
                                 },
