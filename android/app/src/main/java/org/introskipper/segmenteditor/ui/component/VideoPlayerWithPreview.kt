@@ -15,6 +15,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -74,6 +75,11 @@ fun VideoPlayerWithPreview(
     onPlaybackError: (error: androidx.media3.common.PlaybackException) -> Unit = {}
 ) {
     val context = LocalContext.current
+    val currentUseDirectPlay by rememberUpdatedState(useDirectPlay)
+    val currentOnPlayerReady by rememberUpdatedState(onPlayerReady)
+    val currentOnPlaybackStateChanged by rememberUpdatedState(onPlaybackStateChanged)
+    val currentOnTracksChanged by rememberUpdatedState(onTracksChanged)
+    val currentOnPlaybackError by rememberUpdatedState(onPlaybackError)
     
     // Create ExoPlayer instance once - don't recreate on track changes
     val trackSelector = remember { DefaultTrackSelector(context) }
@@ -238,7 +244,7 @@ fun VideoPlayerWithPreview(
     }
     
     // Player event listeners for playback state and track changes
-    DisposableEffect(exoPlayer, previewLoader) {
+    DisposableEffect(exoPlayer) {
         val tracksListener = object : Player.Listener {
             override fun onTracksChanged(tracks: Tracks) {
                 Log.d("VideoPlayerWithPreview", "onTracksChanged: ${tracks.groups.size} track groups")
@@ -291,7 +297,7 @@ fun VideoPlayerWithPreview(
                 Log.d("VideoPlayerWithPreview", "Available tracks - Audio: ${availableAudioTracks.size}, Subtitles: ${availableSubtitleTracks.size}")
                 
                 // Notify callback with tracks
-                onTracksChanged(tracks)
+                currentOnTracksChanged(tracks)
             }
         }
         
@@ -301,7 +307,7 @@ fun VideoPlayerWithPreview(
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
-                onPlaybackStateChanged(
+                currentOnPlaybackStateChanged(
                     isPlaying,
                     exoPlayer.currentPosition,
                     exoPlayer.bufferedPosition
@@ -320,7 +326,7 @@ fun VideoPlayerWithPreview(
                 newPosition: Player.PositionInfo,
                 reason: Int
             ) {
-                onPlaybackStateChanged(
+                currentOnPlaybackStateChanged(
                     exoPlayer.isPlaying,
                     exoPlayer.currentPosition,
                     exoPlayer.bufferedPosition
@@ -331,7 +337,7 @@ fun VideoPlayerWithPreview(
                 Log.e("VideoPlayerWithPreview", "Player error occurred: errorCode=${error.errorCode}", error)
                 
                 // Notify the error handler if in direct play mode and error is codec capability related
-                if (useDirectPlay) {
+                if (currentUseDirectPlay) {
                     // IO - 2000
                     // PARSING - 3000
                     // DECODER - 4000
@@ -341,7 +347,7 @@ fun VideoPlayerWithPreview(
                     
                     if (isCodecError) {
                         Log.w("VideoPlayerWithPreview", "Codec error in direct play mode, notifying error handler")
-                        onPlaybackError(error)
+                        currentOnPlaybackError(error)
                     }
                 }
             }
@@ -349,7 +355,7 @@ fun VideoPlayerWithPreview(
         
         exoPlayer.addListener(tracksListener)
         exoPlayer.addListener(playbackListener)
-        onPlayerReady(exoPlayer)
+        currentOnPlayerReady(exoPlayer)
         
         onDispose {
             exoPlayer.removeListener(tracksListener)
