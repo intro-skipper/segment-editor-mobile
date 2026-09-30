@@ -53,12 +53,16 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -98,6 +102,7 @@ import kotlinx.coroutines.launch
 import org.introskipper.segmenteditor.R
 import org.introskipper.segmenteditor.data.export.shareExport
 import org.introskipper.segmenteditor.data.model.MediaItem
+import org.introskipper.segmenteditor.data.model.MediaSource
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.SegmentType
 import org.introskipper.segmenteditor.framecapture.FramePreview.onReleasePreviews
@@ -150,7 +155,7 @@ fun PlayerScreen(
     }
     
     // Stream URL with track parameters built in (changes when tracks or mode changes)
-    val streamUrl = remember(uiState.mediaItem, useDirectPlay, uiState.selectedAudioTrack, uiState.selectedSubtitleTrack) {
+    val streamUrl = remember(uiState.mediaItem, uiState.selectedMediaSourceId, useDirectPlay, uiState.selectedAudioTrack, uiState.selectedSubtitleTrack) {
         viewModel.getStreamUrl(useHls = !useDirectPlay)
     }
     
@@ -209,7 +214,7 @@ fun PlayerScreen(
 
     // Initialise PreviewFrames independently. Prefer base URL for preview extraction
     // as HLS is unreliable for frame capture and we want to avoid re-init on track changes.
-    LaunchedEffect(uiState.mediaItem) {
+    LaunchedEffect(uiState.mediaItem, uiState.selectedMediaSourceId) {
         // Prefer static URL for preview extraction as HLS is unreliable for frame capture
         viewModel.getStreamUrl(useHls = !useDirectPlay, skipTracks = true)?.let {
             viewModel.setupFallbackPreviews(it)
@@ -513,6 +518,12 @@ fun PlayerScreen(
                 useDirectPlay = useDirectPlay,
                 isSaving = uiState.isBatchSaving,
                 onPlayerReady = { player = it },
+                onMediaSourceSelected = { mediaSourceId ->
+                    // VideoPlayerWithPreview preserves its current position when the URL changes.
+                    // Start the newly selected version from the beginning instead.
+                    player?.seekTo(0L)
+                    viewModel.selectMediaSource(mediaSourceId)
+                },
                 onAudioTracksClick = { showAudioTracks = true },
                 onSubtitleTracksClick = { showSubtitleTracks = true },
                 onUpdateSegment = { segment ->
@@ -984,6 +995,7 @@ private fun PlayerContent(
     useDirectPlay: Boolean,
     isSaving: Boolean = false,
     onPlayerReady: (ExoPlayer) -> Unit,
+    onMediaSourceSelected: (String) -> Unit,
     onAudioTracksClick: () -> Unit,
     onSubtitleTracksClick: () -> Unit,
     onUpdateSegment: (Segment) -> Unit,
@@ -1087,6 +1099,17 @@ private fun PlayerContent(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                val mediaSources = uiState.mediaItem?.mediaSources.orEmpty()
+                if (mediaSources.size > 1) {
+                    item {
+                        MediaSourceSelector(
+                            mediaSources = mediaSources,
+                            selectedMediaSourceId = uiState.selectedMediaSourceId,
+                            onMediaSourceSelected = onMediaSourceSelected
+                        )
+                    }
+                }
+
                 // Control buttons
                 item {
                     PlayerControlsRow(
@@ -1178,6 +1201,67 @@ private fun PlayerContent(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MediaSourceSelector(
+    mediaSources: List<MediaSource>,
+    selectedMediaSourceId: String?,
+    onMediaSourceSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedIndex = mediaSources.indexOfFirst { it.id == selectedMediaSourceId }
+        .takeIf { it >= 0 }
+        ?: 0
+    val selectedSource = mediaSources.getOrNull(selectedIndex)
+    val selectedFallback = translatedString(
+        R.string.player_media_version_fallback,
+        selectedIndex + 1
+    )
+    val selectedName = selectedSource?.displayName(selectedFallback) ?: selectedFallback
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        OutlinedTextField(
+            value = selectedName,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(translatedString(R.string.player_media_version)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            mediaSources.forEachIndexed { index, mediaSource ->
+                val fallback = translatedString(
+                    R.string.player_media_version_fallback,
+                    index + 1
+                )
+                DropdownMenuItem(
+                    text = { Text(mediaSource.displayName(fallback)) },
+                    onClick = {
+                        expanded = false
+                        onMediaSourceSelected(mediaSource.id)
+                    }
+                )
+            }
+        }
+    }
+}
+
+private fun MediaSource.displayName(fallback: String): String {
+    return name?.takeIf { it.isNotBlank() }
+        ?: path?.substringAfterLast('/')?.substringAfterLast('\\')?.takeIf { it.isNotBlank() }
+        ?: fallback
 }
 
 @Composable

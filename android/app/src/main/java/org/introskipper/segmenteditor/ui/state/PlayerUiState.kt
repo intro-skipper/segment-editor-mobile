@@ -13,6 +13,7 @@ import org.introskipper.segmenteditor.data.export.SegmentExportFile
 data class PlayerUiState(
     val isLoading: Boolean = true,
     val mediaItem: MediaItem? = null,
+    val selectedMediaSourceId: String? = null,
     val segments: List<Segment> = emptyList(),
     val error: String? = null,
     

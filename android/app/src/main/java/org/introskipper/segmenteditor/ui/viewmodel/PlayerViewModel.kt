@@ -130,6 +130,8 @@ class PlayerViewModel @Inject constructor(
                 it.copy(
                     isLoading = true,
                     error = null,
+                    mediaItem = null,
+                    selectedMediaSourceId = null,
                     segments = emptyList(),
                     currentPosition = 0L,
                     isPlaying = false,
@@ -164,10 +166,14 @@ class PlayerViewModel @Inject constructor(
 
                 mediaResult.fold(
                     onSuccess = { mediaItem ->
+                        val selectedMediaSource = mediaItem.mediaSources?.firstOrNull()
                         _uiState.update {
                             it.copy(
                                 mediaItem = mediaItem,
-                                duration = mediaItem.runTimeTicks?.div(10_000) ?: 0L,
+                                selectedMediaSourceId = selectedMediaSource?.id,
+                                duration = selectedMediaSource?.runTimeTicks?.div(10_000)
+                                    ?: mediaItem.runTimeTicks?.div(10_000)
+                                    ?: 0L,
                                 resumePositionMs = if (shouldTrackProgress) {
                                     mediaItem.userData?.playbackPositionTicks?.div(10_000) ?: 0L
                                 } else {
@@ -178,7 +184,10 @@ class PlayerViewModel @Inject constructor(
                         }
 
                         // Extract all available tracks from Jellyfin metadata
-                        extractTracksFromMediaStreams(mediaItem.mediaStreams)
+                        extractTracksFromMediaStreams(
+                            selectedMediaSource?.mediaStreams?.takeUnless { it.isEmpty() }
+                                ?: mediaItem.mediaStreams
+                        )
 
                         // Load segments
                         loadSegments(itemId)
@@ -603,7 +612,11 @@ class PlayerViewModel @Inject constructor(
                 when {
                     // Case 1: Switching from Direct Play to HLS - restore Jellyfin tracks
                     hasExoPlayerTracks -> {
-                        val mediaStreams = state.mediaItem?.mediaStreams
+                        val mediaStreams = state.mediaItem?.mediaSources
+                            ?.firstOrNull { it.id == state.selectedMediaSourceId }
+                            ?.mediaStreams
+                            ?.takeUnless { it.isEmpty() }
+                            ?: state.mediaItem?.mediaStreams
 
                         if (mediaStreams != null) {
                             val jellyfinAudioTracks = mediaStreams
@@ -712,13 +725,16 @@ class PlayerViewModel @Inject constructor(
         val mediaItem = _uiState.value.mediaItem ?: return null
         val serverUrl = securePreferences.getServerUrl() ?: return null
         val apiKey = securePreferences.getApiKey() ?: return null
+        val mediaSourceId = _uiState.value.selectedMediaSourceId
+            ?: mediaItem.mediaSources?.firstOrNull()?.id
+            ?: mediaItem.id
 
         // https://developer.android.com/media/platform/supported-formats
         return if (useHls) {
             // HLS streaming - build URL with track parameters upfront
             buildString {
                 append("$serverUrl/Videos/${mediaItem.id}/master.m3u8")
-                append("?MediaSourceId=${mediaItem.id}")
+                append("?MediaSourceId=$mediaSourceId")
                 append("&VideoCodec=h264,hevc,h265,av1")
                 append("&AudioCodec=aac,mp3,opus,flac,ac3,eac3")
                 append("&api_key=$apiKey")
@@ -756,7 +772,7 @@ class PlayerViewModel @Inject constructor(
             }
         } else {
             // Direct play fallback
-            "$serverUrl/Videos/${mediaItem.id}/stream?Static=true&api_key=$apiKey&Container=mp4,mkv"
+            "$serverUrl/Videos/${mediaItem.id}/stream?Static=true&MediaSourceId=$mediaSourceId&api_key=$apiKey&Container=mp4,mkv"
         }
     }
 
@@ -930,6 +946,38 @@ class PlayerViewModel @Inject constructor(
 
     fun selectSubtitleTrack(trackIndex: Int?) {
         _uiState.update { it.copy(selectedSubtitleTrack = trackIndex) }
+    }
+
+    fun selectMediaSource(mediaSourceId: String) {
+        val state = _uiState.value
+        val mediaItem = state.mediaItem ?: return
+        val mediaSource = mediaItem.mediaSources
+            ?.firstOrNull { it.id == mediaSourceId }
+            ?: return
+
+        directPlayTracksInitialized = false
+        hasHandledPlaybackEnded = false
+        val mediaStreams = mediaSource.mediaStreams
+            ?.takeUnless { it.isEmpty() }
+            ?: mediaItem.mediaStreams
+
+        _uiState.update {
+            it.copy(
+                selectedMediaSourceId = mediaSource.id,
+                duration = mediaSource.runTimeTicks?.div(10_000)
+                    ?: mediaItem.runTimeTicks?.div(10_000)
+                    ?: 0L,
+                currentPosition = 0L,
+                bufferedPosition = 0L,
+                audioTracks = emptyList(),
+                subtitleTracks = emptyList(),
+                selectedAudioTrack = null,
+                selectedSubtitleTrack = null
+            )
+        }
+
+        extractTracksFromMediaStreams(mediaStreams)
+        computeNextUpTriggerMs()
     }
 
     fun showTrackSelection(show: Boolean) {

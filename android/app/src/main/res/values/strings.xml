@@ -198,6 +198,8 @@
     <string name="player_pause">Pause</string>
     <string name="player_play">Play</string>
     <string name="player_playback_speed">%1$sx</string>
+    <string name="player_media_version">Media version</string>
+    <string name="player_media_version_fallback">Version %1$d</string>
     <string name="player_direct_play_failed_title">Playback Failed</string>
     <string name="player_direct_play_failed_message">Your device cannot play this video in direct play mode. Would you like to switch to HLS streaming instead?</string>
     <string name="player_switch_to_hls">Switch to HLS</string>
