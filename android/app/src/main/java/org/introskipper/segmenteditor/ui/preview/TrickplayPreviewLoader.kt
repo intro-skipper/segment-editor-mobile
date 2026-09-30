@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
 import android.util.LruCache
+import com.google.gson.JsonParser
 import org.introskipper.segmenteditor.framecapture.FramePreview.loadPreviewFrame
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -11,10 +12,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import org.introskipper.segmenteditor.utils.KotlinxGenericMapSerializer
 import java.io.IOException
 
 /**
@@ -25,6 +24,7 @@ class TrickplayPreviewLoader(
     private val apiKey: String,
     private val userId: String,
     private val itemId: String,
+    private val requestedMediaSourceId: String?,
     private val httpClient: OkHttpClient,
     scope: CoroutineScope
 ) : PreviewLoader {
@@ -134,40 +134,56 @@ class TrickplayPreviewLoader(
         try {
             // Parse the JSON response from /Items/{itemId}
             // The format is: { "Trickplay": { "mediaSourceId": { "width": {...} } } }
-            // We need to extract the first available trickplay info
-
-            val model: Map<String, Any?> = Json.decodeFromString(KotlinxGenericMapSerializer, json)
-            // Find the Trickplay field
-            if (!model.keys.contains("Trickplay")) {
+            // Select the requested media source so alternate versions never reuse
+            // another version's tile sheets.
+            val model = JsonParser.parseString(json).asJsonObject
+            val trickplay = model.getAsJsonObject("Trickplay")
+            if (trickplay == null) {
                 Log.w(TAG, "No Trickplay field found in item response")
                 return null
             }
-            val trickplay = model["Trickplay"].toString()
-            Log.w(TAG, trickplay)
 
-            val mediaSourceId = trickplay.removePrefix("{").substringBefore("=")
-            Log.w(TAG, mediaSourceId)
-            val mediaSourceSection = "{${trickplay.substringAfterLast("={").substringBefore("}")}}"
-            Log.w(TAG, mediaSourceSection)
-            
-            // Extract TrickplayInfoDto fields for this width
-            return extractTrickplayInfo(mediaSourceSection, mediaSourceId)
+            val sourceEntry = if (requestedMediaSourceId != null) {
+                trickplay.entrySet().firstOrNull {
+                    it.key.equals(requestedMediaSourceId, ignoreCase = true)
+                } ?: run {
+                    Log.w(TAG, "No trickplay metadata for media source $requestedMediaSourceId")
+                    return null
+                }
+            } else {
+                trickplay.entrySet().firstOrNull() ?: return null
+            }
+
+            val sourceInfo = sourceEntry.value.asJsonObject
+            val info = if (sourceInfo.has("Width")) {
+                sourceInfo
+            } else {
+                // Jellyfin exposes multiple thumbnail widths per source. Use the
+                // largest available width, matching the previous behavior while
+                // keeping the selection scoped to the requested source.
+                sourceInfo.entrySet()
+                    .filter { it.value.isJsonObject }
+                    .maxByOrNull { it.key.toIntOrNull() ?: Int.MIN_VALUE }
+                    ?.value
+                    ?.asJsonObject
+            } ?: return null
+
+            return extractTrickplayInfo(info, sourceEntry.key)
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing trickplay info", e)
             return null
         }
     }
     
-    private fun extractTrickplayInfo(jsonSection: String, mediaSourceId: String): TrickplayInfo? {
+    private fun extractTrickplayInfo(info: com.google.gson.JsonObject, mediaSourceId: String): TrickplayInfo? {
         try {
-            // Extract TrickplayInfoDto fields - they might appear in any order
-            val width = jsonSection.substringAfter("Width=").substringBefore(",").substringBefore("}")
-            val height = jsonSection.substringAfter("Height=").substringBefore(",").substringBefore("}")
-            val tileWidth = jsonSection.substringAfter("TileWidth=").substringBefore(",").substringBefore("}")
-            val tileHeight = jsonSection.substringAfter("TileHeight=").substringBefore(",").substringBefore("}")
-            val thumbnailCount = jsonSection.substringAfter("ThumbnailCount=").substringBefore(",").substringBefore("}")
-            val interval = jsonSection.substringAfter("Interval=").substringBefore(",").substringBefore("}")
-            val bandwidth = jsonSection.substringAfter("Bandwidth=").substringBefore(",").substringBefore("}")
+            val width = info.get("Width").asInt
+            val height = info.get("Height").asInt
+            val tileWidth = info.get("TileWidth").asInt
+            val tileHeight = info.get("TileHeight").asInt
+            val thumbnailCount = info.get("ThumbnailCount").asInt
+            val interval = info.get("Interval").asInt.coerceAtLeast(1)
+            val bandwidth = info.get("Bandwidth").asLong
             
             return TrickplayInfo(
                 width = width.toInt(),
