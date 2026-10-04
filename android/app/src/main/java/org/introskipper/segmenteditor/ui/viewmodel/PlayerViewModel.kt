@@ -1146,62 +1146,28 @@ class PlayerViewModel @Inject constructor(
         saveJob = viewModelScope.launch {
             _uiState.update { it.copy(isBatchSaving = true) }
             try {
-                // Step 1: Delete all existing server-side segments in parallel.
-                // Track failed IDs so we can skip recreating them in step 2 and avoid
-                // leaving both old and new copies on the server (duplicates).
-                val deleteResults = coroutineScope {
-                    existingSegments
-                        .filter { it.id != null }
-                        .map { segment ->
-                            async {
-                                val result = segmentRepository.deleteSegmentResult(
-                                    segmentId = segment.id!!,
-                                    itemId = segment.itemId,
-                                    segmentType = segment.type
-                                )
-                                result.onFailure { e ->
-                                    Log.w(TAG, "Failed to delete segment ${segment.type} (ID: ${segment.id}) during batch save", e)
-                                }
-                                segment.id to result
-                            }
-                        }
-                        .awaitAll()
+                // PR #1067 adds an item-wide PUT. It is the replacement path for
+                // complete images: it preserves IDs where possible, handles mixed
+                // segment types atomically, and avoids delete-then-create windows.
+                val replacement = segments.map { segment ->
+                    org.introskipper.segmenteditor.data.model.SegmentReplaceRequest(
+                        id = segment.id,
+                        itemId = segment.itemId,
+                        type = SegmentType.stringToApiValue(segment.type),
+                        startTicks = segment.startTicks,
+                        endTicks = segment.endTicks
+                    )
                 }
-
-                // Collect IDs of segments whose delete failed; skipping their create
-                // prevents leaving both old and new copies on the server.
-                val failedDeleteIds = deleteResults
-                    .filter { (_, result) -> result.isFailure }
-                    .map { (id, _) -> id }
-                    .toSet()
-
-                // Bail out early if this job was cancelled while deletes were running
-                ensureActive()
-
-                // Step 2: Create new segments in parallel.
-                // Skip any segment whose previous server copy could not be deleted.
-                // New segments (id == null) are always included since null is never in failedDeleteIds.
-                val segmentsToCreate = segments.filter { it.id !in failedDeleteIds }
-                val createResults = coroutineScope {
-                    segmentsToCreate.map { segment ->
-                        async {
-                            val segmentRequest = org.introskipper.segmenteditor.data.model.SegmentCreateRequest(
-                                itemId = segment.itemId,
-                                type = SegmentType.stringToApiValue(segment.type),
-                                startTicks = segment.startTicks,
-                                endTicks = segment.endTicks
-                            )
-                            segmentRepository.createSegmentResult(segment.itemId, segmentRequest).getOrNull()
-                        }
-                    }.awaitAll()
-                }
-
-                val saved = createResults.filterNotNull()
-                val failedCount = segmentsToCreate.size - saved.size
-                if (failedCount > 0) {
-                    Log.w(TAG, "Batch save completed with $failedCount failures out of ${segmentsToCreate.size} segments")
-                }
-                onComplete(Result.success(saved))
+                val result = segmentRepository.replaceSegmentsResult(
+                    itemId = segments.firstOrNull()?.itemId
+                        ?: existingSegments.firstOrNull()?.itemId
+                        ?: return@launch onComplete(Result.failure(Exception("No media item for segment replacement"))),
+                    segments = replacement
+                )
+                result.fold(
+                    onSuccess = { onComplete(Result.success(segments)) },
+                    onFailure = { error -> onComplete(Result.failure(error)) }
+                )
             } catch (e: kotlinx.coroutines.CancellationException) {
                 // Job was cancelled (e.g. a newer save started); propagate so coroutine is torn down
                 throw e

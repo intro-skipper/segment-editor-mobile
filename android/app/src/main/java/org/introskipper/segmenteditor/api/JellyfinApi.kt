@@ -13,15 +13,18 @@ import org.introskipper.segmenteditor.data.model.PublicSystemInfo
 import org.introskipper.segmenteditor.data.model.UpdateUserItemDataDto
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.SegmentCreateRequest
+import org.introskipper.segmenteditor.data.model.SegmentReplaceRequest
 import org.introskipper.segmenteditor.data.model.SegmentResponse
 import org.introskipper.segmenteditor.data.model.ServerInfo
 import org.introskipper.segmenteditor.data.model.User
+import com.google.gson.JsonElement
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -42,6 +45,20 @@ interface JellyfinApi {
         @Body segment: SegmentCreateRequest,
         @Header("Authorization") authHeader: String
     ): Response<Segment>
+
+    /**
+     * Atomically replaces the complete segment image for an item.
+     *
+     * The PR #1067 server returns the applied segment list for 200 and an
+     * accepted/pending response for 202, so the body is intentionally modeled
+     * as JsonElement and interpreted only through the HTTP status here.
+     */
+    @PUT("MediaSegmentsApi/{itemId}")
+    suspend fun replaceSegments(
+        @Path("itemId") itemId: String,
+        @Body segments: List<SegmentReplaceRequest>,
+        @Header("Authorization") authHeader: String
+    ): Response<JsonElement>
     
     @DELETE("MediaSegmentsApi/{segmentId}")
     suspend fun deleteSegment(

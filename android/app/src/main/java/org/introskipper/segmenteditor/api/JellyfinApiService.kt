@@ -6,6 +6,7 @@
 package org.introskipper.segmenteditor.api
 
 import androidx.core.net.toUri
+import com.google.gson.JsonElement
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.introskipper.segmenteditor.BuildConfig
@@ -16,6 +17,7 @@ import org.introskipper.segmenteditor.data.model.MediaItem
 import org.introskipper.segmenteditor.data.model.PublicSystemInfo
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.SegmentCreateRequest
+import org.introskipper.segmenteditor.data.model.SegmentReplaceRequest
 import org.introskipper.segmenteditor.data.model.SegmentResponse
 import org.introskipper.segmenteditor.data.model.ServerInfo
 import org.introskipper.segmenteditor.data.model.UpdateUserItemDataDto
@@ -103,6 +105,11 @@ class JellyfinApiService(private val securePreferences: SecurePreferences) {
     suspend fun createSegment(itemId: String, segment: SegmentCreateRequest, providerId: String = "IntroSkipper"): Response<Segment> {
         ensureInitialized()
         return api!!.createSegment(itemId, providerId, segment, getApiKey())
+    }
+
+    suspend fun replaceSegments(itemId: String, segments: List<SegmentReplaceRequest>): Response<JsonElement> {
+        ensureInitialized()
+        return api!!.replaceSegments(itemId, segments, getApiKey())
     }
     
     suspend fun deleteSegment(segmentId: String, itemId: String, segmentType: String): Response<Unit> {

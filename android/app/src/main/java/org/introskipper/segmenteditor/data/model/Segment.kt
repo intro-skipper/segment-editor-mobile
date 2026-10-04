@@ -61,6 +61,27 @@ data class SegmentCreateRequest(
     val endTicks: Long
 )
 
+/**
+ * One entry in the complete item-wide replacement image accepted by
+ * MediaSegmentsApi/{itemId}.  The server treats a missing Id as a new segment.
+ */
+data class SegmentReplaceRequest(
+    @SerializedName("Id")
+    val id: String? = null,
+
+    @SerializedName("ItemId")
+    val itemId: String,
+
+    @SerializedName("Type")
+    val type: Int,
+
+    @SerializedName("StartTicks")
+    val startTicks: Long,
+
+    @SerializedName("EndTicks")
+    val endTicks: Long
+)
+
 data class SegmentResponse(
     @SerializedName("Items")
     val items: List<Segment>

@@ -5,9 +5,11 @@
 
 package org.introskipper.segmenteditor.data.repository
 
+import com.google.gson.JsonElement
 import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.SegmentCreateRequest
+import org.introskipper.segmenteditor.data.model.SegmentReplaceRequest
 import org.introskipper.segmenteditor.data.model.SegmentType
 import retrofit2.Response
 
@@ -47,6 +49,15 @@ class SegmentRepository(private val apiService: JellyfinApiService) {
      */
     suspend fun createSegment(itemId: String, segment: SegmentCreateRequest, providerId: String = "IntroSkipper"): Response<Segment> {
         return apiService.createSegment(itemId, segment, providerId)
+    }
+
+    /**
+     * Atomically replaces all user-visible segments for a media item.
+     * HTTP 202 is a successful response: the server has durably accepted the
+     * image and will finish projecting it asynchronously.
+     */
+    suspend fun replaceSegments(itemId: String, segments: List<SegmentReplaceRequest>): Response<JsonElement> {
+        return apiService.replaceSegments(itemId, segments)
     }
     
     /**
@@ -101,6 +112,19 @@ class SegmentRepository(private val apiService: JellyfinApiService) {
                 }
             } else {
                 Result.failure(Exception("Failed to create segment: ${response.code()} ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun replaceSegmentsResult(itemId: String, segments: List<SegmentReplaceRequest>): Result<Unit> {
+        return try {
+            val response = replaceSegments(itemId, segments)
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Failed to replace segments: ${response.code()} ${response.message()}"))
             }
         } catch (e: Exception) {
             Result.failure(e)
