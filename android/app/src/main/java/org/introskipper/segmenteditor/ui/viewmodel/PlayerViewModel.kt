@@ -324,19 +324,32 @@ class PlayerViewModel @Inject constructor(
     private fun loadSegments(itemId: String) {
         viewModelScope.launch {
             try {
-                val result = segmentRepository.getSegmentsResult(itemId)
+                val result = segmentRepository.getEditorSegmentsResult(itemId)
                 result.fold(
-                    onSuccess = { segments ->
+                    onSuccess = { snapshot ->
+                        // The editor endpoint is authoritative for the complete
+                        // image and ETag. Keep Jellyfin's playback endpoint for
+                        // the visible list because it carries provider/visibility
+                        // filtering that the editor DTO intentionally omits.
+                        val playbackSegments = segmentRepository.getSegmentsResult(itemId)
+                            .getOrNull()
+                            ?: snapshot.segments
                         val filtered = if (securePreferences.getDisableSkipMeSegments()) {
-                            segments.filterSkipMe()
+                            playbackSegments.filterSkipMe()
                         } else {
-                            segments
+                            playbackSegments
                         }
                         Log.d(TAG, "Successfully loaded ${filtered.size} segments for $itemId")
                         filtered.forEachIndexed { index, segment ->
                             Log.d(TAG, "Segment $index: type=${segment.type}, start=${segment.getStartSeconds()}s, end=${segment.getEndSeconds()}s")
                         }
-                        _uiState.update { it.copy(segments = filtered) }
+                        _uiState.update {
+                            it.copy(
+                                segments = filtered,
+                                editorSegments = snapshot.segments,
+                                segmentsEtag = snapshot.etag
+                            )
+                        }
                         _events.value = PlayerEvent.SegmentLoaded(filtered)
                         // Recompute Next-Up trigger time whenever segments change
                         computeNextUpTriggerMs()
@@ -1139,6 +1152,7 @@ class PlayerViewModel @Inject constructor(
     fun saveAllSegments(
         segments: List<Segment>,
         existingSegments: List<Segment>,
+        expectedRevision: String?,
         onComplete: (Result<List<Segment>>) -> Unit
     ) {
         // Cancel any previous in-flight save to prevent concurrent operations
@@ -1146,10 +1160,21 @@ class PlayerViewModel @Inject constructor(
         saveJob = viewModelScope.launch {
             _uiState.update { it.copy(isBatchSaving = true) }
             try {
+                if (expectedRevision.isNullOrBlank()) {
+                    onComplete(Result.failure(Exception("Cannot save segments without an editor ETag; reload the media item")))
+                    return@launch
+                }
                 // PR #1067 adds an item-wide PUT. It is the replacement path for
                 // complete images: it preserves IDs where possible, handles mixed
                 // segment types atomically, and avoids delete-then-create windows.
-                val replacement = segments.map { segment ->
+                // Preserve canonical rows hidden by the playback endpoint (for
+                // example automatic segments hidden by item/provider visibility).
+                // They must remain in the complete editor image or PUT would
+                // intentionally tombstone them.
+                val hiddenCanonicalSegments = _uiState.value.editorSegments.filter { canonical ->
+                    canonical.id != null && existingSegments.none { it.id == canonical.id }
+                }
+                val replacement = (segments + hiddenCanonicalSegments).map { segment ->
                     org.introskipper.segmenteditor.data.model.SegmentReplaceRequest(
                         id = segment.id,
                         itemId = segment.itemId,
@@ -1162,7 +1187,8 @@ class PlayerViewModel @Inject constructor(
                     itemId = segments.firstOrNull()?.itemId
                         ?: existingSegments.firstOrNull()?.itemId
                         ?: return@launch onComplete(Result.failure(Exception("No media item for segment replacement"))),
-                    segments = replacement
+                    segments = replacement,
+                    ifMatch = expectedRevision
                 )
                 result.fold(
                     onSuccess = { onComplete(Result.success(segments)) },

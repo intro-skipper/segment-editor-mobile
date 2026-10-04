@@ -107,9 +107,18 @@ class JellyfinApiService(private val securePreferences: SecurePreferences) {
         return api!!.createSegment(itemId, providerId, segment, getApiKey())
     }
 
-    suspend fun replaceSegments(itemId: String, segments: List<SegmentReplaceRequest>): Response<JsonElement> {
+    suspend fun getEditorSegments(itemId: String): Response<List<Segment>> {
         ensureInitialized()
-        return api!!.replaceSegments(itemId, segments, getApiKey())
+        return api!!.getEditorSegments(itemId, getApiKey())
+    }
+
+    suspend fun replaceSegments(
+        itemId: String,
+        segments: List<SegmentReplaceRequest>,
+        ifMatch: String
+    ): Response<JsonElement> {
+        ensureInitialized()
+        return api!!.replaceSegments(itemId, segments, ifMatch, getApiKey())
     }
     
     suspend fun deleteSegment(segmentId: String, itemId: String, segmentType: String): Response<Unit> {

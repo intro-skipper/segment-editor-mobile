@@ -9,6 +9,7 @@ import com.google.gson.JsonElement
 import org.introskipper.segmenteditor.api.JellyfinApiService
 import org.introskipper.segmenteditor.data.model.Segment
 import org.introskipper.segmenteditor.data.model.SegmentCreateRequest
+import org.introskipper.segmenteditor.data.model.SegmentEditorSnapshot
 import org.introskipper.segmenteditor.data.model.SegmentReplaceRequest
 import org.introskipper.segmenteditor.data.model.SegmentType
 import retrofit2.Response
@@ -51,13 +52,32 @@ class SegmentRepository(private val apiService: JellyfinApiService) {
         return apiService.createSegment(itemId, segment, providerId)
     }
 
+    suspend fun getEditorSegmentsResult(itemId: String): Result<SegmentEditorSnapshot> {
+        return try {
+            val response = apiService.getEditorSegments(itemId)
+            val body = response.body()
+            val etag = response.headers()["ETag"]
+            if (response.isSuccessful && body != null && !etag.isNullOrBlank()) {
+                Result.success(SegmentEditorSnapshot(body, etag))
+            } else {
+                Result.failure(Exception("Failed to fetch editor segments: ${response.code()} ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     /**
      * Atomically replaces all user-visible segments for a media item.
      * HTTP 202 is a successful response: the server has durably accepted the
      * image and will finish projecting it asynchronously.
      */
-    suspend fun replaceSegments(itemId: String, segments: List<SegmentReplaceRequest>): Response<JsonElement> {
-        return apiService.replaceSegments(itemId, segments)
+    suspend fun replaceSegments(
+        itemId: String,
+        segments: List<SegmentReplaceRequest>,
+        ifMatch: String
+    ): Response<JsonElement> {
+        return apiService.replaceSegments(itemId, segments, ifMatch)
     }
     
     /**
@@ -118,9 +138,13 @@ class SegmentRepository(private val apiService: JellyfinApiService) {
         }
     }
 
-    suspend fun replaceSegmentsResult(itemId: String, segments: List<SegmentReplaceRequest>): Result<Unit> {
+    suspend fun replaceSegmentsResult(
+        itemId: String,
+        segments: List<SegmentReplaceRequest>,
+        ifMatch: String
+    ): Result<Unit> {
         return try {
-            val response = replaceSegments(itemId, segments)
+            val response = replaceSegments(itemId, segments, ifMatch)
             if (response.isSuccessful) {
                 Result.success(Unit)
             } else {

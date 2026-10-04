@@ -586,7 +586,7 @@ fun PlayerScreen(
                     // Save all segments with changes; isBatchSaving from ViewModel prevents
                     // concurrent saves and is reset via finally even if the job is cancelled
                     if (!uiState.isBatchSaving) {
-                        viewModel.saveAllSegments(editingSegments, uiState.segments) { result ->
+                        viewModel.saveAllSegments(editingSegments, uiState.segments, uiState.segmentsEtag) { result ->
                             result.fold(
                                 onSuccess = { savedSegments ->
                                     // Clear all change flags

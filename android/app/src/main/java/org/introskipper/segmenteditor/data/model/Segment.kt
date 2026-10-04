@@ -82,6 +82,12 @@ data class SegmentReplaceRequest(
     val endTicks: Long
 )
 
+/** Complete editor image returned by MediaSegmentsApi, including its revision token. */
+data class SegmentEditorSnapshot(
+    val segments: List<Segment>,
+    val etag: String
+)
+
 data class SegmentResponse(
     @SerializedName("Items")
     val items: List<Segment>

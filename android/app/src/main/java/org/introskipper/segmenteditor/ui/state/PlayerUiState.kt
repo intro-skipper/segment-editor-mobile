@@ -15,6 +15,8 @@ data class PlayerUiState(
     val mediaItem: MediaItem? = null,
     val selectedMediaSourceId: String? = null,
     val segments: List<Segment> = emptyList(),
+    val editorSegments: List<Segment> = emptyList(),
+    val segmentsEtag: String? = null,
     val error: String? = null,
     
     // Metadata for sharing

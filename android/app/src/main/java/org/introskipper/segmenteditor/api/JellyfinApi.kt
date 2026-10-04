@@ -37,6 +37,13 @@ interface JellyfinApi {
         @Path("itemId") itemId: String,
         @Header("Authorization") authHeader: String
     ): Response<SegmentResponse>
+
+    /** Reads the complete editor image; the response ETag is required for PUT. */
+    @GET("MediaSegmentsApi/{itemId}")
+    suspend fun getEditorSegments(
+        @Path("itemId") itemId: String,
+        @Header("Authorization") authHeader: String
+    ): Response<List<Segment>>
     
     @POST("MediaSegmentsApi/{itemId}")
     suspend fun createSegment(
@@ -57,6 +64,7 @@ interface JellyfinApi {
     suspend fun replaceSegments(
         @Path("itemId") itemId: String,
         @Body segments: List<SegmentReplaceRequest>,
+        @Header("If-Match") ifMatch: String,
         @Header("Authorization") authHeader: String
     ): Response<JsonElement>
     
