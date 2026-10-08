@@ -9,6 +9,7 @@ import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.util.Log
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -64,6 +66,7 @@ import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -94,6 +97,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.VideoSize
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
@@ -137,12 +141,19 @@ fun PlayerScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
+    var isLandscapeVideo by remember(itemId) { mutableStateOf(false) }
     
     // Determine if we should use direct play (no HLS transcoding)
     // Allow fallback to HLS if direct play fails (with confirmation)
     var useDirectPlay by remember(itemId) { mutableStateOf(viewModel.shouldUseDirectPlay()) }
     var showDirectPlayFailedDialog by remember(itemId) { mutableStateOf(false) }
     var hasShownErrorDialog by remember(itemId) { mutableStateOf(false) }
+
+    val isLandscapePlayback =
+        LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE &&
+            (uiState.isFullscreen || uiState.isUserLandscape)
+    val ignoreCameraCutout =
+        viewModel.shouldIgnoreCameraCutout() && isLandscapeVideo && isLandscapePlayback
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -352,6 +363,30 @@ fun PlayerScreen(
         }
     }
 
+    // The display cutout is on a long edge in landscape on many devices. Allowing
+    // the window into the cutout area removes the camera margin for landscape video.
+    // The effect is gated by the actual video orientation so portrait video keeps
+    // the normal safe area even when the player itself is rotated.
+    DisposableEffect(ignoreCameraCutout) {
+        val window = (context as? Activity)?.window
+        val originalCutoutMode = window?.attributes?.layoutInDisplayCutoutMode
+
+        if (window != null && ignoreCameraCutout) {
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+            }
+        }
+
+        onDispose {
+            if (window != null && originalCutoutMode != null) {
+                window.attributes = window.attributes.apply {
+                    layoutInDisplayCutoutMode = originalCutoutMode
+                }
+            }
+        }
+    }
+
     // Handle orientation change
     when (LocalConfiguration.current.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> {
@@ -391,6 +426,11 @@ fun PlayerScreen(
     }
 
     Scaffold(
+        contentWindowInsets = if (ignoreCameraCutout) {
+            WindowInsets(0, 0, 0, 0)
+        } else {
+            ScaffoldDefaults.contentWindowInsets
+        },
         topBar = {
             if (!uiState.isFullscreen && !uiState.isUserLandscape) {
                 TopAppBar(
@@ -686,6 +726,9 @@ fun PlayerScreen(
                         hasShownErrorDialog = true
                         showDirectPlayFailedDialog = true
                     }
+                },
+                onVideoSizeChanged = { videoSize ->
+                    isLandscapeVideo = videoSize.isLandscapeVideo()
                 },
                 onPlayNextUp = {
                     viewModel.handlePlaybackEnded()
@@ -1007,6 +1050,7 @@ private fun PlayerContent(
     onSetStartFromPlayer: (Int) -> Unit,
     onSetEndFromPlayer: (Int) -> Unit,
     onPlaybackError: (PlaybackException) -> Unit,
+    onVideoSizeChanged: (VideoSize) -> Unit,
     onPlayNextUp: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -1052,6 +1096,7 @@ private fun PlayerContent(
                     onTracksChanged = { tracks ->
                         viewModel.updateTracksFromPlayer(tracks, currentUseDirectPlay)
                     },
+                    onVideoSizeChanged = onVideoSizeChanged,
                     onPlaybackError = onPlaybackError
                 )
                 // Next Up card overlay in the top-right corner
@@ -1202,6 +1247,13 @@ private fun PlayerContent(
             }
         }
     }
+}
+
+private fun VideoSize.isLandscapeVideo(): Boolean {
+    val isRotated = unappliedRotationDegrees % 180 != 0
+    val effectiveWidth = if (isRotated) height else width
+    val effectiveHeight = if (isRotated) width else height
+    return effectiveWidth * pixelWidthHeightRatio > effectiveHeight
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

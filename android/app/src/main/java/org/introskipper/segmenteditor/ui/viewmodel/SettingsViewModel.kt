@@ -43,6 +43,7 @@ data class SettingsUiState(
     val skipBehavior: SkipBehavior = SkipBehavior.SHOW_BUTTON,
     val watchProgressMode: WatchProgressMode = WatchProgressMode.CONTINUE_WATCHING,
     val preferredAudioLanguage: String = "",
+    val ignoreCameraCutout: Boolean = false,
     val preferLocalPreviews: Boolean = false,
     val disableSkipMeSegments: Boolean = true,
     val exportFormat: ExportFormat = ExportFormat.JSON,
@@ -132,6 +133,7 @@ class SettingsViewModel @Inject constructor(
                 skipBehavior = securePreferences.getSkipBehavior(),
                 watchProgressMode = securePreferences.getWatchProgressMode(),
                 preferredAudioLanguage = securePreferences.getPreferredAudioLanguage(),
+                ignoreCameraCutout = securePreferences.getIgnoreCameraCutout(),
                 preferLocalPreviews = securePreferences.getPreferLocalPreviews(),
                 disableSkipMeSegments = securePreferences.getDisableSkipMeSegments(),
                 exportFormat = securePreferences.getExportFormat(),
@@ -354,6 +356,11 @@ class SettingsViewModel @Inject constructor(
     fun setPreferredAudioLanguage(language: String) {
         securePreferences.setPreferredAudioLanguage(language)
         _uiState.value = _uiState.value.copy(preferredAudioLanguage = language)
+    }
+
+    fun setIgnoreCameraCutout(ignore: Boolean) {
+        securePreferences.setIgnoreCameraCutout(ignore)
+        _uiState.value = _uiState.value.copy(ignoreCameraCutout = ignore)
     }
 
     fun setPreferLocalPreviews(prefer: Boolean) {

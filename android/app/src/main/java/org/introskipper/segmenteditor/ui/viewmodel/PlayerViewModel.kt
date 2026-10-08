@@ -101,6 +101,10 @@ class PlayerViewModel @Inject constructor(
         return securePreferences.getPreferDirectPlay()
     }
 
+    fun shouldIgnoreCameraCutout(): Boolean {
+        return securePreferences.getIgnoreCameraCutout()
+    }
+
     fun preferredAudioLanguage(): String? {
         return securePreferences.getPreferredAudioLanguage().takeIf { it.isNotBlank() }
     }

@@ -29,6 +29,7 @@ import androidx.media3.common.C.TRACK_TYPE_VIDEO
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
+import androidx.media3.common.VideoSize
 import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
@@ -72,6 +73,7 @@ fun VideoPlayerWithPreview(
     onPlayerReady: (ExoPlayer) -> Unit = {},
     onPlaybackStateChanged: (isPlaying: Boolean, currentPosition: Long, bufferedPosition: Long) -> Unit = { _, _, _ -> },
     onTracksChanged: (Tracks) -> Unit = {},
+    onVideoSizeChanged: (VideoSize) -> Unit = {},
     onPlaybackError: (error: androidx.media3.common.PlaybackException) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -79,6 +81,7 @@ fun VideoPlayerWithPreview(
     val currentOnPlayerReady by rememberUpdatedState(onPlayerReady)
     val currentOnPlaybackStateChanged by rememberUpdatedState(onPlaybackStateChanged)
     val currentOnTracksChanged by rememberUpdatedState(onTracksChanged)
+    val currentOnVideoSizeChanged by rememberUpdatedState(onVideoSizeChanged)
     val currentOnPlaybackError by rememberUpdatedState(onPlaybackError)
     
     // Create ExoPlayer instance once - don't recreate on track changes
@@ -302,6 +305,10 @@ fun VideoPlayerWithPreview(
         }
         
         val playbackListener = object : Player.Listener {
+            override fun onVideoSizeChanged(videoSize: VideoSize) {
+                currentOnVideoSizeChanged(videoSize)
+            }
+
             override fun onCues(cueGroup: CueGroup) {
                 currentCues = cueGroup.cues
             }

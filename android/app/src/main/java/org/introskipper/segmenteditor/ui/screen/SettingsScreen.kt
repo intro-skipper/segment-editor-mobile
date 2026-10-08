@@ -352,6 +352,13 @@ fun SettingsScreen(
                     )
 
                     SwitchSettingItem(
+                        title = translatedString(R.string.settings_ignore_camera_cutout),
+                        subtitle = translatedString(R.string.settings_ignore_camera_cutout_subtitle),
+                        checked = uiState.ignoreCameraCutout,
+                        onCheckedChange = viewModel::setIgnoreCameraCutout
+                    )
+
+                    SwitchSettingItem(
                         title = translatedString(R.string.settings_prefer_local_previews),
                         subtitle = translatedString(R.string.settings_prefer_local_previews_subtitle),
                         checked = uiState.preferLocalPreviews,

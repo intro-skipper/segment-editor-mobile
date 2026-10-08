@@ -246,6 +246,14 @@ class SecurePreferences(context: Context) {
         return sharedPreferences.getBoolean(KEY_PREFER_DIRECT_PLAY, true)
     }
 
+    fun setIgnoreCameraCutout(ignore: Boolean) {
+        sharedPreferences.edit { putBoolean(KEY_IGNORE_CAMERA_CUTOUT, ignore) }
+    }
+
+    fun getIgnoreCameraCutout(): Boolean {
+        return sharedPreferences.getBoolean(KEY_IGNORE_CAMERA_CUTOUT, false)
+    }
+
     fun setPreferLocalPreviews(prefer: Boolean) {
         sharedPreferences.edit { putBoolean(KEY_PREFER_LOCAL_PREVIEWS, prefer) }
     }
@@ -321,6 +329,7 @@ class SecurePreferences(context: Context) {
         
         // Video player keys
         private const val KEY_PREFER_DIRECT_PLAY = "prefer_direct_play"
+        private const val KEY_IGNORE_CAMERA_CUTOUT = "ignore_camera_cutout"
         private const val KEY_PREFER_LOCAL_PREVIEWS = "prefer_local_previews"
         private const val KEY_DISABLE_SKIPME_SEGMENTS = "disable_skipme_segments"
 

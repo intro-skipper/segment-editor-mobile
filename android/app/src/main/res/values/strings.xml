@@ -69,6 +69,8 @@
     <string name="settings_audio_language_chinese">Chinese</string>
     <string name="settings_prefer_direct_play">Use Direct Play</string>
     <string name="settings_prefer_direct_play_subtitle">Play media directly without transcoding</string>
+    <string name="settings_ignore_camera_cutout">Ignore Camera Cutout</string>
+    <string name="settings_ignore_camera_cutout_subtitle">Extend landscape video behind the camera cutout</string>
     <string name="settings_autoplay_next">Auto-play Next Episode</string>
     <string name="settings_skip_behavior">Segment Skip Behavior</string>
     <string name="settings_skip_behavior_subtitle">How segments should be handled during playback</string>
